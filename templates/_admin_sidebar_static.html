@@ -1,0 +1,17 @@
+<aside class="admin-sidebar">
+  <div class="admin-brand"><img src="{{ url_for('static', filename='img/kiteclub-logo.png') }}" alt="KiteClub"></div>
+  <form class="admin-sidebar-search" action="{{url_for('admin_global_search')}}" method="get"><input type="search" name="q" placeholder="Αναζήτηση..."></form>
+  <div class="admin-side-nav" role="navigation" aria-label="Admin sections">
+    <a class="admin-tab {{'active' if admin_active=='today' else ''}}" href="{{url_for('admin')}}#today">▣ &nbsp; Σήμερα</a>
+    <a class="admin-tab {{'active' if admin_active=='day' else ''}}" href="{{url_for('admin')}}#day">▦ &nbsp; Ημερολόγιο</a>
+    <a class="admin-tab {{'active' if admin_active=='students' else ''}}" href="{{url_for('admin')}}#students">♙ &nbsp; Μαθητές</a>
+    <a class="admin-tab {{'active' if admin_active=='instructors' else ''}}" href="{{url_for('admin')}}#instructors">♟ &nbsp; Instructors</a>
+    <a class="admin-tab {{'active' if admin_active=='bookings' else ''}}" href="{{url_for('admin_bookings')}}">▤ &nbsp; Κρατήσεις</a>
+    <a class="admin-tab {{'active' if admin_active=='packages' else ''}}" href="{{url_for('admin_packages')}}">▣ &nbsp; Πακέτα</a>
+    <a class="admin-tab {{'active' if admin_active=='reports' else ''}}" href="{{url_for('admin_reports')}}">▥ &nbsp; Αναφορές</a>
+    <a class="admin-tab {{'active' if admin_active=='finance' else ''}}" href="{{url_for('admin_finance')}}">€ &nbsp; Οικονομικά</a>
+    <a class="admin-tab {{'active' if admin_active=='messages' else ''}}" href="{{url_for('admin_messages')}}">✉ &nbsp; Μηνύματα{% if message_unread_count %} <span class="side-badge">{{message_unread_count}}</span>{% endif %}</a>
+  </div>
+  <div class="admin-side-spacer"></div>
+  <a class="admin-logout" href="{{url_for('logout')}}">↪ &nbsp; Αποσύνδεση</a>
+</aside>

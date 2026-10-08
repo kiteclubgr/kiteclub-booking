@@ -1,0 +1,122 @@
+{% extends "base.html" %}{% block content %}
+<link rel="stylesheet" href="{{url_for('static',filename='admin-shared.css')}}">
+<style>
+.booking-metrics{display:grid;grid-template-columns:repeat(5,minmax(130px,1fr));gap:12px;margin-bottom:16px}.booking-metric{background:#fff;border:1px solid var(--l);border-radius:15px;padding:15px;box-shadow:0 7px 20px rgba(11,35,64,.035)}.booking-metric b{display:block;font-size:28px;line-height:1.05;margin-bottom:5px}.booking-metric span{font-size:12px;color:var(--m);font-weight:800}.booking-metric.blue{background:#f4f9ff}.booking-metric.green{background:#f1fbf5}.booking-metric.orange{background:#fff8ed}.booking-metric.purple{background:#f7f2ff}.booking-metric.red{background:#fff3f3}
+.filter-card{padding:15px}.booking-filters{display:grid;grid-template-columns:minmax(210px,1.5fr) 160px 180px 170px 170px auto;gap:9px;align-items:end}.booking-filters label{font-size:11px;font-weight:900;color:var(--m);display:flex;flex-direction:column;gap:5px}.booking-filters input,.booking-filters select{width:100%}.filter-actions{display:flex;gap:7px}.filter-actions .btn{white-space:nowrap}
+.booking-table-wrap{overflow:auto;border:1px solid var(--l);border-radius:14px}.booking-table{width:100%;min-width:1100px;border-collapse:collapse}.booking-table th,.booking-table td{padding:11px 10px;border-bottom:1px solid var(--l);text-align:left;vertical-align:middle}.booking-table th{background:#f5f9fc;color:#536d80;font-size:11px;text-transform:uppercase;letter-spacing:.3px}.booking-table tbody tr:hover{background:#f9fcfe}.person{font-weight:950}.sub{font-size:11px;color:var(--m);margin-top:2px}.status{font-size:11px;font-weight:950;padding:6px 9px;border-radius:999px;display:inline-block;white-space:nowrap}.s-booked{background:#e4f2ff;color:#075a9a}.s-pending{background:#fff0d7;color:#a85f00}.s-completed{background:#dff7e8;color:#087846}.s-noshow{background:#ffe8df;color:#ad4e20}.s-cancelled{background:#edf1f4;color:#758592}.row-actions{display:flex;gap:6px;align-items:center}.small-btn{border:1px solid var(--l);background:#fff;color:var(--n);padding:7px 9px;border-radius:9px;font-size:11px;font-weight:900;cursor:pointer;text-decoration:none;white-space:nowrap}.small-btn.primary{background:#eaf6ff;border-color:#c6e7f9;color:#08639f}.small-btn.danger{background:#fff1f2;border-color:#f5ced2;color:#b63f49}
+.booking-modal-backdrop{display:none;position:fixed;inset:0;background:rgba(6,25,44,.52);z-index:200;align-items:center;justify-content:center;padding:18px}.booking-modal-backdrop.open{display:flex}.booking-modal{width:min(650px,100%);max-height:88vh;overflow:hidden;background:#fff;border-radius:20px;box-shadow:0 24px 70px rgba(4,22,40,.28);display:flex;flex-direction:column}.booking-modal-head{display:flex;justify-content:space-between;align-items:center;padding:18px 20px;border-bottom:1px solid var(--l)}.booking-modal-head h2{margin:0}.booking-modal-close{border:0;background:#eef3f7;width:36px;height:36px;border-radius:50%;font-size:20px;cursor:pointer;color:var(--n)}.booking-modal-body{padding:18px 20px;overflow:auto}.edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.edit-grid .full{grid-column:1/-1}.edit-grid label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:900}.edit-grid input,.edit-grid select{width:100%}.picked{font-size:11px;color:var(--m);font-weight:750}.edit-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid var(--l)}
+.empty{text-align:center;padding:42px 16px;color:var(--m)}
+@media(max-width:1200px){.booking-metrics{grid-template-columns:repeat(3,1fr)}.booking-filters{grid-template-columns:1fr 1fr 1fr}}
+@media(max-width:700px){.booking-metrics{grid-template-columns:repeat(2,1fr)}.booking-filters{grid-template-columns:1fr}.filter-actions{width:100%}.filter-actions .btn{flex:1}.edit-grid{grid-template-columns:1fr}.edit-grid .full{grid-column:auto}}
+</style>
+<div class="admin-shell">
+  {% set admin_active='bookings' %}{% include '_admin_sidebar_static.html' %}
+  <main class="admin-main">
+    <div class="admin-page-head">
+      <div><h1>Κρατήσεις</h1><div class="admin-page-sub">Αναζήτηση, φίλτρα και διαχείριση όλων των μαθημάτων.</div></div>
+      <a class="btn alt" href="{{url_for('admin')}}#today">← Σήμερα</a>
+    </div>
+
+    <div class="booking-metrics">
+      <div class="booking-metric blue"><b>{{summary.count}}</b><span>Κρατήσεις στα αποτελέσματα</span></div>
+      <div class="booking-metric green"><b>{{summary.hours|round(1)}}h</b><span>Συνολικές ώρες</span></div>
+      <div class="booking-metric purple"><b>{{summary.completed}}</b><span>Completed</span></div>
+      <div class="booking-metric orange"><b>{{summary.pending}}</b><span>Pending payment</span></div>
+      <div class="booking-metric red"><b>{{summary.no_show}}</b><span>No-show</span></div>
+    </div>
+
+    <div class="card filter-card">
+      <form method="get" class="booking-filters">
+        <label>Αναζήτηση μαθητή<input type="search" name="q" value="{{filters.q}}" placeholder="Student ID, όνομα, επώνυμο, email ή τηλέφωνο"></label>
+        <label>Ημερομηνία<input type="date" name="date" value="{{filters.date}}"></label>
+        <label>Instructor<select name="instructor_id"><option value="">Όλοι</option>{% for i in instructors %}<option value="{{i.id}}" {{'selected' if filters.instructor_id and filters.instructor_id|int==i.id else ''}}>{{i.name}}{% if i.surname %} {{i.surname}}{% endif %}</option>{% endfor %}</select></label>
+        <label>Spot<select name="spot_id"><option value="">Όλα</option>{% for s in spots %}<option value="{{s.id}}" {{'selected' if filters.spot_id and filters.spot_id|int==s.id else ''}}>{{s.name}}</option>{% endfor %}</select></label>
+        <label>Status<select name="status">
+          <option value="all" {{'selected' if filters.status=='all' else ''}}>Όλα</option>
+          <option value="booked" {{'selected' if filters.status=='booked' else ''}}>Booked</option>
+          <option value="pending" {{'selected' if filters.status=='pending' else ''}}>Pending payment</option>
+          <option value="completed" {{'selected' if filters.status=='completed' else ''}}>Completed</option>
+          <option value="no_show" {{'selected' if filters.status=='no_show' else ''}}>No-show</option>
+          <option value="cancelled" {{'selected' if filters.status=='cancelled' else ''}}>Cancelled</option>
+        </select></label>
+        <div class="filter-actions"><button class="btn" type="submit">Φίλτρο</button><a class="btn alt" href="{{url_for('admin_bookings')}}">Καθαρισμός</a></div>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="spread" style="margin-bottom:12px"><div><h2 style="margin:0">Λίστα κρατήσεων</h2><div class="muted" style="font-size:12px">Έως 250 πιο πρόσφατες κρατήσεις ανά φίλτρο.</div></div></div>
+      {% if bookings %}
+      <div class="booking-table-wrap"><table class="booking-table">
+        <thead><tr><th>Ημερομηνία / Ώρα</th><th>Μαθητής</th><th>Instructor</th><th>Spot</th><th>Διάρκεια</th><th>Κατάσταση</th><th>Πληρωμή</th><th>Ενέργειες</th></tr></thead>
+        <tbody>{% for b in bookings %}
+          <tr>
+            <td><b>{{b.lesson_date|gr_date}}</b><div class="sub">{{b.start_time|hm24}}</div></td>
+            <td><div class="person"><a href="{{url_for('admin_student_profile',student_id=b.student_id)}}">{{b.participant_names or (b.student_name ~ (' ' ~ b.student_surname if b.student_surname else ''))}}</a></div><div class="sub">{% if b.participant_count and b.participant_count>1 %}{{b.participant_count}}P Group · {{b.participant_codes}}{% else %}{{b.student_code}} · {{b.student_level or '—'}} · {{b.student_email}}{% endif %}</div></td>
+            <td><div class="person">{{b.instructor_name}}{% if b.instructor_surname %} {{b.instructor_surname}}{% endif %}</div></td>
+            <td>{{b.spot_name or '—'}}</td>
+            <td><b>{{b.duration|round(1)}}h</b></td>
+            <td>
+              {% if b.status=='completed' %}<span class="status s-completed">Completed</span>
+              {% elif b.status=='no_show' %}<span class="status s-noshow">No-show</span>
+              {% elif b.status and b.status[:9]=='cancelled' %}<span class="status s-cancelled">Cancelled</span>
+              {% elif b.status=='pending_payment' or b.payment_status=='pending' %}<span class="status s-pending">Pending</span>
+              {% else %}<span class="status s-booked">Booked</span>{% endif %}
+            </td>
+            <td>{{b.payment_status or '—'}}{% if b.amount %}<div class="sub">{{'%.2f'|format(b.amount)}}€</div>{% endif %}</td>
+            <td><div class="row-actions">
+              <a class="small-btn" href="{{url_for('admin',date=b.lesson_date)}}#day">Ημέρα</a>
+              {% if b.status in ('confirmed','pending_payment') %}
+                <button type="button" class="small-btn primary edit-booking" data-id="{{b.id}}" data-student="{{b.student_id}}" data-date="{{b.lesson_date}}" data-time="{{b.start_time}}" data-instructor="{{b.instructor_id}}" data-duration="{{b.duration}}" data-state="{{'pending' if b.status=='pending_payment' or b.payment_status=='pending' else 'booked'}}">Επεξεργασία</button>
+              {% else %}<span class="sub">Κλειδωμένη</span>{% endif %}
+            </div></td>
+          </tr>
+        {% endfor %}</tbody>
+      </table></div>
+      {% else %}<div class="empty">Δεν βρέθηκαν κρατήσεις με αυτά τα φίλτρα.</div>{% endif %}
+    </div>
+  </main>
+</div>
+
+<div class="booking-modal-backdrop" id="editBookingModal" aria-hidden="true">
+  <div class="booking-modal" role="dialog" aria-modal="true">
+    <div class="booking-modal-head"><div><h2>Επεξεργασία κράτησης</h2><div class="muted" style="font-size:12px;margin-top:3px">Αλλαγή μαθητή, instructor, ώρας, διάρκειας ή κατάστασης.</div></div><button class="booking-modal-close" type="button" id="modalClose">×</button></div>
+    <div class="booking-modal-body">
+      <form id="editBookingForm" method="post">
+        <input type="hidden" name="return_to" value="bookings">
+        <div class="edit-grid">
+          <label class="full">Ημερομηνία<input id="editDate" type="text" readonly></label>
+          <label class="full">Μαθητής
+            <input id="editStudentSearch" type="search" list="studentDatalist" placeholder="Student ID, όνομα, επώνυμο, email ή τηλέφωνο" required autocomplete="off">
+            <input id="editStudentId" type="hidden" name="student_id"><span class="picked" id="studentPicked"></span>
+          </label>
+          <datalist id="studentDatalist">{% for s in students %}<option value="{{s.name}}{% if s.surname %} {{s.surname}}{% endif %} · {{s.email}}"></option>{% endfor %}</datalist>
+          <label>Instructor<select id="editInstructor" name="instructor_id" required></select></label>
+          <label>Ώρα έναρξης<select id="editTime" name="start_time" required></select></label>
+          <label>Διάρκεια<select id="editDuration" name="duration"><option value="1">1 ώρα</option><option value="2">2 ώρες</option></select></label>
+          <label>Κατάσταση<select id="editState" name="booking_state"><option value="booked">Booked</option><option value="pending">Pending payment</option></select></label>
+        </div>
+        <div class="edit-actions"><button class="btn alt" type="button" id="modalCancel">Κλείσιμο</button><button class="btn" type="submit">Αποθήκευση</button></div>
+      </form>
+      <form id="cancelBookingForm" method="post" style="margin-top:10px"><input type="hidden" name="return_to" value="bookings"><button class="small-btn danger" type="submit" style="width:100%;padding:10px">Ακύρωση κράτησης & επιστροφή credits όπου ισχύει</button></form>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const modal=document.getElementById('editBookingModal'), form=document.getElementById('editBookingForm'), cancelForm=document.getElementById('cancelBookingForm');
+  const dateEl=document.getElementById('editDate'), studentSearch=document.getElementById('editStudentSearch'), studentId=document.getElementById('editStudentId'), picked=document.getElementById('studentPicked'), instructorEl=document.getElementById('editInstructor'), timeEl=document.getElementById('editTime'), durationEl=document.getElementById('editDuration'), stateEl=document.getElementById('editState');
+  const scheduleData={{edit_schedule_data|tojson}};
+  const students=[{% for s in students %}{id:{{s.id}},display:{{(s.student_code ~ ' · ' ~ s.name ~ (' ' ~ s.surname if s.surname else '') ~ ' · ' ~ s.email)|tojson}},search:{{(s.student_code ~ ' ' ~ s.name ~ ' ' ~ (s.surname or '') ~ ' ' ~ s.email ~ ' ' ~ (s.phone or ''))|lower|tojson}}}{% if not loop.last %},{% endif %}{% endfor %}];
+  function displayDate(iso){const p=(iso||'').split('-');return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:iso;}
+  function fill(select,items,value){select.innerHTML='';items.forEach(x=>{const o=document.createElement('option');o.value=String(typeof x==='object'?x.id:x);o.textContent=typeof x==='object'?x.name:String(x);if(String(o.value)===String(value))o.selected=true;select.appendChild(o);});}
+  function resolveStudent(){const raw=(studentSearch.value||'').trim(),q=raw.toLowerCase();let found=students.find(s=>s.display.toLowerCase()===q);if(!found&&q){const m=students.filter(s=>s.search.includes(q));if(m.length===1)found=m[0];}studentId.value=found?String(found.id):'';picked.textContent=found?'Επιλεγμένος μαθητής: '+found.display:(raw?'Επίλεξε μαθητή από τις προτάσεις.':'');return found;}
+  function close(){modal.classList.remove('open');modal.setAttribute('aria-hidden','true');}
+  document.querySelectorAll('.edit-booking').forEach(btn=>btn.addEventListener('click',()=>{const d=btn.dataset,day=scheduleData[d.date]||{instructors:[],times:[]};fill(instructorEl,day.instructors,d.instructor);fill(timeEl,day.times,d.time);dateEl.value=displayDate(d.date);durationEl.value=Number(d.duration)>=2?'2':'1';stateEl.value=d.state==='pending'?'pending':'booked';const st=students.find(s=>String(s.id)===String(d.student));studentSearch.value=st?st.display:'';studentId.value=st?String(st.id):String(d.student||'');picked.textContent=st?'Επιλεγμένος μαθητής: '+st.display:'';form.action='/admin/booking/'+d.id+'/edit';cancelForm.action='/admin/booking/'+d.id+'/cancel';modal.classList.add('open');modal.setAttribute('aria-hidden','false');}));
+  studentSearch.addEventListener('input',resolveStudent);studentSearch.addEventListener('change',resolveStudent);
+  form.addEventListener('submit',e=>{if(!resolveStudent()){e.preventDefault();alert('Επίλεξε μαθητή από την αναζήτηση.');}});
+  cancelForm.addEventListener('submit',e=>{if(!confirm('Να ακυρωθεί η κράτηση; Αν είχε χρεωθεί από πακέτο, οι ώρες θα επιστραφούν.'))e.preventDefault();});
+  document.getElementById('modalClose').addEventListener('click',close);document.getElementById('modalCancel').addEventListener('click',close);modal.addEventListener('click',e=>{if(e.target===modal)close();});document.addEventListener('keydown',e=>{if(e.key==='Escape')close();});
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends "base.html" %}{% block content %}
+<link rel="stylesheet" href="{{url_for('static',filename='admin-shared.css')}}">
+<style>
+.pack-grid{display:grid;grid-template-columns:1fr 1.2fr;gap:14px}.pack-form{display:grid;grid-template-columns:1.15fr .8fr .7fr .7fr auto;gap:8px;align-items:end}.pack-list{display:grid;gap:9px}.pack-item{border:1px solid var(--l);border-radius:14px;padding:13px;display:grid;grid-template-columns:1.5fr .6fr .7fr .7fr auto;gap:10px;align-items:center}.pack-item .muted{font-size:12px}.purchase-table{width:100%;border-collapse:collapse;min-width:850px}.purchase-table th,.purchase-table td{border:1px solid var(--l);padding:9px;text-align:left}.purchase-table th{background:#f7fafc}.status-paid{background:var(--g);color:var(--gt)}.status-pending{background:var(--o);color:var(--ot)}
+@media(max-width:850px){.pack-grid{grid-template-columns:1fr}.pack-form{grid-template-columns:1fr}.pack-item{grid-template-columns:1fr 1fr}.pack-item>div:first-child{grid-column:1/-1}}
+</style>
+<div class="admin-shell">
+  {% set admin_active='packages' %}{% include '_admin_sidebar_static.html' %}
+  <main class="admin-main">
+    <div class="admin-page-head">
+      <div><h1>Πακέτα & Payments</h1><div class="admin-page-sub">Δημιουργία πακέτων, αγορές μαθητών και κατάσταση πληρωμών.</div></div>
+      <a class="btn alt" href="{{url_for('admin')}}#students">← Μαθητές</a>
+    </div>
+
+    <div class="pack-grid">
+      <div class="card">
+        <h2>Νέο πακέτο</h2>
+        <form method="post" action="{{url_for('admin_package_create')}}" class="pack-form">
+          <div><label>Όνομα</label><input name="name" placeholder="π.χ. Beginner 6h / Crew Member" required></div>
+          <div><label>Τύπος</label><select name="package_type" id="packageType"><option value="lesson">Μαθήματα</option><option value="crew">Crew Member</option></select></div>
+          <div><label>Ώρες</label><input id="packageHours" type="number" name="hours" step="0.5" min="0" value="6"></div>
+          <div><label>Τιμή €</label><input type="number" name="price" step="0.01" min="0" required></div>
+          <button class="btn" type="submit">Δημιουργία</button>
+        </form>
+      </div>
+      <div class="card">
+        <h2>Πώς λειτουργεί</h2>
+        <div class="muted"><b>Πακέτο μαθημάτων:</b> Paid → προστίθενται αυτόματα ώρες στα credits. <br><b>Crew Member:</b> δεν προσθέτει ώρες και ενεργοποιεί membership για τη σταθερή season Μάιος → Απρίλιος. Pending → ενεργοποιείται όταν πατήσεις Mark paid.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Κατάλογος πακέτων</h2>
+      {% if packages %}<div class="pack-list">
+        {% for p in packages %}
+        <div class="pack-item">
+          <div><b>{{p.name}}</b><div class="muted">Δημιουργήθηκε {{p.created_at[:10] if p.created_at else '—'}}</div></div>
+          <div>{% if (p.package_type or 'lesson')=='crew' %}<b>Crew</b><div class="muted">Μάιος → Απρίλιος</div>{% else %}<b>{{p.hours}}h</b><div class="muted">ώρες</div>{% endif %}</div>
+          <div><b>{{'%.2f'|format(p.price)}}€</b><div class="muted">τιμή</div></div>
+          <div><span class="badge {{'ok' if p.active else 'off'}}">{{'Active' if p.active else 'Inactive'}}</span></div>
+          <form method="post" action="{{url_for('admin_package_toggle',package_id=p.id)}}"><button class="btn alt" type="submit">{{'Απενεργοποίηση' if p.active else 'Ενεργοποίηση'}}</button></form>
+        </div>
+        {% endfor %}
+      </div>{% else %}<div class="muted">Δεν υπάρχουν ακόμη πακέτα.</div>{% endif %}
+    </div>
+
+    <div class="card">
+      <h2>Πρόσφατες αγορές / πληρωμές</h2>
+      {% if purchases %}<div style="overflow:auto"><table class="purchase-table"><thead><tr><th>Ημερομηνία</th><th>Μαθητής</th><th>Πακέτο</th><th>Τύπος / Ώρες</th><th>Υπόλοιπο / Season</th><th>Τιμή</th><th>Status</th><th></th></tr></thead><tbody>
+        {% for p in purchases %}<tr>
+          <td>{{p.purchased_at[:16].replace('T',' ') if p.purchased_at else '—'}}</td>
+          <td><a href="{{url_for('admin_student_profile',student_id=p.student_id)}}">{{p.student_name}}{% if p.student_surname %} {{p.student_surname}}{% endif %}</a></td>
+          <td>{{p.package_name}}</td><td>{% if (p.package_type or 'lesson')=='crew' %}Crew Member{% else %}{{p.hours_total}}h{% endif %}</td><td>{% if (p.package_type or 'lesson')=='crew' %}{{p.valid_from|gr_date}} → {{p.valid_until|gr_date}}{% else %}{{p.hours_remaining}}h{% endif %}</td><td>{{'%.2f'|format(p.price)}}€</td>
+          <td><span class="badge {{'status-paid' if p.payment_status=='paid' else 'status-pending'}}">{{p.payment_status}}</span></td>
+          <td>{% if p.payment_status!='paid' %}<form method="post" action="{{url_for('admin_package_purchase_mark_paid',purchase_id=p.id)}}"><button class="btn" type="submit">Mark paid</button></form>{% endif %}</td>
+        </tr>{% endfor %}
+      </tbody></table></div>{% else %}<div class="muted">Δεν υπάρχουν αγορές ακόμη. Άνοιξε έναν μαθητή και πρόσθεσε πακέτο.</div>{% endif %}
+    </div>
+  </main>
+</div>
+{% endblock %}
+
+<script>
+(function(){const t=document.getElementById('packageType'),h=document.getElementById('packageHours');if(!t||!h)return;function sync(){const crew=t.value==='crew';h.disabled=crew;h.required=!crew;if(crew)h.value='0';else if(Number(h.value)<=0)h.value='6';}t.addEventListener('change',sync);sync();})();
+</script>

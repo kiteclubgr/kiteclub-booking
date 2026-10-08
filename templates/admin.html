@@ -1,0 +1,1219 @@
+{% extends "base.html" %}{% block content %}
+<style>
+  .timetable-wrap{overflow:auto;border:1px solid var(--l);border-radius:16px;background:white}
+  .timetable{border-collapse:separate;border-spacing:0;width:100%;min-width:900px}
+  .timetable th,.timetable td{border-right:1px solid var(--l);border-bottom:1px solid var(--l);padding:8px;text-align:center;vertical-align:middle;min-width:230px}
+  .timetable th{background:#f7fafc;position:sticky;top:0;z-index:3}
+  .timetable th:first-child,.timetable td:first-child{position:sticky;left:0;z-index:4;background:#f7fafc;min-width:100px;font-weight:900}
+  .timetable th:first-child{z-index:5}
+  .slot-head{display:flex;flex-direction:column;gap:6px}
+  .slot-head strong{font-size:15px}
+  .activation-line{display:flex;justify-content:center;gap:5px;align-items:center;flex-wrap:wrap;font-size:11px}
+  .activation-active{background:#dff7e8;color:#087846;border-radius:999px;padding:4px 7px;font-weight:900}
+  .activation-standby{background:#edf1f4;color:#778695;border-radius:999px;padding:4px 7px;font-weight:900}
+  .activation-progress{color:var(--m);font-weight:800}
+  .activation-controls{display:flex;justify-content:center;gap:5px;flex-wrap:wrap;margin-top:1px}
+  .activation-controls form{margin:0}
+  .activation-btn{border:1px solid var(--l);background:#fff;color:var(--m);border-radius:8px;padding:5px 8px;font-size:10px;font-weight:900;cursor:pointer}
+  .activation-btn:hover{border-color:#9bcce8;color:var(--n)}
+  .activation-btn.selected-auto{background:#e8f4ff;border-color:#a8d7ef;color:#17649b}
+  .activation-btn.selected-active{background:#dff7e8;border-color:#9eddb9;color:#087846}
+  .activation-btn.selected-standby{background:#edf1f4;border-color:#ccd5dc;color:#61707d}
+  .activation-note{font-size:10px;line-height:1.25;color:var(--m);font-weight:700}
+  .slot-head select{width:100%;font-weight:700}
+  .cell{border-radius:12px;padding:10px 8px;min-height:88px;display:flex;flex-direction:column;justify-content:center;gap:7px}
+  .cell form{margin:0}
+  .cell select.status-select{display:block;width:100%;max-width:170px;margin:0 auto;padding:6px 8px;border:1px solid rgba(11,35,64,.18);border-radius:9px;background:#fff;color:var(--n);font-size:12px;font-weight:800}
+  .cell-open{background:#dff7e8;color:#087846}
+  .cell-empty{background:#f0f3f6;color:#8b99a6}
+  .cell-booked{background:#e4f2ff;color:#075a9a}
+  .cell-manual-booked{background:#e4f2ff;color:#075a9a}
+  .cell-pending{background:#fff0d7;color:#a85f00}
+  .cell-manual-pending{background:#fff0d7;color:#a85f00}
+  .cell-completed{background:#eadfff;color:#6a22c9}
+  .cell-noshow{background:#fff0e3;color:#a34c00}
+  .cell-closed{background:#ffe4e7;color:#bb3744}
+  .tiny{font-size:12px;line-height:1.2}
+  .legend{display:flex;gap:8px;flex-wrap:wrap}
+  .legend span{padding:6px 9px;border-radius:999px;font-size:12px;font-weight:800}
+  .schedule-row{display:grid;grid-template-columns:1.1fr 1fr 1fr 1.2fr auto;gap:10px;align-items:end}
+  .week-card{margin-bottom:14px}
+  .report-wrap{overflow:auto;border:1px solid var(--l);border-radius:15px}
+  .report-table{border-collapse:collapse;width:100%;min-width:1050px}
+  .report-table th,.report-table td{padding:10px;border-right:1px solid var(--l);border-bottom:1px solid var(--l);text-align:center}
+  .report-table th{background:#f7fafc}
+  .compact-report th,.compact-report td{padding:7px 6px;font-size:12px}
+  .compact-report .report-total{font-size:15px}
+  .report-table td:first-child,.report-table th:first-child{text-align:left;font-weight:900}
+  .report-total{font-size:18px;font-weight:900}
+  .pay-badge{display:inline-block;padding:6px 9px;border-radius:999px;background:#e8f4ff;color:#17649b;font-weight:900}
+
+  .week-top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+  .week-nav{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+  .day-card{display:block;text-decoration:none;color:var(--n);border:1px solid var(--l);border-radius:14px;padding:12px;background:#fff;min-height:112px;transition:.15s}
+  .day-card:hover{border-color:#9bd8f5;box-shadow:0 4px 14px rgba(11,35,64,.06)}
+  .day-card.selected{border:2px solid var(--b);background:#f0f9ff}
+  .day-name{font-weight:900;margin-bottom:3px}
+  .day-date{font-size:12px;color:var(--m);margin-bottom:14px}
+  .spot-pill{display:block;border-radius:10px;background:#dff7e8;color:#087846;padding:10px;font-weight:900;text-align:center}
+  .no-spot{display:flex;align-items:center;justify-content:center;min-height:40px;border-radius:10px;background:#f1f4f6;color:#8a98a5;font-size:13px;text-align:center;padding:8px}
+  @media(max-width:900px){.week-grid{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:560px){.week-grid{grid-template-columns:1fr}}
+
+  .date-gr{min-width:135px}
+  .time24{min-width:105px}
+  @media(max-width:800px){.schedule-row{grid-template-columns:1fr 1fr}.schedule-row .wide{grid-column:1/-1}}
+  .admin-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px;padding:7px;background:#eaf2f7;border:1px solid var(--l);border-radius:15px}
+  .admin-tab{border:0;background:transparent;color:var(--n);font-weight:900;padding:11px 16px;border-radius:11px;cursor:pointer;font-size:14px}
+  .admin-tab.active{background:var(--b);color:#fff;box-shadow:0 4px 12px rgba(7,136,200,.2)}
+  .tab-panel{display:none}
+  .tab-panel.active{display:block}
+  .tab-title{margin-bottom:14px}
+  .instructor-manage-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+  .instructor-manage-card{border:1px solid var(--l);border-radius:14px;padding:14px;background:#fff}
+  .instructor-manage-card h3{margin-bottom:4px}
+  .instructor-meta{font-size:12px;color:var(--m);margin:3px 0}
+  .danger-btn{background:#fff;border:1px solid #efb8be;color:#b92f3d}
+  .add-instructor-form{display:grid;grid-template-columns:1.3fr 1.5fr 1fr 1fr .7fr .7fr auto;gap:8px;align-items:end}
+  @media(max-width:1000px){.instructor-manage-grid{grid-template-columns:1fr 1fr}.add-instructor-form{grid-template-columns:1fr 1fr}}
+  @media(max-width:650px){.instructor-manage-grid{grid-template-columns:1fr}.add-instructor-form{grid-template-columns:1fr}}
+
+  @media(max-width:650px){.admin-tabs{display:grid;grid-template-columns:1fr}.admin-tab{text-align:left}}
+
+
+  /* v45 admin dashboard — full-width visual polish */
+  body>nav{display:none}
+  .wrap{max-width:none;margin:0;padding:0}
+  .admin-shell{min-height:100vh;display:grid;grid-template-columns:210px minmax(0,1fr);background:#f3f8fb}
+  .admin-sidebar{background:linear-gradient(180deg,#0a223d 0%,#102d50 100%);color:#fff;padding:16px 10px;position:sticky;top:0;height:100vh;display:flex;flex-direction:column;gap:18px;z-index:30;box-shadow:8px 0 28px rgba(11,35,64,.08)}
+  .admin-brand{display:flex;align-items:center;justify-content:center;min-height:104px;padding:2px 6px;background:transparent;border:0}
+  .admin-brand img{display:block;width:118px;height:118px;object-fit:contain;border-radius:14px;box-shadow:0 5px 18px rgba(0,0,0,.18)}
+  .admin-side-nav{height:auto;background:transparent;border:0;padding:0;position:static;top:auto;z-index:auto;display:flex;flex-direction:column;gap:7px;align-items:stretch;justify-content:flex-start}
+  .admin-tab{width:100%;border:0;background:transparent;color:#dce8f2;font-weight:850;padding:13px 14px;border-radius:10px;cursor:pointer;font-size:14px;text-align:left;transition:.15s}
+  .admin-tab:hover{background:rgba(255,255,255,.08);color:#fff}
+  .admin-tab.active{background:linear-gradient(135deg,#147bd3,#0b91dd);color:#fff;box-shadow:0 8px 18px rgba(0,0,0,.18)}
+  .admin-side-spacer{flex:1}
+  .admin-logout{display:block;text-decoration:none;color:#fff;padding:11px 13px;border-radius:10px;border:1px solid rgba(255,255,255,.19);font-weight:800}
+  .admin-main{min-width:0;padding:24px 30px 38px;width:100%;max-width:none;margin:0}
+  .dashboard-top{display:flex;justify-content:space-between;gap:18px;align-items:center;flex-wrap:wrap;margin-bottom:18px}
+  .dashboard-top h1{font-size:38px;line-height:1;margin-bottom:7px;letter-spacing:-.6px}
+  .dashboard-date{font-size:15px;color:var(--m);font-weight:750}
+  .dashboard-top .btn{padding:12px 17px;border-radius:12px}
+
+  .today-metrics{display:grid;grid-template-columns:repeat(6,minmax(145px,1fr));gap:13px;margin-bottom:16px}
+  .today-metric{background:#fff;border:1px solid #d9e6ee;border-radius:15px;padding:15px 16px;min-height:112px;display:grid;grid-template-columns:44px 1fr;grid-template-rows:auto auto;column-gap:11px;align-items:center;box-shadow:0 7px 20px rgba(11,35,64,.035)}
+  .today-metric .metric-icon{grid-row:1/3;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:21px;font-weight:900;background:rgba(255,255,255,.72)}
+  .today-metric b{font-size:29px;line-height:1;margin:0 0 3px;align-self:end}
+  .today-metric .metric-copy{font-size:12px;color:var(--m);font-weight:780;align-self:start}
+  .today-metric.blue{background:#f4f9ff}.today-metric.green{background:#f1fbf5}.today-metric.purple{background:#f7f2ff}.today-metric.orange{background:#fff8ed}.today-metric.red{background:#fff3f3}.today-metric.gray{background:#f6f8fa}
+  .today-metric.blue .metric-icon{color:#147bd3}.today-metric.green .metric-icon{color:#16a05d}.today-metric.purple .metric-icon{color:#7c3bd8}.today-metric.orange .metric-icon{color:#dd8500}.today-metric.red .metric-icon{color:#d43d49}.today-metric.gray .metric-icon{color:#718392}
+
+  .admin-main>.tab-panel>.card{border-radius:16px;padding:16px 18px;box-shadow:0 7px 22px rgba(11,35,64,.035)}
+  .today-instructors{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+  .today-inst-card{border:1px solid var(--l);border-radius:14px;padding:14px 15px;background:#fff;min-height:112px}
+  .today-inst-card.active{background:#effbf4;border-color:#c5ebd5}
+  .today-inst-card.standby{background:#f5f7f9}
+  .today-inst-top{display:flex;justify-content:space-between;gap:10px;align-items:center}
+  .today-inst-identity{display:flex;align-items:center;gap:10px;min-width:0}
+  .today-inst-avatar,.today-head-avatar{flex:0 0 auto;border-radius:50%;overflow:hidden;background:#dceaf3;color:#0b5d91;display:flex;align-items:center;justify-content:center;font-weight:950}
+  .today-inst-avatar{width:44px;height:44px;font-size:18px}.today-head-avatar{width:36px;height:36px;font-size:14px}
+  .today-inst-avatar img,.today-head-avatar img{width:100%;height:100%;object-fit:cover}
+  .today-inst-name{font-weight:950;font-size:16px;line-height:1.15;white-space:normal}
+  .today-inst-sub{font-size:11px;color:var(--m);font-weight:750;margin-top:3px}
+  .today-progress{height:9px;border-radius:999px;background:#e4edf2;overflow:hidden;margin:11px 0 7px}
+  .today-progress>span{display:block;height:100%;background:#29b865;border-radius:999px}
+  .today-inst-card.standby .today-progress>span{background:#91a6b4}
+
+  .today-schedule-wrap{overflow:auto;border:1px solid var(--l);border-radius:14px;background:#fff}
+  .today-schedule{border-collapse:separate;border-spacing:0;width:100%;min-width:1000px;table-layout:fixed}
+  .today-schedule th,.today-schedule td{padding:7px;border-right:1px solid var(--l);border-bottom:1px solid var(--l);text-align:center;vertical-align:middle;min-width:240px}
+  .today-schedule th{background:#f4f8fb;position:sticky;top:0;z-index:4;height:66px}
+  .today-head{display:flex;align-items:center;justify-content:center;gap:9px}
+  .today-head-copy{text-align:left}.today-head-copy strong{display:block;font-size:15px}.today-head-copy small{display:block;color:var(--m);font-weight:800;margin-top:2px}
+  .today-schedule .time-right{position:sticky;right:0;z-index:5;min-width:88px;width:88px;max-width:88px;background:#edf4f8;font-weight:950;color:var(--n);border-left:1px solid var(--l);font-size:15px}
+  .today-schedule th.time-right{z-index:7}
+  .today-booking-cell,.today-free-cell{border-radius:10px;padding:8px 10px;min-height:58px;display:flex;justify-content:center;gap:3px;position:relative}
+  .today-booking-cell{align-items:flex-start;text-align:left;padding-right:88px;border-left:4px solid currentColor}
+  .today-booking-cell a{text-decoration:none;font-weight:950;font-size:14px;line-height:1.15}
+  .today-booking-cell small,.today-free-cell small{font-size:11px}
+  .today-status{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:10px;font-weight:950;padding:5px 7px;border-radius:999px;background:rgba(255,255,255,.65);white-space:nowrap}
+  .today-booked{background:#e7f3ff;color:#0765af}.today-pending{background:#fff1da;color:#a76100}.today-completed{background:#e2f8ea;color:#087846}.today-noshow{background:#ffe7e3;color:#b24a28}
+  .today-open{background:#f8fbfd;color:#7890a1;border:1px dashed #cbdbe5}.today-standby{background:repeating-linear-gradient(135deg,#f4f6f8,#f4f6f8 7px,#eef2f4 7px,#eef2f4 14px);color:#8a99a5}.today-closed{background:#ffe7ea;color:#b53d49}.today-manual{background:#eef3f7;color:#526778}
+  .today-free-cell{align-items:center;flex-direction:row;gap:6px}
+  .today-book-action{border:0;background:transparent;color:#6f8495;font:inherit;font-size:12px;font-weight:850;cursor:pointer;padding:4px 7px;border-radius:7px}.today-book-action:hover{background:#eaf4fb;color:#075a9a}
+  .today-table-note{margin-top:4px;color:var(--m);font-size:13px}
+  .day-manage-head{margin-bottom:14px}
+
+  .manual-book-link{border:0;background:rgba(255,255,255,.82);color:#075a9a;border-radius:8px;padding:6px 8px;font-size:11px;font-weight:900;cursor:pointer}
+  .manual-book-link:hover{background:#fff}
+  .booking-modal-backdrop{display:none;position:fixed;inset:0;background:rgba(6,25,44,.5);z-index:200;align-items:center;justify-content:center;padding:18px}
+  .booking-modal-backdrop.open{display:flex}
+  .booking-modal{width:min(620px,100%);max-height:min(760px,88vh);overflow:hidden;background:#fff;border-radius:20px;box-shadow:0 24px 70px rgba(4,22,40,.28);display:flex;flex-direction:column}
+  .booking-modal-head{display:flex;justify-content:space-between;align-items:center;padding:18px 20px;border-bottom:1px solid var(--l)}
+  .booking-modal-head h2{margin:0}.booking-modal-close{border:0;background:#eef3f7;width:36px;height:36px;border-radius:50%;font-size:20px;cursor:pointer;color:var(--n)}
+  .booking-modal-body{padding:18px 20px;overflow:auto}.booking-search{width:100%;padding:13px 14px;border-radius:12px;margin-bottom:12px}
+  .student-pick-list{display:flex;flex-direction:column;gap:8px}.student-pick{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid var(--l);border-radius:12px;padding:11px 12px;background:#fff}.student-pick:hover{border-color:#a6d6ef;background:#f8fcff}.student-pick-name{font-weight:950}.student-pick-meta{font-size:11px;color:var(--m);margin-top:2px}.student-pick button{white-space:nowrap}
+  .no-search-results{display:none;text-align:center;color:var(--m);padding:22px}
+  .booking-edit-btn{border:0;background:rgba(255,255,255,.84);color:inherit;border-radius:8px;padding:5px 8px;font-size:10px;font-weight:950;cursor:pointer;box-shadow:0 1px 0 rgba(11,35,64,.06)}
+  .booking-edit-btn:hover{background:#fff}
+  .today-booking-cell .booking-edit-btn{position:absolute;right:8px;bottom:6px}
+  .today-booking-cell{padding-bottom:28px}
+  .edit-booking-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .edit-booking-grid .full{grid-column:1/-1}
+  .edit-booking-grid label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:900;color:var(--n)}
+  .edit-booking-grid input,.edit-booking-grid select{width:100%;padding:11px 12px;border:1px solid var(--l);border-radius:11px;background:#fff;color:var(--n)}
+  .edit-student-picked{margin-top:5px;font-size:11px;color:var(--m);font-weight:750}
+  .edit-actions{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-top:16px;padding-top:14px;border-top:1px solid var(--l)}
+  .edit-actions .save-side{display:flex;gap:8px;margin-left:auto}
+  .danger-solid{border:0;background:#d74752;color:#fff;border-radius:10px;padding:10px 13px;font-weight:900;cursor:pointer}
+  .danger-solid:hover{background:#c83743}
+  @media(max-width:620px){.edit-booking-grid{grid-template-columns:1fr}.edit-booking-grid .full{grid-column:auto}.edit-actions{align-items:stretch;flex-direction:column}.edit-actions .save-side{width:100%;margin-left:0}.edit-actions .save-side .btn,.edit-actions .danger-solid{flex:1}}
+
+  @media(max-width:1280px){.today-metrics{grid-template-columns:repeat(3,1fr)}.today-instructors{grid-template-columns:1fr}}
+  @media(max-width:900px){
+    .admin-shell{grid-template-columns:1fr}.admin-sidebar{position:sticky;top:0;height:auto;padding:8px 10px;display:block;overflow-x:auto;white-space:nowrap}.admin-brand{display:none}.admin-side-nav{display:flex;flex-direction:row;gap:6px;min-width:max-content}.admin-tab{width:auto;padding:10px 12px}.admin-side-spacer,.admin-logout{display:none}.admin-main{padding:14px}.dashboard-top h1{font-size:30px}.today-schedule th,.today-schedule td{min-width:220px}
+  }
+  @media(max-width:620px){.today-metrics{grid-template-columns:repeat(2,1fr)}.today-metric{min-height:94px;padding:11px}.today-metric b{font-size:24px}.dashboard-top h1{font-size:28px}}
+
+
+.shared-student-list{display:flex;flex-direction:column;gap:4px;margin:7px 0}.shared-student-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 7px;border-radius:8px;background:rgba(255,255,255,.5);font-size:12px}.mini-state{font-size:9px;font-weight:800;border-radius:999px;padding:2px 6px;white-space:nowrap}.mini-state.booked{background:#d9edff;color:#0064a8}.mini-state.pending{background:#fff0c9;color:#8a5b00}.mini-state.completed{background:#d9f7e4;color:#0a7c3a}.mini-state.noshow{background:#ffe0dd;color:#a62d24}.shared-booking-card{padding-top:10px;padding-bottom:9px}
+.admin-sidebar-search{margin:-4px 2px 0}.admin-sidebar-search input{width:100%;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.09);color:#fff;border-radius:10px;padding:10px 11px;font-size:12px}.admin-sidebar-search input::placeholder{color:#c7d6e2}.side-badge{float:right;background:#ff6b5c;color:#fff;border-radius:999px;padding:1px 6px;font-size:10px}
+</style>
+
+<div class="admin-shell">
+  <aside class="admin-sidebar">
+    <div class="admin-brand"><img src="{{ url_for('static', filename='img/kiteclub-logo.png') }}" alt="KiteClub"></div>
+    <form class="admin-sidebar-search" action="{{url_for('admin_global_search')}}" method="get"><input type="search" name="q" placeholder="Αναζήτηση..."></form>
+    <nav class="admin-side-nav" aria-label="Admin sections">
+      <button class="admin-tab active" type="button" data-tab="today">▣ &nbsp; Σήμερα</button>
+      <button class="admin-tab" type="button" data-tab="day">▦ &nbsp; Ημερολόγιο</button>
+      <button class="admin-tab" type="button" data-tab="students">♙ &nbsp; Μαθητές</button>
+      <button class="admin-tab" type="button" data-tab="instructors">♟ &nbsp; Instructors</button>
+      <a class="admin-tab" href="{{url_for('admin_bookings')}}" style="text-decoration:none;display:block">▤ &nbsp; Κρατήσεις</a>
+      <a class="admin-tab" href="{{url_for('admin_packages')}}" style="text-decoration:none;display:block">▣ &nbsp; Πακέτα</a>
+      <a class="admin-tab" href="{{url_for('admin_reports')}}" style="text-decoration:none;display:block">▥ &nbsp; Αναφορές</a>
+      <a class="admin-tab" href="{{url_for('admin_finance')}}" style="text-decoration:none;display:block">€ &nbsp; Οικονομικά</a>
+      <a class="admin-tab" href="{{url_for('admin_messages')}}" style="text-decoration:none;display:block">✉ &nbsp; Μηνύματα{% if message_unread_count %} <span class="side-badge">{{message_unread_count}}</span>{% endif %}</a>
+    </nav>
+    <div class="admin-side-spacer"></div>
+    <a class="admin-logout" href="{{url_for('logout')}}">↪ &nbsp; Αποσύνδεση</a>
+  </aside>
+
+  <main class="admin-main">
+    <section class="tab-panel active" id="tab-today">
+      <div class="dashboard-top">
+        <div>
+          <h1>Σήμερα</h1>
+          <div class="dashboard-date">{{today_date|gr_long_date}} · {{today_date|gr_date}}{% if today_spot %} · {{today_spot.name}}{% endif %}</div>
+        </div>
+        <a class="btn alt" href="{{url_for('admin',date=today_date|gr_date)}}#day">▦ Διαχείριση σημερινής ημέρας</a>
+      </div>
+
+      <div class="today-metrics">
+        <div class="today-metric blue"><span class="metric-icon">♟</span><div><b>{{today_summary.students}}</b><div class="metric-copy">Μαθητές σήμερα · {{today_summary.lessons}} κρατήσεις</div></div></div>
+        <div class="today-metric green"><span class="metric-icon">◷</span><div><b>{{today_summary.hours|round(1)}}h</b><div class="metric-copy">Συνολικές booked ώρες</div></div></div>
+        <div class="today-metric purple"><span class="metric-icon">✓</span><div><b>{{today_summary.completed}}</b><div class="metric-copy">Completed</div></div></div>
+        <div class="today-metric orange"><span class="metric-icon">⌛</span><div><b>{{today_summary.pending}}</b><div class="metric-copy">Pending payment</div></div></div>
+        <div class="today-metric red"><span class="metric-icon">×</span><div><b>{{today_summary.no_show}}</b><div class="metric-copy">No-show</div></div></div>
+        <div class="today-metric gray"><span class="metric-icon">⊘</span><div><b>{{today_summary.cancelled}}</b><div class="metric-copy">Cancelled</div></div></div>
+      </div>
+
+      <div class="card">
+        <div class="spread">
+          <div><h2 style="margin-bottom:4px">Κατάσταση Instructors Σήμερα</h2><div class="muted">Η σειρά ακολουθεί τα Slot 1 → Slot 2 → Slot 3 της ημέρας.</div></div>
+          <a class="btn alt" href="{{url_for('admin',date=today_date|gr_date)}}#day">Ρυθμίσεις ημέρας</a>
+        </div>
+        <br>
+        {% if today_columns %}
+        <div class="today-instructors">
+          {% for col in today_columns %}
+            {% set act=today_activation_by_column.get(col.column_no) %}
+            <div class="today-inst-card {{'active' if act and act.active else 'standby'}}">
+              <div class="today-inst-top">
+                <div class="today-inst-identity">
+                  <div class="today-inst-avatar">{% if col.instructor_photo %}<img src="{{url_for('static',filename=col.instructor_photo)}}" alt="">{% else %}{{col.instructor_name[:1]}}{% endif %}</div>
+                  <div><div class="today-inst-name">{{col.instructor_name}}{% if col.instructor_surname %} {{col.instructor_surname}}{% endif %}</div><div class="today-inst-sub">Slot {{col.column_no}}</div></div>
+                </div>
+                <span class="badge {{'ok' if act and act.active else 'off'}}">{{'ACTIVE' if act and act.active else 'STANDBY'}}</span>
+              </div>
+              {% if act %}
+                {% set pct = ([((act.booked_hours / act.threshold * 100) if act.threshold else 100),100]|min) %}
+                <div class="today-progress"><span style="width:{{pct|round(0)}}%"></span></div>
+                <div class="muted" style="font-size:12px"><b style="color:var(--n)">{{act.booked_hours|round(1)}} / {{act.threshold|round(1)}}h</b> booked{% if not act.active and act.previous_name %} · ανοίγει όταν {{act.previous_name}} φτάσει {{act.previous_threshold|round(1)}}h{% endif %}</div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+        {% else %}<div class="muted">Δεν έχουν οριστεί instructors για σήμερα.</div>{% endif %}
+      </div>
+
+      <div class="card">
+        <div class="spread">
+          <div>
+            <h2 style="margin-bottom:4px">Μαθήματα Σήμερα</h2>
+            <div class="today-table-note">Οι instructors είναι από πάνω, οι ώρες είναι δεξιά και οι κρατήσεις εμφανίζονται μέσα στον πίνακα.</div>
+          </div>
+          <div class="legend">
+            <span style="background:#e4f2ff;color:#075a9a">Booked</span>
+            <span style="background:#fff0d7;color:#a85f00">Pending</span>
+            <span style="background:#dff7e8;color:#087846">Completed</span>
+            <span style="background:#ffe8df;color:#ad4e20">No-show</span>
+          </div>
+        </div><br>
+
+        {% if today_hours and today_columns %}
+        <div class="today-schedule-wrap">
+          <table class="today-schedule">
+            <thead><tr>
+              {% for col in today_columns %}
+                {% set act=today_activation_by_column.get(col.column_no) %}
+                <th>
+                  <div class="today-head">
+                    <div class="today-head-avatar">{% if col.instructor_photo %}<img src="{{url_for('static',filename=col.instructor_photo)}}" alt="">{% else %}{{col.instructor_name[:1]}}{% endif %}</div>
+                    <div class="today-head-copy"><strong>{{col.instructor_name}}{% if col.instructor_surname %} {{col.instructor_surname}}{% endif %}</strong><small>Slot {{col.column_no}} · {{'ACTIVE' if act and act.active else 'STANDBY'}}</small></div>
+                  </div>
+                </th>
+              {% endfor %}
+              <th class="time-right">Ώρα</th>
+            </tr></thead>
+            <tbody>
+            {% for h in today_hours %}
+              <tr>
+                {% for col in today_columns %}
+                  {% set data=today_slot_lookup.get((h.start_time,col.instructor_id)) %}
+                  <td>
+                    {% if data %}
+                      {% if data.bookings %}
+                        {% set booking_list=data.bookings %}
+                        {% if booking_list|length > 1 %}
+                          <div class="today-booking-cell today-booked shared-booking-card" style="margin-bottom:6px">
+                            <strong>Booked · {{data.shared_count}} μαθητές</strong>
+                            <div class="shared-student-list">
+                              {% for bk in booking_list %}
+                                <div class="shared-student-row">
+                                  <span>{{bk.participant_names or (bk.student_name ~ (' ' ~ bk.student_surname if bk.student_surname else ''))}}</span>
+                                  {% if bk.booking_status=='completed' %}<small class="mini-state completed">Completed</small>
+                                  {% elif bk.booking_status=='no_show' %}<small class="mini-state noshow">No-show</small>
+                                  {% elif bk.booking_status=='pending_payment' or bk.payment_status=='pending' %}<small class="mini-state pending">Pending</small>
+                                  {% else %}<small class="mini-state booked">Booked</small>{% endif %}
+                                </div>
+                              {% endfor %}
+                            </div>
+                            <small>Κοινή ώρα instructor · 1.0h workload</small>
+                            <button type="button" class="booking-edit-btn" onclick='openGroupedEditBooking({{ booking_list|map(attribute="booking_id")|list|tojson }})'>Επεξεργασία</button>
+                          </div>
+                        {% else %}
+                          {% set bk=booking_list[0] %}
+                          {% set bs=bk.booking_status %}
+                          {% if bs=='completed' %}{% set cls='today-completed' %}{% set label='Completed' %}
+                          {% elif bs=='no_show' %}{% set cls='today-noshow' %}{% set label='No-show' %}
+                          {% elif bs=='pending_payment' or bk.payment_status=='pending' %}{% set cls='today-pending' %}{% set label='Pending payment' %}
+                          {% else %}{% set cls='today-booked' %}{% set label='Booked' %}{% endif %}
+                          <div class="today-booking-cell {{cls}}" style="margin-bottom:6px">
+                            <a href="{{url_for('admin_student_profile',student_id=bk.student_id)}}">{{bk.participant_names or (bk.student_name ~ (' ' ~ bk.student_surname if bk.student_surname else ''))}}</a>
+                            <small>{% if bk.participant_count and bk.participant_count>1 %}{{bk.participant_count}}P Group · {% else %}{{bk.student_level or 'Student'}} · {% endif %}{{bk.duration|round(1)}}h</small>
+                            <span class="today-status">{{label}}</span>
+                            {% if bs in ['confirmed','pending_payment'] %}
+                            <button type="button" class="booking-edit-btn" onclick="openEditBooking({{bk.booking_id}},{{bk.student_id}},'{{bk.booking_lesson_date}}','{{bk.booking_start_time}}',{{bk.booking_instructor_id}},{{bk.duration|float}},'{{'pending' if bs=='pending_payment' or bk.payment_status=='pending' else 'booked'}}')">Επεξεργασία</button>
+                            {% endif %}
+                          </div>
+                        {% endif %}
+                        {% if data.shared_count is defined and data.shared_count < 3 %}
+                          <button type="button" class="today-book-action" onclick="openBookingModal({{data.slot_id}})">+ Προσθήκη μαθητή</button>
+                        {% endif %}
+                      {% else %}
+                        {% if data.slot_status=='open' %}{% set cls='today-open' %}{% set label='Available' %}
+                        {% elif data.slot_status=='standby' %}{% set cls='today-standby' %}{% set label='Standby' %}
+                        {% elif data.slot_status=='closed' %}{% set cls='today-closed' %}{% set label='Closed' %}
+                        {% elif data.slot_status=='pending_payment' %}{% set cls='today-pending' %}{% set label='Pending payment' %}
+                        {% elif data.slot_status=='booked' %}{% set cls='today-booked' %}{% set label='Booked' %}
+                        {% else %}{% set cls='today-manual' %}{% set label=data.slot_status %}{% endif %}
+                        <div class="today-free-cell {{cls}}"><strong>{{label}}</strong>{% if data.slot_status=='open' %}<button type="button" class="today-book-action" onclick="openBookingModal({{data.slot_id}})">+ Κράτηση</button>{% endif %}</div>
+                      {% endif %}
+                    {% else %}
+                      <div class="today-free-cell today-standby"><strong>—</strong></div>
+                    {% endif %}
+                  </td>
+                {% endfor %}
+                <td class="time-right">{{h.start_time|hm24}}</td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+          <div class="muted">Δεν υπάρχει πρόγραμμα για σήμερα. <a href="{{url_for('admin',date=today_date|gr_date)}}#day"><b>Δημιούργησε το πρόγραμμα της ημέρας →</b></a></div>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-day">
+      <div class="card spread day-manage-head">
+        <div><h1>Διαχείριση ημέρας</h1><div class="muted">{{date|gr_date}}</div></div>
+        <div class="row">
+          <form method="get" class="row"><input class="date-gr" type="text" name="date" value="{{date|gr_date}}" placeholder="ΗΗ/ΜΜ/ΕΕΕΕ" pattern="\d{2}/\d{2}/\d{4}" required><button class="btn">Άνοιγμα</button></form>
+          <form method="post" action="{{url_for('manual_rebalance')}}"><input type="hidden" name="date" value="{{date}}"><button class="btn alt">Rebalance instructors</button></form>
+        </div>
+      </div>
+<div class="card week-card">
+  <div class="week-top">
+    <div>
+      <h2 style="margin-bottom:4px">Εβδομαδιαίο πρόγραμμα</h2>
+      <div class="muted">Κάνε κλικ σε μία ημέρα για να τη διαχειριστείς. Κάθε ημέρα έχει ένα spot.</div>
+    </div>
+    <div class="week-nav">
+      <a class="btn alt" href="{{url_for('admin',date=prev_week|gr_date)}}">‹</a>
+      <span class="badge off">{{week_start|gr_date}} – {{week_end|gr_date}}</span>
+      <a class="btn alt" href="{{url_for('admin',date=next_week|gr_date)}}">›</a>
+    </div>
+  </div>
+
+  <div class="week-grid">
+    {% for d in week_days %}
+    <a class="day-card {% if d.selected %}selected{% endif %}" href="{{url_for('admin',date=d.iso|gr_date)}}">
+      <div class="day-name">{{d.label}}</div>
+      <div class="day-date">{{d.iso|gr_date}}</div>
+      {% if d.spot %}
+        <span class="spot-pill">{{d.spot}}</span>
+      {% else %}
+        <div class="no-spot">Δεν έχει οριστεί spot</div>
+      {% endif %}
+    </a>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="card">
+  <h2>Προσθήκη Slots</h2>
+  <p class="muted">Δημιουργεί αυτόματα ωριαίες γραμμές. Μετά επιλέγεις εκπαιδευτή στην κεφαλίδα κάθε Slot.</p>
+  <form method="post" action="{{url_for('generate_hours')}}" class="schedule-row">
+    <div><label>Ημερομηνία</label><br><input class="date-gr" type="text" name="date" value="{{date|gr_date}}" placeholder="ΗΗ/ΜΜ/ΕΕΕΕ" pattern="\d{2}/\d{2}/\d{4}" required></div>
+    <div><label>Ώρα έναρξης (24ωρη)</label><br><select class="time24" name="start_time" required><option value="">--:--</option><option value="00:00">00:00</option>
+<option value="00:30">00:30</option>
+<option value="01:00">01:00</option>
+<option value="01:30">01:30</option>
+<option value="02:00">02:00</option>
+<option value="02:30">02:30</option>
+<option value="03:00">03:00</option>
+<option value="03:30">03:30</option>
+<option value="04:00">04:00</option>
+<option value="04:30">04:30</option>
+<option value="05:00">05:00</option>
+<option value="05:30">05:30</option>
+<option value="06:00">06:00</option>
+<option value="06:30">06:30</option>
+<option value="07:00">07:00</option>
+<option value="07:30">07:30</option>
+<option value="08:00">08:00</option>
+<option value="08:30">08:30</option>
+<option value="09:00">09:00</option>
+<option value="09:30">09:30</option>
+<option value="10:00">10:00</option>
+<option value="10:30">10:30</option>
+<option value="11:00">11:00</option>
+<option value="11:30">11:30</option>
+<option value="12:00">12:00</option>
+<option value="12:30">12:30</option>
+<option value="13:00">13:00</option>
+<option value="13:30">13:30</option>
+<option value="14:00">14:00</option>
+<option value="14:30">14:30</option>
+<option value="15:00">15:00</option>
+<option value="15:30">15:30</option>
+<option value="16:00">16:00</option>
+<option value="16:30">16:30</option>
+<option value="17:00">17:00</option>
+<option value="17:30">17:30</option>
+<option value="18:00">18:00</option>
+<option value="18:30">18:30</option>
+<option value="19:00">19:00</option>
+<option value="19:30">19:30</option>
+<option value="20:00">20:00</option>
+<option value="20:30">20:30</option>
+<option value="21:00">21:00</option>
+<option value="21:30">21:30</option>
+<option value="22:00">22:00</option>
+<option value="22:30">22:30</option>
+<option value="23:00">23:00</option>
+<option value="23:30">23:30</option></select></div>
+    <div><label>Ώρα λήξης (24ωρη)</label><br><select class="time24" name="end_time" required><option value="">--:--</option><option value="00:00">00:00</option>
+<option value="00:30">00:30</option>
+<option value="01:00">01:00</option>
+<option value="01:30">01:30</option>
+<option value="02:00">02:00</option>
+<option value="02:30">02:30</option>
+<option value="03:00">03:00</option>
+<option value="03:30">03:30</option>
+<option value="04:00">04:00</option>
+<option value="04:30">04:30</option>
+<option value="05:00">05:00</option>
+<option value="05:30">05:30</option>
+<option value="06:00">06:00</option>
+<option value="06:30">06:30</option>
+<option value="07:00">07:00</option>
+<option value="07:30">07:30</option>
+<option value="08:00">08:00</option>
+<option value="08:30">08:30</option>
+<option value="09:00">09:00</option>
+<option value="09:30">09:30</option>
+<option value="10:00">10:00</option>
+<option value="10:30">10:30</option>
+<option value="11:00">11:00</option>
+<option value="11:30">11:30</option>
+<option value="12:00">12:00</option>
+<option value="12:30">12:30</option>
+<option value="13:00">13:00</option>
+<option value="13:30">13:30</option>
+<option value="14:00">14:00</option>
+<option value="14:30">14:30</option>
+<option value="15:00">15:00</option>
+<option value="15:30">15:30</option>
+<option value="16:00">16:00</option>
+<option value="16:30">16:30</option>
+<option value="17:00">17:00</option>
+<option value="17:30">17:30</option>
+<option value="18:00">18:00</option>
+<option value="18:30">18:30</option>
+<option value="19:00">19:00</option>
+<option value="19:30">19:30</option>
+<option value="20:00">20:00</option>
+<option value="20:30">20:30</option>
+<option value="21:00">21:00</option>
+<option value="21:30">21:30</option>
+<option value="22:00">22:00</option>
+<option value="22:30">22:30</option>
+<option value="23:00">23:00</option>
+<option value="23:30">23:30</option></select></div>
+    <div><label>Spot</label><br><select name="spot_id" style="width:100%">{% for s in spots %}<option value="{{s.id}}" {% if day_spot and day_spot.spot_id==s.id %}selected{% endif %}>{{s.name}}</option>{% endfor %}</select></div>
+    <div class="wide"><button class="btn">Δημιουργία slots</button></div>
+  </form>
+</div>
+
+<div class="card">
+  <div class="spread">
+    <div>
+      <h2 style="margin-bottom:4px">Ημερήσιο timetable</h2>
+      <div class="muted">Ώρες αριστερά · Η σειρά Slot 1 → Slot 2 → Slot 3 είναι η σειρά ενεργοποίησης. Ο επόμενος ανοίγει αυτόματα όταν ο προηγούμενος φτάσει 4 booked ώρες. Μπορείς επίσης να κάνεις Manual Activate / Standby. Μόλις ένας instructor ανοίξει αυτόματα, παραμένει ενεργός ακόμη κι αν αργότερα ακυρωθεί κράτηση.</div>
+    </div>
+    <div class="legend">
+      <span style="background:#dff7e8;color:#087846">Available</span>
+      <span style="background:#e4f2ff;color:#075a9a">Booked</span>
+      <span style="background:#fff0d7;color:#a85f00">Pending payment</span>
+      <span style="background:#ffe4e7;color:#bb3744">Closed</span>
+      <span style="background:#eadfff;color:#6a22c9">Completed</span>
+      <span style="background:#fff0e3;color:#a34c00">No-show</span>
+    </div>
+  </div><br>
+
+  {% if day_hours %}
+  <div class="timetable-wrap">
+    <table class="timetable">
+      <thead>
+        <tr>
+          <th>Ώρα</th>
+          {% for col in day_columns %}
+          <th>
+            <div class="slot-head">
+              <strong>Slot {{col.column_no}}</strong>
+              {% if col.instructor_id %}<div class="tiny"><b>{{col.instructor_name}}{% if col.instructor_surname %} {{col.instructor_surname}}{% endif %}</b></div>{% endif %}
+              <form method="post" action="{{url_for('assign_day_column',column_no=col.column_no)}}">
+                <input type="hidden" name="date" value="{{date}}">
+                <select name="instructor_id" onchange="this.form.submit()">
+                  <option value="">— Χωρίς εκπαιδευτή —</option>
+                  {% for i in instructors %}
+                    {% set ns = namespace(used_elsewhere=false) %}
+                    {% for other in day_columns %}
+                      {% if other.column_no != col.column_no and other.instructor_id == i.id %}
+                        {% set ns.used_elsewhere = true %}
+                      {% endif %}
+                    {% endfor %}
+                    {% if not ns.used_elsewhere or col.instructor_id==i.id %}
+                      <option value="{{i.id}}" {% if col.instructor_id==i.id %}selected{% endif %}>{{i.name}}{% if i.surname %} {{i.surname}}{% endif %}</option>
+                    {% endif %}
+                  {% endfor %}
+                </select>
+              </form>
+              {% set act = activation_by_column.get(col.column_no) %}
+              {% if act %}
+              <div class="activation-line">
+                <span class="{{'activation-active' if act.active else 'activation-standby'}}">{{'ACTIVE' if act.active else 'STANDBY'}}</span>
+                <span class="activation-progress">{{act.booked_hours|round(1)}} / {{act.threshold|round(1)}}h booked</span>
+              </div>
+
+              {% if col.column_no == 1 %}
+                <div class="activation-note">BASE ACTIVE · πρώτος στη σειρά</div>
+              {% else %}
+                <div class="activation-controls">
+                  <form method="post" action="{{url_for('set_day_column_activation',column_no=col.column_no)}}">
+                    <input type="hidden" name="date" value="{{date}}">
+                    <input type="hidden" name="mode" value="auto">
+                    <button class="activation-btn {% if not act.activation_override %}selected-auto{% endif %}" type="submit">Auto</button>
+                  </form>
+                  <form method="post" action="{{url_for('set_day_column_activation',column_no=col.column_no)}}">
+                    <input type="hidden" name="date" value="{{date}}">
+                    <input type="hidden" name="mode" value="active">
+                    <button class="activation-btn {% if act.activation_override == 'active' %}selected-active{% endif %}" type="submit">Activate</button>
+                  </form>
+                  <form method="post" action="{{url_for('set_day_column_activation',column_no=col.column_no)}}">
+                    <input type="hidden" name="date" value="{{date}}">
+                    <input type="hidden" name="mode" value="standby">
+                    <button class="activation-btn {% if act.activation_override == 'standby' %}selected-standby{% endif %}" type="submit">Standby</button>
+                  </form>
+                </div>
+
+                {% if act.activation_override == 'active' %}
+                  <div class="activation-note">Manual Activate · ανοικτός ανεξάρτητα από τις 4h</div>
+                {% elif act.activation_override == 'standby' %}
+                  <div class="activation-note">Manual Standby · τα auto slots παραμένουν κλειστά</div>
+                {% elif act.activated_once %}
+                  <div class="activation-note">AUTO LOCKED · έχει ήδη ανοίξει και δεν ξανακλείνει από ακύρωση</div>
+                {% elif not act.active and act.previous_name %}
+                  <div class="activation-note">Ανοίγει όταν {{act.previous_name}} φτάσει {{act.previous_threshold|round(1)}}h · απομένουν {{act.remaining_hours|round(1)}}h</div>
+                {% else %}
+                  <div class="activation-note">Auto · ενεργοποιήθηκε από το όριο του προηγούμενου</div>
+                {% endif %}
+              {% endif %}
+              {% endif %}
+            </div>
+          </th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+      {% for h in day_hours %}
+        <tr>
+          <td>{{h.start_time|hm24}}</td>
+          {% for col in day_columns %}
+            <td>
+              {% if not col.instructor_id %}
+                <div class="cell cell-empty">—</div>
+              {% else %}
+                {% set data = slot_lookup.get((h.start_time,col.instructor_id)) %}
+                {% if data %}
+                  {% set s = data.slot %}
+                  {% set booking_list = data.bookings if data.bookings else [] %}
+                  {% if booking_list %}
+                    {% if booking_list|length > 1 %}
+                      {# v54: multiple independent bookings in the same instructor/hour are shown as ONE visual card. #}
+                      {% set active_count = booking_list|length %}
+                      <div class="cell cell-booked shared-booking-card" style="margin-bottom:6px">
+                        <strong>Booked · {{active_count}} μαθητές</strong>
+                        <div class="shared-student-list">
+                          {% for b in booking_list %}
+                            <div class="shared-student-row">
+                              <span>{{b.participant_names or (b.student_name ~ (' ' ~ b.student_surname if b.student_surname else ''))}}</span>
+                              {% if b.booking_status == 'completed' %}<small class="mini-state completed">Completed</small>
+                              {% elif b.booking_status == 'no_show' %}<small class="mini-state noshow">No-show</small>
+                              {% elif b.payment_status == 'pending' %}<small class="mini-state pending">Pending</small>
+                              {% else %}<small class="mini-state booked">Booked</small>{% endif %}
+                            </div>
+                          {% endfor %}
+                        </div>
+                        <div class="tiny">{{h.spot}}</div>
+                        <button type="button" class="booking-edit-btn" onclick='openGroupedEditBooking({{ booking_list|map(attribute="booking_id")|list|tojson }})'>Επεξεργασία</button>
+                      </div>
+                    {% else %}
+                      {% set b = booking_list[0] %}
+                      {% if b.booking_status == 'completed' %}
+                      <div class="cell cell-completed" style="margin-bottom:6px">
+                        <strong>Completed</strong>
+                        <div class="tiny">{{b.participant_names or (b.student_name ~ (' ' ~ b.student_surname if b.student_surname else ''))}}{% if b.participant_count and b.participant_count>1 %}<br><b>{{b.participant_count}}P Group</b>{% endif %}</div>
+                        <div class="tiny">{{h.spot}}</div>
+                      </div>
+                      {% elif b.booking_status == 'no_show' %}
+                      <div class="cell cell-noshow" style="margin-bottom:6px">
+                        <strong>No-show</strong>
+                        <div class="tiny">{{b.participant_names or (b.student_name ~ (' ' ~ b.student_surname if b.student_surname else ''))}}{% if b.participant_count and b.participant_count>1 %}<br><b>{{b.participant_count}}P Group</b>{% endif %}</div>
+                        <div class="tiny">{{h.spot}}</div>
+                      </div>
+                      {% elif b.payment_status == 'pending' %}
+                      <div class="cell cell-pending" style="margin-bottom:6px">
+                        <strong>Pending payment</strong>
+                        <div class="tiny">{{b.participant_names or (b.student_name ~ (' ' ~ b.student_surname if b.student_surname else ''))}}{% if b.participant_count and b.participant_count>1 %}<br><b>{{b.participant_count}}P Group</b>{% endif %}</div>
+                        <div class="tiny">{{h.spot}}</div>
+                        <button type="button" class="booking-edit-btn" onclick="openEditBooking({{b.booking_id}},{{b.student_id}},'{{b.booking_lesson_date}}','{{b.booking_start_time}}',{{b.booking_instructor_id}},{{b.duration|float}},'pending')">Επεξεργασία</button>
+                      </div>
+                      {% else %}
+                      <div class="cell cell-booked" style="margin-bottom:6px">
+                        <strong>Booked</strong>
+                        <div class="tiny">{{b.participant_names or (b.student_name ~ (' ' ~ b.student_surname if b.student_surname else ''))}}{% if b.participant_count and b.participant_count>1 %}<br><b>{{b.participant_count}}P Group</b>{% endif %}</div>
+                        <div class="tiny">{{h.spot}}</div>
+                        <button type="button" class="booking-edit-btn" onclick="openEditBooking({{b.booking_id}},{{b.student_id}},'{{b.booking_lesson_date}}','{{b.booking_start_time}}',{{b.booking_instructor_id}},{{b.duration|float}},'booked')">Επεξεργασία</button>
+                      </div>
+                      {% endif %}
+                    {% endif %}
+                    {% if data.shared_count < 3 %}
+                      <button type="button" class="manual-book-link" onclick="openBookingModal({{s.id}})">+ Πρόσθεσε μαθητή στην ίδια ώρα</button>
+                    {% endif %}
+                  {% else %}
+                    {% if s.status == 'closed' %}
+                    <div class="cell cell-closed">
+                      <strong>Closed</strong><div class="tiny">{{h.spot}}</div>
+                      <form method="post" action="{{url_for('manual_slot_state',slot_id=s.id)}}">
+                        <select class="status-select" name="status" data-current="{{s.status}}" onchange="handleSlotStatus(this, {{s.id}})">
+                          <option value="open">Available</option>
+                          <option value="standby">Standby (auto)</option>
+                          <option value="closed" selected>Closed</option>
+                          <option value="pending_payment">Pending payment</option>
+                          <option value="booked">Booked</option>
+                        </select>
+                      </form>
+                    </div>
+                    {% elif s.status == 'booked' %}
+                    <div class="cell cell-manual-booked">
+                      <strong>Booked</strong><div class="tiny">{{h.spot}}</div>
+                      <button type="button" class="manual-book-link" onclick="openBookingModal({{s.id}})">+ Πρόσθεσε μαθητή</button>
+                      <form method="post" action="{{url_for('manual_slot_state',slot_id=s.id)}}">
+                        <select class="status-select" name="status" data-current="{{s.status}}" onchange="handleSlotStatus(this, {{s.id}})">
+                          <option value="open">Available</option>
+                          <option value="standby">Standby (auto)</option>
+                          <option value="closed">Closed</option>
+                          <option value="pending_payment">Pending payment</option>
+                          <option value="booked" selected>Booked</option>
+                        </select>
+                      </form>
+                    </div>
+                    {% elif s.status == 'standby' %}
+                    <div class="cell cell-empty">
+                      <strong>Standby</strong><div class="tiny">{{h.spot}}</div>
+                      <form method="post" action="{{url_for('manual_slot_state',slot_id=s.id)}}">
+                        <select class="status-select" name="status" data-current="{{s.status}}" onchange="handleSlotStatus(this, {{s.id}})">
+                          <option value="standby" selected>Standby (auto)</option>
+                          <option value="open">Available</option>
+                          <option value="closed">Closed</option>
+                          <option value="pending_payment">Pending payment</option>
+                          <option value="booked">Booked</option>
+                        </select>
+                      </form>
+                    </div>
+                    {% elif s.status == 'pending_payment' %}
+                    <div class="cell cell-manual-pending">
+                      <strong>Pending payment</strong><div class="tiny">{{h.spot}}</div>
+                      <form method="post" action="{{url_for('manual_slot_state',slot_id=s.id)}}">
+                        <select class="status-select" name="status" data-current="{{s.status}}" onchange="handleSlotStatus(this, {{s.id}})">
+                          <option value="open">Available</option>
+                          <option value="standby">Standby (auto)</option>
+                          <option value="closed">Closed</option>
+                          <option value="pending_payment" selected>Pending payment</option>
+                          <option value="booked">Booked</option>
+                        </select>
+                      </form>
+                    </div>
+                    {% else %}
+                    <div class="cell cell-open">
+                      <strong>Available</strong><div class="tiny">{{h.spot}}</div>
+                      <form method="post" action="{{url_for('manual_slot_state',slot_id=s.id)}}">
+                        <select class="status-select" name="status" data-current="{{s.status}}" onchange="handleSlotStatus(this, {{s.id}})">
+                          <option value="open" selected>Available</option>
+                          <option value="standby">Standby (auto)</option>
+                          <option value="closed">Closed</option>
+                          <option value="pending_payment">Pending payment</option>
+                          <option value="booked">Booked</option>
+                        </select>
+                      </form>
+                    </div>
+                    {% endif %}
+                  {% endif %}
+                {% else %}
+                  <div class="cell cell-empty">—</div>
+                {% endif %}
+              {% endif %}
+            </td>
+          {% endfor %}
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <p class="muted">Δεν έχει δημιουργηθεί ωράριο για αυτή την ημέρα.</p>
+  {% endif %}
+</div>
+
+
+
+</section>
+
+<section class="tab-panel" id="tab-instructors">
+  <div class="tab-title">
+    <h2 style="margin-bottom:4px">Διαχείριση instructors</h2>
+    <div class="muted">Κατάσταση, completed ώρες και εβδομαδιαίο report εκπαιδευτών.</div>
+  </div>
+
+  <div class="card">
+    <div class="spread">
+      <div>
+        <h2 style="margin-bottom:4px">Διαθέσιμοι instructors</h2>
+        <div class="muted">Πρόσθεσε ή αφαίρεσε instructors από τη σχολή.</div>
+      </div>
+      <span class="badge off">{{instructors|length}} instructors</span>
+    </div>
+    <br>
+
+    <div class="instructor-manage-grid">
+      {% for i in instructors %}
+      <div class="instructor-manage-card">
+        <h3><a href="{{url_for('admin_instructor_profile',instructor_id=i.id)}}" style="color:inherit;text-decoration:none">{{i.name}}{% if i.surname %} {{i.surname}}{% endif %}</a></h3>
+        <div class="instructor-meta">{{i.email}}</div>
+        {% if i.phone %}<div class="instructor-meta">{{i.phone}}</div>{% endif %}
+        <div class="row" style="margin-top:9px;flex-wrap:wrap">
+          <span class="badge off">{{i.hourly_rate}}€/ώρα</span>
+          <span class="badge off">auto-open {{i.activation_threshold}}h</span>
+          {% set ia = activation_by_instructor.get(i.id) %}
+          {% if ia %}
+            <span class="badge {{'ok' if ia.active else 'off'}}">{{'ACTIVE' if ia.active else 'STANDBY'}}</span>
+            <span class="badge off">{{ia.booked_hours|round(1)}}h booked</span>
+          {% else %}
+            <span class="badge off">NOT SELECTED</span>
+          {% endif %}
+        </div>
+        <div class="row" style="margin-top:12px">
+          <a class="btn alt" href="{{url_for('admin_instructor_profile',instructor_id=i.id)}}">Προφίλ / Edit</a>
+          <form method="post" action="{{url_for('admin_delete_instructor',instructor_id=i.id)}}" onsubmit="return confirm('Να αφαιρεθεί ο instructor {{i.name}}{% if i.surname %} {{i.surname}}{% endif %};')">
+            <button class="btn danger-btn" type="submit">Αφαίρεση</button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <hr style="border:0;border-top:1px solid var(--l);margin:18px 0">
+
+    <h3>+ Νέος instructor</h3><br>
+    <form method="post" action="{{url_for('admin_add_instructor')}}" class="add-instructor-form">
+      <div>
+        <label>Όνομα</label>
+        <input name="name" placeholder="π.χ. Νίκος Κ." required>
+      </div>
+      <div>
+        <label>Email</label>
+        <input type="email" name="email" placeholder="nikos@kiteclub.gr" required>
+      </div>
+      <div>
+        <label>Τηλέφωνο</label>
+        <input name="phone" placeholder="69...">
+      </div>
+      <div>
+        <label>Password</label>
+        <input name="password" placeholder="teacher123" required>
+      </div>
+      <div>
+        <label>€/ώρα</label>
+        <input type="number" step="0.5" name="hourly_rate" value="15">
+      </div>
+      <div>
+        <label>Threshold</label>
+        <input type="number" step="0.5" name="activation_threshold" value="4">
+      </div>
+      <button class="btn" type="submit">+ Προσθήκη</button>
+    </form>
+  </div>
+
+<div class="cards">
+{% for i in instructors %}
+  <div class="metric">
+    <span class="muted">{{i.name}}{% if i.surname %} {{i.surname}}{% endif %}</span>
+    {% set ia = activation_by_instructor.get(i.id) %}
+    <b>{{ia.booked_hours|round(1) if ia else 0}}h booked</b>
+    <small>{{i.done_hours}} completed · auto-open {{i.activation_threshold}}h</small><br>
+    {% if ia %}
+      <span class="badge {{'ok' if ia.active else 'off'}}">{{'ACTIVE' if ia.active else 'STANDBY'}}</span>
+    {% else %}
+      <span class="badge off">NOT SELECTED</span>
+    {% endif %}
+  </div>
+{% endfor %}
+</div><br><div class="card">
+  <div class="spread">
+    <div>
+      <h2 style="margin-bottom:4px">Instructor Report</h2>
+      <div class="muted">Completed μαθήματα και ώρες ανά εκπαιδευτή για την επιλεγμένη εβδομάδα.</div>
+    </div>
+    <span class="badge off">{{report_week_start|gr_date}} – {{report_week_end|gr_date}}</span>
+  </div>
+  <br>
+
+  <div class="report-wrap">
+    <table class="report-table compact-report">
+      <thead>
+        <tr>
+          <th>Εκπαιδευτής</th>
+          {% for d in instructor_report[0].daily if instructor_report %}
+            <th>{{d.label}}<br><small>{{d.iso|gr_date}}</small></th>
+          {% endfor %}
+          <th>Μαθήματα</th>
+          <th>Ώρες</th>
+          <th>€/ώρα</th>
+          <th>Σύνολο</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for r in instructor_report %}
+        <tr>
+          <td>{{r.name}}</td>
+          {% for d in r.daily %}
+            <td>
+              {% if d.hours %}
+                <b>{{d.hours}}h</b> <small>({{d.lessons}})</small>
+              {% else %}
+                <span class="muted">—</span>
+              {% endif %}
+            </td>
+          {% endfor %}
+          <td><b>{{r.total_lessons}}</b></td>
+          <td class="report-total">{{r.total_hours}}h</td>
+          <td>{{r.hourly_rate}}€</td>
+          <td><span class="pay-badge">{{"%.2f"|format(r.total_pay)}}€</span></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+</section>
+
+<section class="tab-panel" id="tab-students">
+  <div class="tab-title">
+    <h2 style="margin-bottom:4px">Διαχείριση μαθητών</h2>
+    <div class="muted">Μαθητές, credits και πρόσφατες κρατήσεις.</div>
+  </div>
+<div class="card">
+  <div class="spread" style="gap:12px;align-items:end;flex-wrap:wrap;margin-bottom:12px">
+    <div><h2 style="margin-bottom:3px">Μαθητές & Credits</h2><div class="muted">Αλφαβητική σειρά βάσει ονόματος.</div></div>
+    <div style="min-width:280px;max-width:440px;flex:1"><label style="font-size:11px;font-weight:900">Αναζήτηση μαθητή</label><input id="adminStudentSearch" type="search" placeholder="Όνομα, επώνυμο, Student ID, email ή τηλέφωνο" style="width:100%"></div>
+  </div>
+  <form method="post" action="{{url_for('add_student')}}" class="row" style="margin-bottom:14px">
+    <input name="name" placeholder="Όνομα" required>
+    <input type="email" name="email" placeholder="Email" required>
+    <input name="phone" placeholder="Τηλέφωνο">
+    <select name="level"><option>Beginner</option><option>Intermediate</option><option>Advanced</option></select>
+    <select name="initial_service" title="Αρχική υπηρεσία">
+      <option value="none">Χωρίς αρχική υπηρεσία</option>
+      <option value="1h">1 ώρα · 60€</option>
+      <option value="2h">2 ώρες · 110€</option>
+      <option value="8h">Πακέτο 8 ωρών · 360€</option>
+    </select>
+    <input type="number" step="0.5" name="credits" value="0" style="width:90px" title="Χειροκίνητα αρχικά credits">
+    <input name="password" value="student123" style="width:130px">
+    <button class="btn">+ Νέος μαθητής</button>
+  </form>
+  <div id="adminStudentList">
+  {% for s in students %}
+  <div class="item spread admin-student-row" data-search="{{(s.name ~ ' ' ~ (s.surname or '') ~ ' ' ~ (s.student_code or '') ~ ' ' ~ s.email ~ ' ' ~ (s.phone or ''))|lower}}">
+    <div><b><a href="{{url_for('admin_student_profile',student_id=s.id)}}" style="color:inherit">{{s.name}}{% if s.surname %} {{s.surname}}{% endif %}</a></b><div class="muted">{{s.student_code}} · {{s.email}} · {{s.level}} · {{'Private' if s.lesson_type=='private' else ('2P Group' if s.lesson_type=='2p' else '3P Group')}}</div></div>
+    <div class="row">
+      <span class="badge ok">{{s.credits}} ώρες</span>
+      <form method="post" action="{{url_for('adjust_credits',student_id=s.id)}}" class="row">
+        <input type="number" step="0.5" name="amount" placeholder="+/- ώρες" style="width:90px" required>
+        <input name="note" placeholder="Σημείωση">
+        <button class="btn alt">Update credits</button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+  <div id="adminStudentNoResults" class="muted" style="display:none;padding:18px 4px">Δεν βρέθηκε μαθητής.</div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Πρόσφατες κρατήσεις</h2>
+  {% for b in bookings %}
+  <div class="item spread">
+    <div><b>{{b.participant_names or (b.student ~ (' ' ~ b.student_surname if b.student_surname else ''))}}</b> — {{b.instructor}}{% if b.instructor_surname %} {{b.instructor_surname}}{% endif %} · {{b.start_time|hm24}}
+      <div class="muted">{{b.duration}} ώρες{% if b.participant_count and b.participant_count>1 %} · {{b.participant_count}}P Group{% endif %} · {{b.amount}}€</div>
+    </div>
+    <div class="row">
+      <span class="badge {{'off' if b.status=='no_show' else ('ok' if b.status in ['confirmed','completed'] else 'wait')}}">{{'No-show' if b.status=='no_show' else b.status}}</span>
+      {% if b.payment_status=='pending' %}
+      <form method="post" action="{{url_for('payment_received',booking_id=b.id)}}">
+        <button class="btn">Payment Received</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+  {% else %}
+  <p class="muted">Καμία κράτηση.</p>
+  {% endfor %}
+</div>
+
+</section>
+
+
+    <div class="booking-modal-backdrop" id="bookingModal" aria-hidden="true">
+      <div class="booking-modal" role="dialog" aria-modal="true" aria-labelledby="bookingModalTitle">
+        <div class="booking-modal-head">
+          <div><h2 id="bookingModalTitle">Προσθήκη μαθητή στην ώρα</h2><div class="muted" style="font-size:12px;margin-top:3px">Αναζήτησε μαθητή. Ο Admin μπορεί να προσθέσει έως 3 μαθητές στην ίδια ώρα.</div></div>
+          <button class="booking-modal-close" type="button" onclick="closeBookingModal()">×</button>
+        </div>
+        <div class="booking-modal-body">
+          <input id="studentBookingSearch" class="booking-search" type="search" placeholder="Αναζήτηση μαθητή…" autocomplete="off">
+          <div class="student-pick-list" id="studentPickList">
+            {% for s in students %}
+            <form class="student-pick" method="post" data-search="{{(s.student_code ~ ' ' ~ s.name ~ ' ' ~ (s.surname or '') ~ ' ' ~ s.email ~ ' ' ~ (s.phone or ''))|lower}}">
+              <div><div class="student-pick-name">{{s.name}}{% if s.surname %} {{s.surname}}{% endif %}</div><div class="student-pick-meta">{{s.student_code}} · {{'Private' if s.lesson_type=='private' else ('2P Group' if s.lesson_type=='2p' else '3P Group')}} · {{s.level}} · {{s.credits}} ώρες · {{s.email}}{% if s.phone %} · {{s.phone}}{% endif %}</div></div>
+              <input type="hidden" name="student_id" value="{{s.id}}">
+              <button class="btn" type="submit">Επιλογή</button>
+            </form>
+            {% endfor %}
+          </div>
+          <div class="no-search-results" id="studentNoResults">Δεν βρέθηκε μαθητής.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="booking-modal-backdrop" id="editBookingModal" aria-hidden="true">
+      <div class="booking-modal" role="dialog" aria-modal="true" aria-labelledby="editBookingTitle">
+        <div class="booking-modal-head">
+          <div><h2 id="editBookingTitle">Επεξεργασία κράτησης</h2><div class="muted" style="font-size:12px;margin-top:3px">Άλλαξε μαθητή, instructor, ώρα, διάρκεια ή κατάσταση.</div></div>
+          <button class="booking-modal-close" type="button" onclick="closeEditBookingModal()">×</button>
+        </div>
+        <div class="booking-modal-body">
+          <form id="editBookingForm" method="post">
+            <div class="edit-booking-grid">
+              <label class="full">Ημερομηνία
+                <input id="editBookingDate" type="text" readonly>
+              </label>
+              <label class="full">Μαθητής από αυτή την κράτηση
+                <select id="editBookingMemberSelect"></select>
+                <span class="edit-student-picked" id="editStudentPicked"></span>
+              </label>
+              <label class="full">Αλλαγή μαθητή <span class="muted" style="font-weight:400">(προαιρετικό)</span>
+                <input id="editStudentSearchInput" type="search" list="editStudentDatalist" placeholder="Άφησέ το όπως είναι ή αναζήτησε άλλον μαθητή" autocomplete="off">
+                <input id="editStudentId" type="hidden" name="student_id">
+              </label>
+              <datalist id="editStudentDatalist">
+                {% for s in students %}
+                <option value="{{s.name}}{% if s.surname %} {{s.surname}}{% endif %} · {{s.email}}"></option>
+                {% endfor %}
+              </datalist>
+              <label>Instructor
+                <select id="editInstructorId" name="instructor_id" required></select>
+              </label>
+              <label>Ώρα έναρξης
+                <select id="editStartTime" name="start_time" required></select>
+              </label>
+              <label>Διάρκεια
+                <select id="editDuration" name="duration">
+                  <option value="1">1 ώρα</option>
+                  <option value="2">2 ώρες</option>
+                </select>
+              </label>
+              <label>Κατάσταση
+                <select id="editBookingState" name="booking_state">
+                  <option value="booked">Booked</option>
+                  <option value="pending">Pending payment</option>
+                </select>
+              </label>
+            </div>
+            <div class="edit-actions">
+              <button class="danger-solid" type="button" onclick="cancelEditedBooking()">Ακύρωση κράτησης</button>
+              <div class="save-side">
+                <button class="btn alt" type="button" onclick="closeEditBookingModal()">Κλείσιμο</button>
+                <button class="btn" type="submit">Αποθήκευση αλλαγών</button>
+              </div>
+            </div>
+          </form>
+          <form id="cancelBookingForm" method="post" style="display:none"></form>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+(function(){
+  const buttons=[...document.querySelectorAll('.admin-tab[data-tab]')];
+  const panels=[...document.querySelectorAll('.tab-panel')];
+
+  function activate(name){
+    buttons.forEach(b=>b.classList.toggle('active', b.dataset.tab===name));
+    panels.forEach(p=>p.classList.toggle('active', p.id==='tab-'+name));
+    try{ localStorage.setItem('kiteclubAdminTabV45',name); }catch(e){}
+  }
+
+  buttons.forEach(b=>b.addEventListener('click',()=>activate(b.dataset.tab)));
+
+  let saved='today';
+  try{ saved=localStorage.getItem('kiteclubAdminTabV45') || 'today'; }catch(e){}
+  if(location.hash==='#today') saved='today';
+  if(location.hash==='#instructors') saved='instructors';
+  if(location.hash==='#students') saved='students';
+  if(location.hash==='#day') saved='day';
+  if(!buttons.some(b=>b.dataset.tab===saved)) saved='today';
+  activate(saved);
+
+  const modal=document.getElementById('bookingModal');
+  const adminStudentSearch=document.getElementById('adminStudentSearch');
+  const adminStudentRows=[...document.querySelectorAll('.admin-student-row')];
+  const adminStudentNoResults=document.getElementById('adminStudentNoResults');
+  if(adminStudentSearch){adminStudentSearch.addEventListener('input',()=>{const q=adminStudentSearch.value.trim().toLocaleLowerCase('el-GR');let visible=0;adminStudentRows.forEach(r=>{const ok=!q || (r.dataset.search||'').toLocaleLowerCase('el-GR').includes(q);r.style.display=ok?'':'none';if(ok)visible++;});if(adminStudentNoResults)adminStudentNoResults.style.display=visible?'none':'block';});}
+
+  const search=document.getElementById('studentBookingSearch');
+  const pickForms=[...document.querySelectorAll('.student-pick')];
+  const noResults=document.getElementById('studentNoResults');
+  let activeSlotId=null;
+
+  window.openBookingModal=function(slotId){
+    activeSlotId=slotId;
+    pickForms.forEach(f=>f.action='/admin/slot/'+slotId+'/book-student');
+    if(search){search.value='';}
+    pickForms.forEach(f=>f.style.display='flex');
+    if(noResults) noResults.style.display='none';
+    modal.classList.add('open'); modal.setAttribute('aria-hidden','false');
+    setTimeout(()=>search && search.focus(),30);
+  };
+  window.closeBookingModal=function(){
+    modal.classList.remove('open'); modal.setAttribute('aria-hidden','true'); activeSlotId=null;
+    document.querySelectorAll('.status-select').forEach(s=>{ if(s.value==='booked' && s.dataset.current!=='booked') s.value=s.dataset.current || 'open'; });
+  };
+  window.handleSlotStatus=function(select,slotId){
+    if(select.value==='booked'){
+      openBookingModal(slotId);
+      return;
+    }
+    select.form.submit();
+  };
+  if(search){
+    search.addEventListener('input',()=>{
+      const q=search.value.trim().toLowerCase(); let visible=0;
+      pickForms.forEach(f=>{ const show=!q || (f.dataset.search||'').includes(q); f.style.display=show?'flex':'none'; if(show) visible++; });
+      if(noResults) noResults.style.display=visible?'none':'block';
+    });
+  }
+  if(modal){ modal.addEventListener('click',e=>{ if(e.target===modal) closeBookingModal(); }); }
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape' && modal && modal.classList.contains('open')) closeBookingModal(); });
+
+  // v46 — Edit / Move / Cancel active bookings from the Admin timetable.
+  const editModal=document.getElementById('editBookingModal');
+  const editForm=document.getElementById('editBookingForm');
+  const cancelForm=document.getElementById('cancelBookingForm');
+  const editDate=document.getElementById('editBookingDate');
+  const editStudentSearch=document.getElementById('editStudentSearchInput');
+  const editStudentId=document.getElementById('editStudentId');
+  const editStudentPicked=document.getElementById('editStudentPicked');
+  const editInstructor=document.getElementById('editInstructorId');
+  const editTime=document.getElementById('editStartTime');
+  const editDuration=document.getElementById('editDuration');
+  const editState=document.getElementById('editBookingState');
+  const scheduleData={{edit_schedule_data|tojson}};
+  const editStudents=[
+    {% for s in students %}
+    {id:{{s.id}},display:{{(s.student_code ~ ' · ' ~ s.name ~ (' ' ~ s.surname if s.surname else '') ~ ' · ' ~ s.email)|tojson}},search:{{(s.student_code ~ ' ' ~ s.name ~ ' ' ~ (s.surname or '') ~ ' ' ~ s.email ~ ' ' ~ (s.phone or ''))|lower|tojson}}}{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ];
+  const bookingEditData={
+    {% for t, row in timetable.items() %}{% for iid, data in row.items() %}{% if data.bookings %}{% for b in data.bookings %}
+    {{b.booking_id}}:{bookingId:{{b.booking_id}},studentId:{{b.student_id}},studentName:{{(b.participant_names or (b.student_name ~ (' ' ~ b.student_surname if b.student_surname else '')))|tojson}},lessonDate:{{b.booking_lesson_date|tojson}},startTime:{{b.booking_start_time|tojson}},instructorId:{{b.booking_instructor_id}},duration:{{b.duration|float}},state:{{('pending' if b.booking_status=='pending_payment' or b.payment_status=='pending' else 'booked')|tojson}}},
+    {% endfor %}{% endif %}{% endfor %}{% endfor %}
+  };
+  const editMemberSelect=document.getElementById('editBookingMemberSelect');
+  let groupedBookingIds=[];
+  let editingBookingId=null;
+
+  function displayDate(iso){
+    const p=(iso||'').split('-'); return p.length===3 ? p[2]+'/'+p[1]+'/'+p[0] : iso;
+  }
+  function fillSelect(select,items,value){
+    select.innerHTML='';
+    items.forEach(item=>{
+      const opt=document.createElement('option');
+      if(typeof item==='object'){ opt.value=String(item.id); opt.textContent=item.name; }
+      else { opt.value=String(item); opt.textContent=String(item); }
+      if(String(opt.value)===String(value)) opt.selected=true;
+      select.appendChild(opt);
+    });
+  }
+  function resolveEditStudent(){
+    const raw=(editStudentSearch.value||'').trim();
+    const q=raw.toLowerCase();
+    let found=editStudents.find(s=>s.display.toLowerCase()===q);
+    if(!found && q){
+      const matches=editStudents.filter(s=>s.search.includes(q));
+      if(matches.length===1) found=matches[0];
+    }
+    editStudentId.value=found ? String(found.id) : '';
+    editStudentPicked.textContent=found ? 'Επιλεγμένος μαθητής: '+found.display : (raw ? 'Επίλεξε μαθητή από τις προτάσεις.' : '');
+    return found;
+  }
+
+  function loadBookingForEdit(data){
+    if(!data) return;
+    editingBookingId=data.bookingId;
+    const day=scheduleData[data.lessonDate] || {instructors:[],times:[]};
+    fillSelect(editInstructor,day.instructors,data.instructorId);
+    fillSelect(editTime,day.times,data.startTime);
+    editDate.value=displayDate(data.lessonDate);
+    editDuration.value=String(Number(data.duration)>=2 ? 2 : 1);
+    editState.value=data.state==='pending' ? 'pending' : 'booked';
+    const st=editStudents.find(s=>String(s.id)===String(data.studentId));
+    editStudentSearch.value=st ? st.display : '';
+    editStudentId.value=st ? String(st.id) : String(data.studentId||'');
+    editStudentPicked.textContent='Επεξεργάζεσαι: '+(data.studentName || (st ? st.display : 'μαθητή'));
+    editForm.action='/admin/booking/'+data.bookingId+'/edit';
+    cancelForm.action='/admin/booking/'+data.bookingId+'/cancel';
+  }
+  function populateMemberSelect(ids,selectedId){
+    groupedBookingIds=(ids||[]).map(Number).filter(Boolean);
+    editMemberSelect.innerHTML='';
+    groupedBookingIds.forEach(id=>{
+      const d=bookingEditData[id]; if(!d) return;
+      const opt=document.createElement('option'); opt.value=String(id); opt.textContent=d.studentName;
+      if(String(id)===String(selectedId)) opt.selected=true;
+      editMemberSelect.appendChild(opt);
+    });
+    editMemberSelect.disabled=editMemberSelect.options.length<=1;
+  }
+  window.openGroupedEditBooking=function(ids){
+    const clean=(ids||[]).map(Number).filter(id=>bookingEditData[id]);
+    if(!clean.length) return;
+    populateMemberSelect(clean,clean[0]);
+    loadBookingForEdit(bookingEditData[clean[0]]);
+    editModal.classList.add('open'); editModal.setAttribute('aria-hidden','false');
+    setTimeout(()=>editMemberSelect && editMemberSelect.focus(),30);
+  };
+  window.openEditBooking=function(bookingId,studentId,lessonDate,startTime,instructorId,duration,state){
+    const data=bookingEditData[bookingId] || {bookingId,studentId,studentName:'',lessonDate,startTime,instructorId,duration,state};
+    populateMemberSelect([bookingId],bookingId);
+    loadBookingForEdit(data);
+    editModal.classList.add('open'); editModal.setAttribute('aria-hidden','false');
+    setTimeout(()=>editMemberSelect && editMemberSelect.focus(),30);
+  };
+  if(editMemberSelect){
+    editMemberSelect.addEventListener('change',()=>{
+      const d=bookingEditData[Number(editMemberSelect.value)];
+      if(d) loadBookingForEdit(d);
+    });
+  }
+  window.closeEditBookingModal=function(){
+    editModal.classList.remove('open'); editModal.setAttribute('aria-hidden','true'); editingBookingId=null;
+  };
+  window.cancelEditedBooking=function(){
+    if(!editingBookingId) return;
+    if(confirm('Να ακυρωθεί η κράτηση; Αν είχε χρεωθεί από πακέτο, οι ώρες θα επιστραφούν στον μαθητή.')) cancelForm.submit();
+  };
+  if(editStudentSearch){
+    editStudentSearch.addEventListener('input',resolveEditStudent);
+    editStudentSearch.addEventListener('change',resolveEditStudent);
+  }
+  if(editForm){
+    editForm.addEventListener('submit',e=>{
+      if(!resolveEditStudent()){ e.preventDefault(); alert('Επίλεξε μαθητή από την αναζήτηση.'); }
+    });
+  }
+  if(editModal){ editModal.addEventListener('click',e=>{ if(e.target===editModal) closeEditBookingModal(); }); }
+
+  // If the backend redirected after selecting Booked, reopen the picker for that slot.
+  try{
+    const params=new URLSearchParams(location.search); const bs=params.get('book_slot');
+    if(bs){ openBookingModal(parseInt(bs,10)); }
+  }catch(e){}
+
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape' && editModal && editModal.classList.contains('open')) closeEditBookingModal(); });
+})();
+</script>
+
+{% endblock %}

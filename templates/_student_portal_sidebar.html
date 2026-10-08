@@ -1,0 +1,12 @@
+<aside class="student-portal-sidebar">
+  <div class="sp-logo"><img src="{{ url_for('static', filename='img/kiteclub-logo.png') }}" alt="KiteClub"></div>
+  <div class="sp-menu" role="navigation" aria-label="Student navigation">
+    <a class="{% if student_nav=='home' %}active{% endif %}" href="{{ url_for('student_home') }}"><span>⌂</span> Αρχική</a>
+    <a class="{% if student_nav=='booking' %}active{% endif %}" href="{{ url_for('student') }}"><span>▣</span> Κρατήσεις</a>
+    <a class="{% if student_nav=='lessons' %}active{% endif %}" href="{{ url_for('student_profile') }}#lessons"><span>🎓</span> Τα μαθήματά μου</a>
+    <a class="{% if student_nav=='photos' %}active{% endif %}" href="{{ url_for('student_profile') }}#photos"><span>▧</span> Φωτογραφίες</a>
+    <a class="{% if student_nav=='profile' %}active{% endif %}" href="{{ url_for('student_profile') }}"><span>●</span> Προφίλ μου</a>
+    <a class="{% if student_nav=='messages' %}active{% endif %}" href="{{ url_for('student_messages') }}"><span>✉</span> Μηνύματα{% if message_unread_count %}<b class="sp-badge">{{message_unread_count}}</b>{% endif %}</a>
+  </div>
+  <a class="sp-logout" href="{{ url_for('logout') }}">↪ Αποσύνδεση</a>
+</aside>

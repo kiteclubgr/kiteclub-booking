@@ -1,0 +1,19 @@
+{% extends "base.html" %}{% block content %}
+<link rel="stylesheet" href="{{url_for('static',filename='instructor-v39.css')}}">
+{% include '_instructor_mobile_chrome.html' %}
+<div class="im-shell">
+  <div class="card"><h1>Οι μαθητές μου</h1><form method="get" style="margin-top:12px"><input class="im-search" name="q" value="{{q}}" placeholder="🔎 Αναζήτηση μαθητή..."></form></div>
+  <div class="card">
+    <div class="im-filters"><span class="im-chip active">Όλοι</span><span class="im-chip">Ενεργοί</span><span class="im-chip">Beginner</span><span class="im-chip">Intermediate</span><span class="im-chip">Advanced</span></div><br>
+    <div class="im-student-list">
+      {% for s in students %}
+      <a class="im-student" href="{{url_for('instructor_student_detail',student_id=s.id)}}">
+        <div class="im-avatar">{% if s.profile_photo %}<img src="{{url_for('static',filename=s.profile_photo)}}" alt="">{% else %}{{s.name[:1]}}{% endif %}</div>
+        <div class="im-student-main"><div class="im-name">{{s.name}}{% if s.surname %} {{s.surname}}{% endif %}</div><div class="im-meta">{{s.student_code}} · {{s.level or '—'}} · {{s.completed_hours}} completed ώρες · {{s.lessons}} μαθήματα</div></div><div class="im-chevron">›</div>
+      </a>
+      {% else %}<p class="muted">Δεν βρέθηκαν μαθητές.</p>{% endfor %}
+    </div>
+  </div>
+</div>
+{% set active_tab='students' %}{% include '_instructor_bottom_nav.html' %}
+{% endblock %}
