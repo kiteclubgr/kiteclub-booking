@@ -12,7 +12,7 @@
   --kc-grey-bg:#edf2f5;
   --kc-line:#d9e6ee;
 }
-.student-wrap{max-width:1040px;margin:auto}
+.student-wrap{max-width:1260px;margin:auto}
 .mobile-topbar{display:none}
 .booking-hero{padding:15px 17px}
 .hero-title{display:flex;align-items:center;justify-content:space-between;gap:12px}
@@ -188,16 +188,15 @@
 }
 
 @media(min-width:761px){
-  .booking-portal-shell{min-height:100vh;display:grid;grid-template-columns:220px minmax(0,1fr)}
-  .booking-portal-main{min-width:0;padding:24px 28px 44px}
-  .booking-portal-main .student-wrap{max-width:1180px;margin:0 auto}
-  .booking-portal-main .mobile-topbar{display:none}
+  .student-portal-main .student-wrap{max-width:1260px;margin:0 auto}
+  .student-portal-main .mobile-topbar{display:none}
 }
 </style>
 
-<div class="booking-portal-shell">
+<div class="student-portal-shell">
   {% set student_nav='booking' %}{% include '_student_portal_sidebar.html' %}
-  <main class="booking-portal-main">
+  <main class="student-portal-main">
+    <div class="student-portal-content">
 <div class="mobile-topbar">
   <div class="mobile-spacer" aria-hidden="true"></div>
   <div class="mobile-logo"><img src="{{ url_for('static', filename='img/kiteclub-logo.png') }}" alt="KiteClub"></div>
@@ -379,7 +378,7 @@
       <div class="row">
         <span class="badge {{'off' if b.status=='no_show' else ('ok' if b.status in ['confirmed','completed'] else 'wait')}}">{{'No-show' if b.status=='no_show' else ('Make-up' if b.status=='makeup' else b.status)}}</span>
         {% if b.can_cancel %}
-        <form method="post" action="{{url_for('cancel_student_booking',booking_id=b.id)}}" onsubmit="return confirm('{% if b.participant_count and b.participant_count>1 %}Η ακύρωση θα ακυρώσει την κοινή κράτηση για όλο το group. Συνέχεια;{% else %}Θέλεις να ακυρώσεις την κράτηση; Οι ώρες θα επιστραφούν στο πακέτο σου.{% endif %}')">
+        <form method="post" action="{{url_for('cancel_student_booking',booking_id=b.id)}}" onsubmit="return confirm('{% if b.participant_count and b.participant_count><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">1 %}Η ακύρωση θα ακυρώσει την κοινή κράτηση για όλο το group. Συνέχεια;{% else %}Θέλεις να ακυρώσεις την κράτηση; Οι ώρες θα επιστραφούν στο πακέτο σου.{% endif %}')">
           <button class="btn alt" type="submit">Ακύρωση</button>
         </form>
         {% endif %}
@@ -427,7 +426,7 @@
       </div>
     </div>
 
-    <form id="bookForm" method="post">
+    <form id="bookForm" method="post"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="duration" id="durationInput" value="1">
       <div class="sheet-actions">
         <button type="button" class="btn alt" onclick="closeConfirm()">Ακύρωση</button>
@@ -442,6 +441,7 @@
   <a href="#my-lessons"><span class="nav-ico">▤</span>Τα μαθήματά μου</a>
   <a href="{{url_for('student_profile')}}"><span class="nav-ico">♙</span>Προφίλ</a>
 </div>
+    </div>
   </main>
 </div>
 <script>

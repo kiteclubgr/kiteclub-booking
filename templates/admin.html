@@ -353,7 +353,7 @@
         <div><h1>Διαχείριση ημέρας</h1><div class="muted">{{date|gr_date}}</div></div>
         <div class="row">
           <form method="get" class="row"><input class="date-gr" type="text" name="date" value="{{date|gr_date}}" placeholder="ΗΗ/ΜΜ/ΕΕΕΕ" pattern="\d{2}/\d{2}/\d{4}" required><button class="btn">Άνοιγμα</button></form>
-          <form method="post" action="{{url_for('manual_rebalance')}}"><input type="hidden" name="date" value="{{date}}"><button class="btn alt">Rebalance instructors</button></form>
+          <form method="post" action="{{url_for('manual_rebalance')}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="date" value="{{date}}"><button class="btn alt">Rebalance instructors</button></form>
         </div>
       </div>
 <div class="card week-card">
@@ -387,7 +387,7 @@
 <div class="card">
   <h2>Προσθήκη Slots</h2>
   <p class="muted">Δημιουργεί αυτόματα ωριαίες γραμμές. Μετά επιλέγεις εκπαιδευτή στην κεφαλίδα κάθε Slot.</p>
-  <form method="post" action="{{url_for('generate_hours')}}" class="schedule-row">
+  <form method="post" action="{{url_for('generate_hours')}}" class="schedule-row"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
     <div><label>Ημερομηνία</label><br><input class="date-gr" type="text" name="date" value="{{date|gr_date}}" placeholder="ΗΗ/ΜΜ/ΕΕΕΕ" pattern="\d{2}/\d{2}/\d{4}" required></div>
     <div><label>Ώρα έναρξης (24ωρη)</label><br><select class="time24" name="start_time" required><option value="">--:--</option><option value="00:00">00:00</option>
 <option value="00:30">00:30</option>
@@ -517,7 +517,7 @@
             <div class="slot-head">
               <strong>Slot {{col.column_no}}</strong>
               {% if col.instructor_id %}<div class="tiny"><b>{{col.instructor_name}}{% if col.instructor_surname %} {{col.instructor_surname}}{% endif %}</b></div>{% endif %}
-              <form method="post" action="{{url_for('assign_day_column',column_no=col.column_no)}}">
+              <form method="post" action="{{url_for('assign_day_column',column_no=col.column_no)}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="date" value="{{date}}">
                 <select name="instructor_id" onchange="this.form.submit()">
                   <option value="">— Χωρίς εκπαιδευτή —</option>
@@ -545,17 +545,17 @@
                 <div class="activation-note">BASE ACTIVE · πρώτος στη σειρά</div>
               {% else %}
                 <div class="activation-controls">
-                  <form method="post" action="{{url_for('set_day_column_activation',column_no=col.column_no)}}">
+                  <form method="post" action="{{url_for('set_day_column_activation',column_no=col.column_no)}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="date" value="{{date}}">
                     <input type="hidden" name="mode" value="auto">
                     <button class="activation-btn {% if not act.activation_override %}selected-auto{% endif %}" type="submit">Auto</button>
                   </form>
-                  <form method="post" action="{{url_for('set_day_column_activation',column_no=col.column_no)}}">
+                  <form method="post" action="{{url_for('set_day_column_activation',column_no=col.column_no)}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="date" value="{{date}}">
                     <input type="hidden" name="mode" value="active">
                     <button class="activation-btn {% if act.activation_override == 'active' %}selected-active{% endif %}" type="submit">Activate</button>
                   </form>
-                  <form method="post" action="{{url_for('set_day_column_activation',column_no=col.column_no)}}">
+                  <form method="post" action="{{url_for('set_day_column_activation',column_no=col.column_no)}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="date" value="{{date}}">
                     <input type="hidden" name="mode" value="standby">
                     <button class="activation-btn {% if act.activation_override == 'standby' %}selected-standby{% endif %}" type="submit">Standby</button>
@@ -650,7 +650,7 @@
                     {% if s.status == 'closed' %}
                     <div class="cell cell-closed">
                       <strong>Closed</strong><div class="tiny">{{h.spot}}</div>
-                      <form method="post" action="{{url_for('manual_slot_state',slot_id=s.id)}}">
+                      <form method="post" action="{{url_for('manual_slot_state',slot_id=s.id)}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                         <select class="status-select" name="status" data-current="{{s.status}}" onchange="handleSlotStatus(this, {{s.id}})">
                           <option value="open">Available</option>
                           <option value="standby">Standby (auto)</option>
@@ -664,7 +664,7 @@
                     <div class="cell cell-manual-booked">
                       <strong>Booked</strong><div class="tiny">{{h.spot}}</div>
                       <button type="button" class="manual-book-link" onclick="openBookingModal({{s.id}})">+ Πρόσθεσε μαθητή</button>
-                      <form method="post" action="{{url_for('manual_slot_state',slot_id=s.id)}}">
+                      <form method="post" action="{{url_for('manual_slot_state',slot_id=s.id)}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                         <select class="status-select" name="status" data-current="{{s.status}}" onchange="handleSlotStatus(this, {{s.id}})">
                           <option value="open">Available</option>
                           <option value="standby">Standby (auto)</option>
@@ -677,7 +677,7 @@
                     {% elif s.status == 'standby' %}
                     <div class="cell cell-empty">
                       <strong>Standby</strong><div class="tiny">{{h.spot}}</div>
-                      <form method="post" action="{{url_for('manual_slot_state',slot_id=s.id)}}">
+                      <form method="post" action="{{url_for('manual_slot_state',slot_id=s.id)}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                         <select class="status-select" name="status" data-current="{{s.status}}" onchange="handleSlotStatus(this, {{s.id}})">
                           <option value="standby" selected>Standby (auto)</option>
                           <option value="open">Available</option>
@@ -690,7 +690,7 @@
                     {% elif s.status == 'pending_payment' %}
                     <div class="cell cell-manual-pending">
                       <strong>Pending payment</strong><div class="tiny">{{h.spot}}</div>
-                      <form method="post" action="{{url_for('manual_slot_state',slot_id=s.id)}}">
+                      <form method="post" action="{{url_for('manual_slot_state',slot_id=s.id)}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                         <select class="status-select" name="status" data-current="{{s.status}}" onchange="handleSlotStatus(this, {{s.id}})">
                           <option value="open">Available</option>
                           <option value="standby">Standby (auto)</option>
@@ -703,7 +703,7 @@
                     {% else %}
                     <div class="cell cell-open">
                       <strong>Available</strong><div class="tiny">{{h.spot}}</div>
-                      <form method="post" action="{{url_for('manual_slot_state',slot_id=s.id)}}">
+                      <form method="post" action="{{url_for('manual_slot_state',slot_id=s.id)}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                         <select class="status-select" name="status" data-current="{{s.status}}" onchange="handleSlotStatus(this, {{s.id}})">
                           <option value="open" selected>Available</option>
                           <option value="standby">Standby (auto)</option>
@@ -770,7 +770,7 @@
         </div>
         <div class="row" style="margin-top:12px">
           <a class="btn alt" href="{{url_for('admin_instructor_profile',instructor_id=i.id)}}">Προφίλ / Edit</a>
-          <form method="post" action="{{url_for('admin_delete_instructor',instructor_id=i.id)}}" onsubmit="return confirm('Να αφαιρεθεί ο instructor {{i.name}}{% if i.surname %} {{i.surname}}{% endif %};')">
+          <form method="post" action="{{url_for('admin_delete_instructor',instructor_id=i.id)}}" onsubmit="return confirm('Να αφαιρεθεί ο instructor {{i.name}}{% if i.surname %} {{i.surname}}{% endif %};')"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
             <button class="btn danger-btn" type="submit">Αφαίρεση</button>
           </form>
         </div>
@@ -781,7 +781,7 @@
     <hr style="border:0;border-top:1px solid var(--l);margin:18px 0">
 
     <h3>+ Νέος instructor</h3><br>
-    <form method="post" action="{{url_for('admin_add_instructor')}}" class="add-instructor-form">
+    <form method="post" action="{{url_for('admin_add_instructor')}}" class="add-instructor-form"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
       <div>
         <label>Όνομα</label>
         <input name="name" placeholder="π.χ. Νίκος Κ." required>
@@ -796,7 +796,7 @@
       </div>
       <div>
         <label>Password</label>
-        <input name="password" placeholder="teacher123" required>
+        <input name="password" type="password" placeholder="12+ χαρακτήρες" minlength="12" required>
       </div>
       <div>
         <label>€/ώρα</label>
@@ -885,11 +885,11 @@
     <div><h2 style="margin-bottom:3px">Μαθητές & Credits</h2><div class="muted">Αλφαβητική σειρά βάσει ονόματος.</div></div>
     <div style="min-width:280px;max-width:440px;flex:1"><label style="font-size:11px;font-weight:900">Αναζήτηση μαθητή</label><input id="adminStudentSearch" type="search" placeholder="Όνομα, επώνυμο, Student ID, email ή τηλέφωνο" style="width:100%"></div>
   </div>
-  <form method="post" action="{{url_for('add_student')}}" class="row" style="margin-bottom:14px">
+  <form method="post" action="{{url_for('add_student')}}" class="row" style="margin-bottom:14px"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
     <input name="name" placeholder="Όνομα" required>
     <input type="email" name="email" placeholder="Email" required>
     <input name="phone" placeholder="Τηλέφωνο">
-    <select name="level"><option>Beginner</option><option>Intermediate</option><option>Advanced</option></select>
+    <input value="Beginner" readonly><input type="hidden" name="level" value="Beginner">
     <select name="initial_service" title="Αρχική υπηρεσία">
       <option value="none">Χωρίς αρχική υπηρεσία</option>
       <option value="1h">1 ώρα · 60€</option>
@@ -897,7 +897,7 @@
       <option value="8h">Πακέτο 8 ωρών · 360€</option>
     </select>
     <input type="number" step="0.5" name="credits" value="0" style="width:90px" title="Χειροκίνητα αρχικά credits">
-    <input name="password" value="student123" style="width:130px">
+    <input name="password" type="password" placeholder="12+ χαρακτήρες" minlength="12" required style="width:160px">
     <button class="btn">+ Νέος μαθητής</button>
   </form>
   <div id="adminStudentList">
@@ -906,7 +906,7 @@
     <div><b><a href="{{url_for('admin_student_profile',student_id=s.id)}}" style="color:inherit">{{s.name}}{% if s.surname %} {{s.surname}}{% endif %}</a></b><div class="muted">{{s.student_code}} · {{s.email}} · {{s.level}} · {{'Private' if s.lesson_type=='private' else ('2P Group' if s.lesson_type=='2p' else '3P Group')}}</div></div>
     <div class="row">
       <span class="badge ok">{{s.credits}} ώρες</span>
-      <form method="post" action="{{url_for('adjust_credits',student_id=s.id)}}" class="row">
+      <form method="post" action="{{url_for('adjust_credits',student_id=s.id)}}" class="row"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <input type="number" step="0.5" name="amount" placeholder="+/- ώρες" style="width:90px" required>
         <input name="note" placeholder="Σημείωση">
         <button class="btn alt">Update credits</button>
@@ -928,7 +928,7 @@
     <div class="row">
       <span class="badge {{'off' if b.status=='no_show' else ('ok' if b.status in ['confirmed','completed'] else 'wait')}}">{{'No-show' if b.status=='no_show' else b.status}}</span>
       {% if b.payment_status=='pending' %}
-      <form method="post" action="{{url_for('payment_received',booking_id=b.id)}}">
+      <form method="post" action="{{url_for('payment_received',booking_id=b.id)}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <button class="btn">Payment Received</button>
       </form>
       {% endif %}
@@ -952,7 +952,7 @@
           <input id="studentBookingSearch" class="booking-search" type="search" placeholder="Αναζήτηση μαθητή…" autocomplete="off">
           <div class="student-pick-list" id="studentPickList">
             {% for s in students %}
-            <form class="student-pick" method="post" data-search="{{(s.student_code ~ ' ' ~ s.name ~ ' ' ~ (s.surname or '') ~ ' ' ~ s.email ~ ' ' ~ (s.phone or ''))|lower}}">
+            <form class="student-pick" method="post" data-search="{{(s.student_code ~ ' ' ~ s.name ~ ' ' ~ (s.surname or '') ~ ' ' ~ s.email ~ ' ' ~ (s.phone or ''))|lower}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
               <div><div class="student-pick-name">{{s.name}}{% if s.surname %} {{s.surname}}{% endif %}</div><div class="student-pick-meta">{{s.student_code}} · {{'Private' if s.lesson_type=='private' else ('2P Group' if s.lesson_type=='2p' else '3P Group')}} · {{s.level}} · {{s.credits}} ώρες · {{s.email}}{% if s.phone %} · {{s.phone}}{% endif %}</div></div>
               <input type="hidden" name="student_id" value="{{s.id}}">
               <button class="btn" type="submit">Επιλογή</button>
@@ -971,7 +971,7 @@
           <button class="booking-modal-close" type="button" onclick="closeEditBookingModal()">×</button>
         </div>
         <div class="booking-modal-body">
-          <form id="editBookingForm" method="post">
+          <form id="editBookingForm" method="post"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
             <div class="edit-booking-grid">
               <label class="full">Ημερομηνία
                 <input id="editBookingDate" type="text" readonly>
@@ -1016,7 +1016,7 @@
               </div>
             </div>
           </form>
-          <form id="cancelBookingForm" method="post" style="display:none"></form>
+          <form id="cancelBookingForm" method="post" style="display:none"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}"></form>
         </div>
       </div>
     </div>

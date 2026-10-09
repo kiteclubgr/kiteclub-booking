@@ -11,7 +11,7 @@
   {% if lesson.status in ['confirmed','pending_payment'] %}
   <div class="im-lesson-actions">
     <a class="btn im-save" href="{{url_for('instructor_complete_lesson',booking_id=lesson.id)}}">✓ {% if participants|length>1 %}Παρουσία / Ολοκλήρωση group{% else %}Ολοκλήρωση μαθήματος{% endif %}</a>
-    {% if participants|length==1 %}<form method="post" action="{{url_for('instructor_no_show',booking_id=lesson.id)}}" onsubmit="return confirm('Να σημειωθεί ο μαθητής ως No-show; Οι ώρες θα χρεωθούν κανονικά και ΔΕΝ θα επιστραφούν.');"><button class="btn im-save im-noshow-btn" type="submit">⚠ No-show — Δεν προσήλθε</button></form>{% endif %}
+    {% if participants|length==1 %}<form method="post" action="{{url_for('instructor_no_show',booking_id=lesson.id)}}" onsubmit="return confirm('Να σημειωθεί ο μαθητής ως No-show; Οι ώρες θα χρεωθούν κανονικά και ΔΕΝ θα επιστραφούν.');"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}"><button class="btn im-save im-noshow-btn" type="submit">⚠ No-show — Δεν προσήλθε</button></form>{% endif %}
   </div>
   {% elif participants|length>1 and lesson.status in ['completed','no_show'] %}
   <div class="card"><b>Η παρουσία του group έχει καταχωρηθεί.</b><div class="muted" style="margin-top:5px">Τα αποτελέσματα φαίνονται ξεχωριστά δίπλα σε κάθε μαθητή.</div></div>

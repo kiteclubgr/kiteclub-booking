@@ -11,7 +11,7 @@
     <div class="student-portal-content">
       <div class="edit-page">
         <div class="edit-head"><div><a href="{{url_for('student_profile')}}">← Επιστροφή στο προφίλ</a><h1>Επεξεργασία προφίλ</h1><div class="muted">Ενημέρωσε τα προσωπικά σου στοιχεία.</div></div></div>
-        <form class="edit-card" action="{{url_for('student_profile_edit')}}" method="post" enctype="multipart/form-data">
+        <form class="edit-card" action="{{url_for('student_profile_edit')}}" method="post" enctype="multipart/form-data"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
           <div class="photo-preview">
             <div class="avatar">{% if student.profile_photo %}<img src="{{url_for('static',filename=student.profile_photo)}}" alt="{{student.name}}">{% else %}{{student.name[:1]}}{{student.surname[:1] if student.surname else ''}}{% endif %}</div>
             <div><b>Φωτογραφία προφίλ</b><div class="muted">JPG, PNG ή WEBP.</div><input type="file" name="profile_photo" accept="image/jpeg,image/png,image/webp" style="margin-top:8px"></div>

@@ -1,6 +1,6 @@
 
-from flask import Flask, render_template, request, redirect, url_for, flash, session
-import sqlite3, os, smtplib
+from flask import Flask, render_template, request, redirect, url_for, flash, session, abort
+import sqlite3, os, smtplib, secrets, hmac, time, logging
 from email.message import EmailMessage
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -41,16 +41,83 @@ else:
     UPLOAD_ROOT.mkdir(parents=True, exist_ok=True)
 
 app = Flask(__name__)
-app.secret_key = os.getenv("SECRET_KEY", "change-me-in-production")
+# Demo-ready build: automatically seed a new, empty database unless explicitly disabled.
+# Never use this public-demo configuration with real customer information.
+IS_PRODUCTION = bool(os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("PRODUCTION", "").lower() in ("1", "true", "yes"))
+DEMO_MODE = os.getenv("ENABLE_DEMO_DATA", "1").lower() in ("1", "true", "yes")
+secret = os.getenv("SECRET_KEY", "").strip()
+if not secret:
+    # On Railway, keep the generated signing key on the persistent volume when available.
+    # Local builds use a gitignored secret file in the project directory.
+    key_root = DATA_ROOT if DATA_DIR_ENV else Path(BASE)
+    local_key = key_root / ".local_secret_key"
+    if local_key.exists():
+        secret = local_key.read_text().strip()
+    else:
+        generated = secrets.token_urlsafe(48)
+        try:
+            fd = os.open(str(local_key), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            with os.fdopen(fd, "w") as key_file:
+                key_file.write(generated)
+            secret = generated
+        except FileExistsError:
+            secret = local_key.read_text().strip()
+if len(secret) < 32:
+    raise RuntimeError("SECRET_KEY must have at least 32 characters")
+app.secret_key = secret
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 # Keep logins stable while testing on desktop and phone.
 app.config.update(
     PERMANENT_SESSION_LIFETIME=timedelta(days=30),
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
-    SESSION_COOKIE_SECURE=os.getenv("COOKIE_SECURE", "0").lower() in ("1", "true", "yes"),
+    SESSION_COOKIE_SECURE=IS_PRODUCTION or os.getenv("COOKIE_SECURE", "0").lower() in ("1", "true", "yes"),
     MAX_CONTENT_LENGTH=25 * 1024 * 1024,
 )
+
+
+# v75: server-side CSRF protection for all state-changing browser requests.
+# Tokens belong to the signed session and are embedded into every POST form.
+def csrf_token():
+    if "_csrf_token" not in session:
+        session["_csrf_token"] = secrets.token_urlsafe(32)
+    return session["_csrf_token"]
+
+app.jinja_env.globals["csrf_token"] = csrf_token
+
+@app.before_request
+def enforce_csrf():
+    if request.method in ("POST", "PUT", "PATCH", "DELETE"):
+        supplied = request.form.get("_csrf_token") or request.headers.get("X-CSRF-Token", "")
+        expected = session.get("_csrf_token", "")
+        if not supplied or not expected or not hmac.compare_digest(supplied, expected):
+            abort(400, description="Invalid or missing security token. Refresh the page and try again.")
+
+@app.after_request
+def security_headers(response):
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    response.headers["Cache-Control"] = "no-store" if session.get("uid") else "no-cache"
+    if request.is_secure:
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
+
+# Login throttling in SQLite, shared between gunicorn workers and restarts.
+def login_locked(con, key):
+    cutoff = int(time.time()) - 900
+    row = con.execute("SELECT attempts, first_at FROM login_attempts WHERE identity=?", (key,)).fetchone()
+    return bool(row and row["first_at"] >= cutoff and row["attempts"] >= 8)
+
+def record_login_failure(con, key):
+    cutoff = int(time.time()) - 900
+    now = int(time.time())
+    con.execute("""INSERT INTO login_attempts(identity, attempts, first_at)
+      VALUES (?,1,?) ON CONFLICT(identity) DO UPDATE SET
+      attempts=CASE WHEN first_at < ? THEN 1 ELSE attempts+1 END,
+      first_at=CASE WHEN first_at < ? THEN ? ELSE first_at END""", (key,now,cutoff,cutoff,now))
+    con.commit()
 
 @app.template_filter("gr_date")
 def gr_date(value):
@@ -98,9 +165,112 @@ def crew_season_for_date(value=None):
     return f"{start_year:04d}-05-01", f"{start_year+1:04d}-04-30"
 
 def db():
-    con = sqlite3.connect(DB)
+    con = sqlite3.connect(DB, timeout=15)
+    con.execute("PRAGMA busy_timeout=15000")
     con.row_factory = sqlite3.Row
     return con
+
+# v71: Beginner curriculum and automatic Beginner -> Kiter progression.
+# The higher categories (Intermediate / Expert) are intentionally left manual
+# until their technique lists are defined in a later version.
+BEGINNER_CURRICULUM = [
+    {"number": 1, "title": "Level 1", "usual_hours": "Συνήθως στις πρώτες 2 ώρες", "skills": [
+        ("l1_theory", "Θεωρία"),
+        ("l1_trim", "Τριμάρισμα"),
+        ("l1_control", "Χειρισμός"),
+        ("l1_quick_release", "Quick Release"),
+        ("l1_power_strike", "Power Strike"),
+        ("l1_bodydrag", "Bodydrag"),
+    ]},
+    {"number": 2, "title": "Level 2", "usual_hours": "", "skills": [
+        ("l2_control", "Χειρισμός 2"),
+        ("l2_water_relaunch", "Water Relaunch"),
+        ("l2_bodydrag", "Bodydrag 2"),
+        ("l2_self_rescue", "Self Rescue"),
+    ]},
+    {"number": 3, "title": "Level 3", "usual_hours": "", "skills": [
+        ("l3_control", "Χειρισμός 3"),
+        ("l3_bodydrag_downwind", "Bodydrag Downwind"),
+        ("l3_bodydrag_upwind", "Bodydrag Upwind"),
+        ("l3_bodydrag_board", "Bodydrag with Board"),
+    ]},
+    {"number": 4, "title": "Level 4", "usual_hours": "", "skills": [
+        ("l4_bodydrag", "Bodydrag 4"),
+        ("l4_waterstart", "Waterstart"),
+        ("l4_keep_going", "Keep Going"),
+        ("l4_upwind", "Upwind"),
+    ]},
+]
+BEGINNER_SKILL_LOOKUP = {key: name for level in BEGINNER_CURRICULUM for key, name in level["skills"]}
+PROGRESS_STATUSES = {"not_started", "practicing", "mastered"}
+
+def get_student_progress(con, student_id):
+    rows=con.execute("""
+      SELECT p.skill_key,p.status,p.updated_at,p.updated_by,u.name updater_name,u.surname updater_surname
+      FROM student_skill_progress p
+      LEFT JOIN users u ON u.id=p.updated_by
+      WHERE p.student_id=?
+    """,(student_id,)).fetchall()
+    saved={r["skill_key"]:dict(r) for r in rows}
+    levels=[]; total_mastered=0; total_skills=0
+    for level in BEGINNER_CURRICULUM:
+        skills=[]; mastered=0
+        for key,name in level["skills"]:
+            row=saved.get(key,{})
+            status=row.get("status") or "not_started"
+            if status not in PROGRESS_STATUSES: status="not_started"
+            if status=="mastered": mastered+=1
+            skills.append({
+              "key":key,"name":name,"status":status,
+              "updated_at":row.get("updated_at"),
+              "updater_name":row.get("updater_name"),
+              "updater_surname":row.get("updater_surname"),
+            })
+        count=len(skills); total_skills+=count; total_mastered+=mastered
+        levels.append({
+          "number":level["number"],"title":level["title"],"usual_hours":level["usual_hours"],
+          "skills":skills,"mastered":mastered,"count":count,"complete":mastered==count
+        })
+    percent=round((total_mastered/total_skills)*100) if total_skills else 0
+    complete=total_skills>0 and total_mastered==total_skills
+    return {
+      "levels":levels,"total_mastered":total_mastered,"total_skills":total_skills,
+      "percent":percent,"complete":complete,
+      # v72: while the advanced curricula are not defined, the visible school level
+      # is driven by the Beginner programme itself.
+      "current_level":"Kiter" if complete else "Beginner"
+    }
+
+def students_with_progress_levels(con, rows):
+    """Expose the same live level used by student/admin/instructor profiles.
+
+    Do not trust the legacy students.level field for list display.
+    """
+    return [dict(row, level=get_student_progress(con, row["id"])["current_level"])
+            for row in rows]
+
+
+def set_student_skill_progress(con, student_id, skill_key, status, changed_by):
+    if skill_key not in BEGINNER_SKILL_LOOKUP or status not in PROGRESS_STATUSES:
+        raise ValueError("Μη έγκυρη τεχνική ή κατάσταση προόδου.")
+    old=con.execute("SELECT status FROM student_skill_progress WHERE student_id=? AND skill_key=?",(student_id,skill_key)).fetchone()
+    old_status=old["status"] if old else "not_started"
+    now=datetime.now().isoformat()
+    if old:
+        con.execute("UPDATE student_skill_progress SET status=?,updated_at=?,updated_by=? WHERE student_id=? AND skill_key=?",(status,now,changed_by,student_id,skill_key))
+    else:
+        con.execute("INSERT INTO student_skill_progress(student_id,skill_key,status,updated_at,updated_by) VALUES(?,?,?,?,?)",(student_id,skill_key,status,now,changed_by))
+    if old_status!=status:
+        con.execute("INSERT INTO student_skill_history(student_id,skill_key,old_status,new_status,changed_at,changed_by) VALUES(?,?,?,?,?,?)",(student_id,skill_key,old_status,status,now,changed_by))
+    current=con.execute("SELECT level FROM students WHERE user_id=?",(student_id,)).fetchone()
+    before=(current["level"] if current else "Beginner") or "Beginner"
+    progress=get_student_progress(con,student_id)
+    # Only Beginner/Kiter is automated in v71. Do not overwrite future/manual higher levels.
+    after=before
+    if before in ("Beginner","Kiter"):
+        after="Kiter" if progress["complete"] else "Beginner"
+        con.execute("UPDATE students SET level=? WHERE user_id=?",(after,student_id))
+    return before,after,progress
 
 def send_email(to_email, subject, body):
     host=os.getenv("SMTP_HOST")
@@ -333,6 +503,32 @@ def init_db():
     """)
     con.execute("CREATE INDEX IF NOT EXISTS idx_messages_pair ON messages(sender_id,recipient_id,created_at)")
 
+    # v71: per-student Beginner curriculum progress + audit trail.
+    con.execute("""
+      CREATE TABLE IF NOT EXISTS student_skill_progress(
+        student_id INTEGER NOT NULL,
+        skill_key TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'not_started',
+        updated_at TEXT,
+        updated_by INTEGER,
+        PRIMARY KEY(student_id,skill_key)
+      )
+    """)
+    con.execute("""
+      CREATE TABLE IF NOT EXISTS student_skill_history(
+        id INTEGER PRIMARY KEY,
+        student_id INTEGER NOT NULL,
+        skill_key TEXT NOT NULL,
+        old_status TEXT,
+        new_status TEXT NOT NULL,
+        changed_at TEXT NOT NULL,
+        changed_by INTEGER
+      )
+    """)
+    con.execute("CREATE INDEX IF NOT EXISTS idx_student_skill_history_student ON student_skill_history(student_id,changed_at)")
+    # The school now uses exactly Beginner, Kiter, Intermediate, Expert.
+    con.execute("UPDATE students SET level='Expert' WHERE level='Advanced'")
+
     # v50: groups are internal only; the Admin sees member names, never Group A/B labels.
     con.execute("""
       CREATE TABLE IF NOT EXISTS student_groups(
@@ -388,8 +584,12 @@ def init_db():
         next_code+=1
     con.commit()
 
-    # Seed only once
-    if c.execute("SELECT COUNT(*) n FROM users").fetchone()["n"] == 0:
+    con.execute("""CREATE TABLE IF NOT EXISTS login_attempts (
+        identity TEXT PRIMARY KEY, attempts INTEGER NOT NULL, first_at INTEGER NOT NULL
+    )""")
+    con.commit()
+    # Demo accounts only by explicit opt-in. Production bootstraps with provided credentials.
+    if c.execute("SELECT COUNT(*) n FROM users").fetchone()["n"] == 0 and DEMO_MODE:
         users=[
           ("Admin","admin@kiteclub.gr","", "admin","admin123"),
           ("Γιάννης","student@kiteclub.gr","6900000000","student","student123"),
@@ -466,7 +666,7 @@ def init_db():
     # v47 demo/test data: give surnames only to the known built-in demo accounts
     # and add a few extra demo students. User-created accounts are never renamed.
     migrated_v47=con.execute("SELECT value FROM app_meta WHERE key='v47_demo_students_and_surnames'").fetchone()
-    if not migrated_v47:
+    if not migrated_v47 and DEMO_MODE:
         demo_identity_updates=[
           ("Γιάννης","Κοτσιράς","student@kiteclub.gr"),
           ("Άγγελος","Καραγιάννης","angelos@kiteclub.gr"),
@@ -483,7 +683,7 @@ def init_db():
         demo_students=[
           ("Μαρία","Παπαδοπούλου","maria.demo@kiteclub.gr","6900000001",8.0,"Intermediate"),
           ("Νίκος","Αντωνίου","nikos.demo@kiteclub.gr","6900000002",4.0,"Beginner"),
-          ("Ελένη","Γεωργίου","eleni.demo@kiteclub.gr","6900000003",10.0,"Advanced"),
+          ("Ελένη","Γεωργίου","eleni.demo@kiteclub.gr","6900000003",10.0,"Expert"),
           ("Κώστας","Δημητρίου","kostas.demo@kiteclub.gr","6900000004",6.0,"Intermediate"),
           ("Σοφία","Νικολάου","sofia.demo@kiteclub.gr","6900000005",5.0,"Beginner"),
           ("Αλέξης","Μπουρνάζος","alexis.demo@kiteclub.gr","6900000006",7.0,"Intermediate"),
@@ -518,6 +718,15 @@ def init_db():
         con.execute("UPDATE students SET student_code=? WHERE user_id=?",(f"STU-{next_student_number:04d}",r["user_id"]))
         next_student_number+=1
     con.commit()
+    if con.execute("SELECT COUNT(*) AS n FROM users").fetchone()["n"] == 0:
+        admin_email = os.getenv("ADMIN_EMAIL", "").strip().lower()
+        admin_password = os.getenv("ADMIN_PASSWORD", "")
+        if not admin_email or len(admin_password) < 12:
+            con.close()
+            raise RuntimeError("Empty database: set ADMIN_EMAIL and ADMIN_PASSWORD (12+ chars), or ENABLE_DEMO_DATA=1 for local demo")
+        con.execute("INSERT INTO users(name,email,phone,role,password_hash) VALUES(?,?,?,?,?)",
+                    ("Admin", admin_email, "", "admin", generate_password_hash(admin_password)))
+        con.commit()
     con.close()
 
 
@@ -1174,6 +1383,9 @@ def current_user():
     con=db()
     u=con.execute("SELECT * FROM users WHERE id=?",(session["uid"],)).fetchone()
     con.close()
+    if u and not u["active"]:
+        session.clear()
+        return None
     if u:
         # Refresh legacy sessions created before v48 and keep the role available
         # to the shared desktop/mobile navigation.
@@ -1209,13 +1421,25 @@ def login():
         if existing:
             return redirect(url_for("home"))
     if request.method=="POST":
-        con=db(); u=con.execute("SELECT * FROM users WHERE email=?",(request.form["email"],)).fetchone(); con.close()
-        if u and check_password_hash(u["password_hash"], request.form["password"]):
+        email = request.form.get("email", "").strip().lower()
+        key = email[:254]  # Shared failure counter per account; avoids logging passwords.
+        con=db()
+        if login_locked(con, key):
+            con.close()
+            flash("Πολλές αποτυχημένες προσπάθειες. Δοκίμασε ξανά σε 15 λεπτά.")
+            return render_template("login.html"), 429
+        u=con.execute("SELECT * FROM users WHERE lower(email)=? AND COALESCE(active,1)=1",(email,)).fetchone()
+        if u and check_password_hash(u["password_hash"], request.form.get("password", "")):
+            con.execute("DELETE FROM login_attempts WHERE identity=?", (key,))
+            con.commit(); con.close()
             session.clear()
             session["uid"]=u["id"]
             session["role"]=u["role"]
             session.permanent=True
+            csrf_token()  # Rotate token with newly authenticated session.
             return redirect(url_for("home"))
+        record_login_failure(con, key)
+        con.close()
         flash("Λάθος email ή password")
     return render_template("login.html")
 
@@ -1557,12 +1781,13 @@ def student_profile():
       SELECT * FROM student_photos WHERE student_id=?
       ORDER BY COALESCE(photo_date,'') DESC, created_at DESC, id DESC
     """,(u["id"],)).fetchall()
+    progress=get_student_progress(con,u["id"])
     con.close()
     return render_template(
       "student_profile.html",student=st,upcoming=upcoming,completed=completed,
       cancelled=cancelled,no_shows=no_shows,makeups=makeups,completed_hours=completed_hours,
       no_show_hours=no_show_hours,makeup_hours=makeup_hours,package_history=package_history,group_members=group_members,
-      crew_status=crew_status,student_photos=student_photos
+      crew_status=crew_status,student_photos=student_photos,progress=progress
     )
 
 
@@ -1902,6 +2127,7 @@ def admin():
     students=con.execute("""SELECT u.id,u.name,u.surname,u.email,u.phone,s.credits,s.level,
              s.student_code,s.lesson_type,s.group_id
       FROM students s JOIN users u ON u.id=s.user_id ORDER BY u.name,u.surname""").fetchall()
+    students=students_with_progress_levels(con, students)
     spots=con.execute("SELECT * FROM spots ORDER BY name").fetchall()
     day_hours=con.execute("""
       SELECT dh.*,sp.name spot
@@ -2252,11 +2478,14 @@ def add_slot():
 def add_student():
     u=current_user()
     if not u or u["role"]!="admin": return redirect(url_for("login"))
+    if len(request.form.get("password", "")) < 12:
+        flash("Ο κωδικός νέου λογαριασμού πρέπει να έχει τουλάχιστον 12 χαρακτήρες.")
+        return redirect(url_for("admin"))
     con=db()
     try:
-        cur=con.execute("INSERT INTO users(name,email,phone,role,password_hash) VALUES(?,?,?,?,?)",(request.form["name"].strip(),request.form["email"].strip().lower(),request.form.get("phone","").strip(),"student",generate_password_hash(request.form.get("password","student123") or "student123")))
+        cur=con.execute("INSERT INTO users(name,email,phone,role,password_hash) VALUES(?,?,?,?,?)",(request.form["name"].strip(),request.form["email"].strip().lower(),request.form.get("phone","").strip(),"student",generate_password_hash(request.form.get("password") or secrets.token_urlsafe(18))))
         uid=cur.lastrowid; credits=float(request.form.get("credits","0") or 0); student_code=_next_student_code(con)
-        con.execute("INSERT INTO students(user_id,credits,level,student_code,lesson_type) VALUES(?,?,?,?,?)",(uid,credits,request.form.get("level","Beginner"),student_code,"private"))
+        con.execute("INSERT INTO students(user_id,credits,level,student_code,lesson_type) VALUES(?,?,?,?,?)",(uid,credits,"Beginner",student_code,"private"))
         if credits:
             con.execute("INSERT INTO credit_ledger(student_id,amount,kind,note,created_at) VALUES(?,?,?,?,?)",(uid,credits,"manual_adjustment","Initial credits",datetime.now().isoformat()))
         service=(request.form.get("initial_service") or "none").strip(); service_map={"1h":(1.0,60.0),"2h":(2.0,110.0),"8h":(8.0,360.0)}
@@ -2288,10 +2517,13 @@ def adjust_credits(student_id):
 def add_instructor():
     u=current_user()
     if not u or u["role"]!="admin": return redirect(url_for("login"))
+    if len(request.form.get("password", "")) < 12:
+        flash("Ο κωδικός νέου λογαριασμού πρέπει να έχει τουλάχιστον 12 χαρακτήρες.")
+        return redirect(url_for("admin"))
     con=db()
     try:
         cur=con.execute("INSERT INTO users(name,email,phone,role,password_hash) VALUES(?,?,?,?,?)",
-            (request.form["name"].strip(),request.form["email"].strip().lower(),request.form.get("phone","").strip(),"instructor",generate_password_hash(request.form.get("password","teacher123") or "teacher123")))
+            (request.form["name"].strip(),request.form["email"].strip().lower(),request.form.get("phone","").strip(),"instructor",generate_password_hash(request.form.get("password") or secrets.token_urlsafe(18))))
         uid=cur.lastrowid
         con.execute("INSERT INTO instructors(user_id,hourly_rate,priority,activation_threshold) VALUES(?,?,?,?)",
             (uid,float(request.form.get("hourly_rate","15") or 15),int(request.form.get("priority","1") or 1),float(request.form.get("activation_threshold","5") or 5)))
@@ -3295,7 +3527,7 @@ def admin_student_profile(student_id):
         instagram=request.form.get("instagram","").strip()
         email=request.form.get("email","").strip().lower()
         phone=request.form.get("phone","").strip()
-        level=request.form.get("level","Beginner").strip()
+        level=(st["level"] or "Beginner").strip()
         password=request.form.get("password","").strip()
         lesson_type=request.form.get("lesson_type","private").strip().lower()
         partner_ids=request.form.getlist("group_member_id")
@@ -3477,6 +3709,7 @@ def admin_student_profile(student_id):
       SELECT * FROM student_photos WHERE student_id=?
       ORDER BY COALESCE(photo_date,'') DESC, created_at DESC, id DESC
     """,(student_id,)).fetchall()
+    progress=get_student_progress(con,student_id)
 
     today_iso=datetime.now().date().isoformat()
     crew_status="inactive"
@@ -3509,8 +3742,29 @@ def admin_student_profile(student_id):
       group_partner_ids=group_partner_ids,
       all_students=all_students,
       crew_status=crew_status,
-      student_photos=student_photos
+      student_photos=student_photos,
+      progress=progress
     )
+
+
+@app.post("/admin/students/<int:student_id>/progress")
+def admin_student_progress(student_id):
+    u=current_user()
+    if not u or u["role"]!="admin": return redirect(url_for("login"))
+    con=db()
+    exists=con.execute("SELECT 1 FROM students WHERE user_id=?",(student_id,)).fetchone()
+    if not exists:
+        con.close(); flash("Ο μαθητής δεν βρέθηκε."); return redirect(url_for("admin")+"#students")
+    try:
+        before,after,progress=set_student_skill_progress(con,student_id,request.form.get("skill_key",""),request.form.get("status",""),u["id"])
+        con.commit()
+        if before!=after and after=="Kiter": flash("Ο μαθητής ολοκλήρωσε και τα 4 Levels και έγινε Kiter.")
+        else: flash("Η πρόοδος ενημερώθηκε.")
+    except ValueError as e:
+        con.rollback(); flash(str(e))
+    finally:
+        con.close()
+    return redirect(url_for("admin_student_profile",student_id=student_id)+"#progress")
 
 
 @app.post("/admin/students/<int:student_id>/photos")
@@ -4425,6 +4679,7 @@ def instructor_students():
       GROUP BY su.id,su.name,su.surname,su.email,su.phone,su.profile_photo,st.level,st.credits,st.student_code
       ORDER BY su.name,su.surname
     """,tuple(params)).fetchall()
+    rows=students_with_progress_levels(con, rows)
     con.close()
     return render_template("instructor_students.html",students=rows,q=q)
 
@@ -4472,12 +4727,38 @@ def instructor_student_detail(student_id):
     makeup_hours=sum(float(r["duration"] or 0) for r in history if r["status"]=="makeup")
     makeup_count=sum(1 for r in history if r["status"]=="makeup")
     group_members=_group_members(con,student_id)
+    progress=get_student_progress(con,student_id)
     con.close()
     return render_template(
       "instructor_student_detail.html",student=student,history=history,
       completed_hours=completed_hours,no_show_hours=no_show_hours,no_show_count=no_show_count,
-      makeup_hours=makeup_hours,makeup_count=makeup_count,group_members=group_members
+      makeup_hours=makeup_hours,makeup_count=makeup_count,group_members=group_members,progress=progress
     )
+
+
+@app.post("/instructor/students/<int:student_id>/progress")
+def instructor_student_progress(student_id):
+    u=current_user()
+    if not u or u["role"]!="instructor": return redirect(url_for("login"))
+    con=db()
+    allowed=con.execute("""
+      SELECT 1 FROM bookings b
+      JOIN booking_participants bp ON bp.booking_id=b.id
+      JOIN slots sl ON sl.id=b.slot_id
+      WHERE sl.instructor_id=? AND bp.student_id=? LIMIT 1
+    """,(u["id"],student_id)).fetchone()
+    if not allowed:
+        con.close(); flash("Ο μαθητής δεν βρέθηκε."); return redirect(url_for("instructor_students"))
+    try:
+        before,after,progress=set_student_skill_progress(con,student_id,request.form.get("skill_key",""),request.form.get("status",""),u["id"])
+        con.commit()
+        if before!=after and after=="Kiter": flash("Ο μαθητής ολοκλήρωσε και τα 4 Levels και έγινε Kiter.")
+        else: flash("Η πρόοδος ενημερώθηκε.")
+    except ValueError as e:
+        con.rollback(); flash(str(e))
+    finally:
+        con.close()
+    return redirect(url_for("instructor_student_detail",student_id=student_id)+"#progress")
 
 
 @app.route("/instructor/lesson/<int:booking_id>")
@@ -4543,11 +4824,18 @@ def instructor_complete_lesson(booking_id):
     """,(booking_id,)).fetchone()
     skills=con.execute("SELECT * FROM skills ORDER BY id").fetchall()
     participants=_booking_participants(con,booking_id) if lesson else []
+    progress=get_student_progress(con,lesson["student_id"]) if lesson else None
+    participant_progress={}
+    for person in participants:
+        participant_progress[int(person["student_id"])]=get_student_progress(con,int(person["student_id"]))
     con.close()
     if not lesson or lesson["instructor_id"]!=u["id"]:
         flash("Το μάθημα δεν βρέθηκε.")
         return redirect(url_for("instructor"))
-    return render_template("instructor_complete.html",lesson=lesson,skills=skills,participants=participants)
+    return render_template(
+      "instructor_complete.html",lesson=lesson,skills=skills,participants=participants,
+      progress=progress,participant_progress=participant_progress,beginner_curriculum=BEGINNER_CURRICULUM
+    )
 
 
 @app.post("/instructor/no-show/<int:booking_id>")
@@ -4684,7 +4972,8 @@ def complete_group(booking_id):
 def complete(booking_id):
     u=current_user()
     if not u or u["role"]!="instructor": return redirect(url_for("login"))
-    skill=request.form.get("next_skill","Water Start"); instructor_notes=request.form.get("instructor_notes","").strip(); con=db()
+    worked_keys=[k for k in request.form.getlist("worked_skill") if k in BEGINNER_SKILL_LOOKUP]
+    instructor_notes=request.form.get("instructor_notes","").strip(); con=db()
     b=con.execute("""
       SELECT b.*,su.email,su.name,s.lesson_date,s.start_time,s.instructor_id
       FROM bookings b JOIN slots s ON s.id=b.slot_id JOIN users su ON su.id=b.student_id WHERE b.id=?
@@ -4701,6 +4990,16 @@ def complete(booking_id):
     if b["status"]!="confirmed":
         con.close(); flash("Μόνο επιβεβαιωμένο μάθημα μπορεί να ολοκληρωθεί."); return redirect(url_for("instructor",date=lesson_date))
 
+    if not worked_keys:
+        con.close(); flash("Επίλεξε τουλάχιστον μία τεχνική που δουλέψατε σήμερα.")
+        return redirect(url_for("instructor_complete_lesson",booking_id=booking_id))
+    progress_changes=[]
+    for skill_key in worked_keys:
+        status=(request.form.get(f"progress_status_{skill_key}") or "practicing").strip().lower()
+        if status not in ("practicing","mastered"): status="practicing"
+        before,after,_=set_student_skill_progress(con,b["student_id"],skill_key,status,u["id"])
+        progress_changes.append((skill_key,status,before,after))
+    skill=BEGINNER_SKILL_LOOKUP[worked_keys[0]]
     now=datetime.now().isoformat()
     con.execute("UPDATE bookings SET status='completed',completed_at=?,next_skill=?,instructor_notes=? WHERE id=?",(now,skill,instructor_notes,booking_id))
     con.execute("""
@@ -4717,7 +5016,11 @@ def complete(booking_id):
         for person in participants:
             if person["email"]:
                 send_email(person["email"],f"KiteClub — Επόμενο βήμα: {skill}",f"Μπράβο {person['name']} για το σημερινό μάθημα.\n\nΕπόμενη τεχνική: {skill}\n{sk['notes']}\nVideo: {sk['video_url']}\n\nΤα λέμε στο επόμενο μάθημα!")
-    flash("Το μάθημα ολοκληρώθηκε και οι ώρες καταγράφηκαν.")
+    became_kiter=any(before!=after and after=="Kiter" for _,_,before,after in progress_changes)
+    if became_kiter:
+        flash("Το μάθημα ολοκληρώθηκε, η πρόοδος ενημερώθηκε και ο μαθητής έγινε Kiter!")
+    else:
+        flash("Το μάθημα ολοκληρώθηκε, οι ώρες και η πρόοδος καταγράφηκαν.")
     return redirect(url_for("instructor_lesson",booking_id=booking_id))
 
 

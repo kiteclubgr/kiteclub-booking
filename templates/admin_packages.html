@@ -15,7 +15,7 @@
     <div class="pack-grid">
       <div class="card">
         <h2>Νέο πακέτο</h2>
-        <form method="post" action="{{url_for('admin_package_create')}}" class="pack-form">
+        <form method="post" action="{{url_for('admin_package_create')}}" class="pack-form"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
           <div><label>Όνομα</label><input name="name" placeholder="π.χ. Beginner 6h / Crew Member" required></div>
           <div><label>Τύπος</label><select name="package_type" id="packageType"><option value="lesson">Μαθήματα</option><option value="crew">Crew Member</option></select></div>
           <div><label>Ώρες</label><input id="packageHours" type="number" name="hours" step="0.5" min="0" value="6"></div>
@@ -38,7 +38,7 @@
           <div>{% if (p.package_type or 'lesson')=='crew' %}<b>Crew</b><div class="muted">Μάιος → Απρίλιος</div>{% else %}<b>{{p.hours}}h</b><div class="muted">ώρες</div>{% endif %}</div>
           <div><b>{{'%.2f'|format(p.price)}}€</b><div class="muted">τιμή</div></div>
           <div><span class="badge {{'ok' if p.active else 'off'}}">{{'Active' if p.active else 'Inactive'}}</span></div>
-          <form method="post" action="{{url_for('admin_package_toggle',package_id=p.id)}}"><button class="btn alt" type="submit">{{'Απενεργοποίηση' if p.active else 'Ενεργοποίηση'}}</button></form>
+          <form method="post" action="{{url_for('admin_package_toggle',package_id=p.id)}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}"><button class="btn alt" type="submit">{{'Απενεργοποίηση' if p.active else 'Ενεργοποίηση'}}</button></form>
         </div>
         {% endfor %}
       </div>{% else %}<div class="muted">Δεν υπάρχουν ακόμη πακέτα.</div>{% endif %}
@@ -52,7 +52,7 @@
           <td><a href="{{url_for('admin_student_profile',student_id=p.student_id)}}">{{p.student_name}}{% if p.student_surname %} {{p.student_surname}}{% endif %}</a></td>
           <td>{{p.package_name}}</td><td>{% if (p.package_type or 'lesson')=='crew' %}Crew Member{% else %}{{p.hours_total}}h{% endif %}</td><td>{% if (p.package_type or 'lesson')=='crew' %}{{p.valid_from|gr_date}} → {{p.valid_until|gr_date}}{% else %}{{p.hours_remaining}}h{% endif %}</td><td>{{'%.2f'|format(p.price)}}€</td>
           <td><span class="badge {{'status-paid' if p.payment_status=='paid' else 'status-pending'}}">{{p.payment_status}}</span></td>
-          <td>{% if p.payment_status!='paid' %}<form method="post" action="{{url_for('admin_package_purchase_mark_paid',purchase_id=p.id)}}"><button class="btn" type="submit">Mark paid</button></form>{% endif %}</td>
+          <td>{% if p.payment_status!='paid' %}<form method="post" action="{{url_for('admin_package_purchase_mark_paid',purchase_id=p.id)}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}"><button class="btn" type="submit">Mark paid</button></form>{% endif %}</td>
         </tr>{% endfor %}
       </tbody></table></div>{% else %}<div class="muted">Δεν υπάρχουν αγορές ακόμη. Άνοιξε έναν μαθητή και πρόσθεσε πακέτο.</div>{% endif %}
     </div>

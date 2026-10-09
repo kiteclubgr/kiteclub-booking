@@ -1,9 +1,41 @@
 {% extends "base.html" %}{% block content %}
 <link rel="stylesheet" href="{{url_for('static',filename='instructor-v39.css')}}">
 {% include '_instructor_mobile_chrome.html' %}
+<style>
+.progress-head{display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap}.progress-big{font-size:30px;font-weight:950}.progress-track{height:12px;background:#e8eef2;border-radius:999px;overflow:hidden;margin:12px 0 18px}.progress-fill{height:100%;background:#15915a;border-radius:999px}.level-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.level-card{border:1px solid #dfe8ee;border-radius:15px;padding:14px;background:#fbfdff}.level-card.done{border-color:#bde4ca;background:#f4fcf7}.level-title{display:flex;justify-content:space-between;gap:10px;align-items:start;margin-bottom:10px}.level-title h3{margin:0}.skill-row{display:grid;grid-template-columns:minmax(0,1fr) 145px;gap:10px;align-items:center;padding:9px 0;border-top:1px solid #edf2f5}.skill-row:first-of-type{border-top:0}.skill-name{font-weight:800}.skill-meta{font-size:11px;color:var(--m);margin-top:3px}.skill-select{width:100%;padding:8px;border-radius:9px;border:1px solid #cfdde6;background:#fff}.skill-mastered .skill-name{color:#087846}.skill-practicing .skill-name{color:#9a6500}@media(max-width:780px){.level-grid{grid-template-columns:1fr}.skill-row{grid-template-columns:1fr 130px}}
+</style>
 <div class="im-shell">
-  <div class="card"><a href="{{url_for('instructor_students')}}" class="muted" style="text-decoration:none">‹ Επιστροφή στους μαθητές</a><br><br><div class="im-hero"><div class="im-avatar">{% if student.profile_photo %}<img src="{{url_for('static',filename=student.profile_photo)}}" alt="">{% else %}{{student.name[:1]}}{% endif %}</div><div><h1>{{student.name}}{% if student.surname %} {{student.surname}}{% endif %}</h1><div class="muted">{{student.student_code}} · {{student.level or '—'}} · {{student.credits}} ώρες πακέτου · {{'Private' if student.lesson_type=='private' else ('2P Group' if student.lesson_type=='2p' else '3P Group')}}</div>{% if student.phone %}<div class="muted">☎ {{student.phone}}</div>{% endif %}{% if group_members|length>1 %}<div class="muted" style="margin-top:5px">Group: {% for m in group_members %}{{m.name}}{% if m.surname %} {{m.surname}}{% endif %}{% if not loop.last %} · {% endif %}{% endfor %}</div>{% endif %}</div></div></div>
+  <div class="card"><a href="{{url_for('instructor_students')}}" class="muted" style="text-decoration:none">‹ Επιστροφή στους μαθητές</a><br><br><div class="im-hero"><div class="im-avatar">{% if student.profile_photo %}<img src="{{url_for('static',filename=student.profile_photo)}}" alt="">{% else %}{{student.name[:1]}}{% endif %}</div><div><h1>{{student.name}}{% if student.surname %} {{student.surname}}{% endif %}</h1><div class="muted">{{student.student_code}} · <b>{{progress.current_level}}</b> · {{student.credits}} ώρες πακέτου · {{'Private' if student.lesson_type=='private' else ('2P Group' if student.lesson_type=='2p' else '3P Group')}}</div>{% if student.phone %}<div class="muted">☎ {{student.phone}}</div>{% endif %}{% if group_members|length>1 %}<div class="muted" style="margin-top:5px">Group: {% for m in group_members %}{{m.name}}{% if m.surname %} {{m.surname}}{% endif %}{% if not loop.last %} · {% endif %}{% endfor %}</div>{% endif %}</div></div></div>
   <div class="card"><div class="im-facts"><div class="im-fact"><b>{{completed_hours}}h</b><br><span class="muted">completed μαζί σου</span></div><div class="im-fact"><b>{{makeup_count}}</b><br><span class="muted">Make-up · {{makeup_hours}}h</span></div><div class="im-fact"><b>{{no_show_count}}</b><br><span class="muted">No-show · {{no_show_hours}}h χρεωμένες</span></div><div class="im-fact"><b>{{history|length}}</b><br><span class="muted">μαθήματα μαζί σου</span></div></div></div>
+
+  <div class="card" id="progress">
+    <div class="progress-head">
+      <div><h2 style="margin-bottom:4px">Beginner Progress</h2><div class="muted">Ολοκλήρωση των 4 Levels → αυτόματη μετάβαση σε <b>Kiter</b>.</div></div>
+      <div style="text-align:right"><div class="progress-big">{{progress.total_mastered}} / {{progress.total_skills}}</div><div class="muted">{{progress.percent}}% mastered</div></div>
+    </div>
+    <div class="progress-track"><div class="progress-fill" style="width:{{progress.percent}}%"></div></div>
+    <div class="level-grid">
+      {% for level in progress.levels %}
+      <section class="level-card {% if level.complete %}done{% endif %}">
+        <div class="level-title"><div><h3>{{level.title}}</h3>{% if level.usual_hours %}<div class="muted" style="font-size:11px">{{level.usual_hours}}</div>{% endif %}</div><span class="badge {{'ok' if level.complete else 'off'}}">{{level.mastered}}/{{level.count}}</span></div>
+        {% for skill in level.skills %}
+        <div class="skill-row skill-{{skill.status}}">
+          <div><div class="skill-name">{% if skill.status=='mastered' %}✓ {% elif skill.status=='practicing' %}◐ {% else %}○ {% endif %}{{skill.name}}</div>{% if skill.updated_at %}<div class="skill-meta">Τελευταία ενημέρωση {{skill.updated_at[:16].replace('T',' ')}}{% if skill.updater_name %} · {{skill.updater_name}}{% if skill.updater_surname %} {{skill.updater_surname}}{% endif %}{% endif %}</div>{% endif %}</div>
+          <form method="post" action="{{url_for('instructor_student_progress',student_id=student.id)}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="skill_key" value="{{skill.key}}">
+            <select class="skill-select" name="status" onchange="this.form.submit()">
+              <option value="not_started" {% if skill.status=='not_started' %}selected{% endif %}>Not started</option>
+              <option value="practicing" {% if skill.status=='practicing' %}selected{% endif %}>Practicing</option>
+              <option value="mastered" {% if skill.status=='mastered' %}selected{% endif %}>Mastered</option>
+            </select>
+          </form>
+        </div>
+        {% endfor %}
+      </section>
+      {% endfor %}
+    </div>
+  </div>
+
   <div class="card"><h2>Ιστορικό μαθημάτων</h2><div class="im-history">{% for b in history %}<div class="im-history-row"><b>{{b.lesson_date|gr_date}}</b><div><div>{{b.start_time|hm24}} · {{b.spot}}</div><div class="muted">{{b.next_skill or '—'}}{% if b.instructor_notes %} · {{b.instructor_notes}}{% endif %}</div></div><span class="badge {{'ok' if b.status=='completed' else ('off' if b.status=='no_show' else 'wait')}}">{{'No-show' if b.status=='no_show' else ('Make-up' if b.status=='makeup' else b.status)}}</span></div>{% else %}<p class="muted">Δεν υπάρχει ιστορικό.</p>{% endfor %}</div></div>
 </div>
 {% set active_tab='students' %}{% include '_instructor_bottom_nav.html' %}

@@ -81,7 +81,7 @@
   <div class="booking-modal" role="dialog" aria-modal="true">
     <div class="booking-modal-head"><div><h2>Επεξεργασία κράτησης</h2><div class="muted" style="font-size:12px;margin-top:3px">Αλλαγή μαθητή, instructor, ώρας, διάρκειας ή κατάστασης.</div></div><button class="booking-modal-close" type="button" id="modalClose">×</button></div>
     <div class="booking-modal-body">
-      <form id="editBookingForm" method="post">
+      <form id="editBookingForm" method="post"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="return_to" value="bookings">
         <div class="edit-grid">
           <label class="full">Ημερομηνία<input id="editDate" type="text" readonly></label>
@@ -97,7 +97,7 @@
         </div>
         <div class="edit-actions"><button class="btn alt" type="button" id="modalCancel">Κλείσιμο</button><button class="btn" type="submit">Αποθήκευση</button></div>
       </form>
-      <form id="cancelBookingForm" method="post" style="margin-top:10px"><input type="hidden" name="return_to" value="bookings"><button class="small-btn danger" type="submit" style="width:100%;padding:10px">Ακύρωση κράτησης & επιστροφή credits όπου ισχύει</button></form>
+      <form id="cancelBookingForm" method="post" style="margin-top:10px"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="return_to" value="bookings"><button class="small-btn danger" type="submit" style="width:100%;padding:10px">Ακύρωση κράτησης & επιστροφή credits όπου ισχύει</button></form>
     </div>
   </div>
 </div>

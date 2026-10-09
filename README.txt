@@ -473,3 +473,17 @@ IMPORTANT:
 - Keep SECRET_KEY private and stable once real users start using the app.
 - Do not run production with FLASK_DEBUG=1.
 - Before real launch, create/verify a Railway volume backup policy.
+
+v71 - Beginner Progress System
+- 4 Beginner lesson levels with 18 techniques total.
+- Instructor/Admin can mark each technique: Not started / Practicing / Mastered.
+- Student sees read-only progress in profile.
+- When all 18 techniques are Mastered, Beginner changes automatically to Kiter.
+- Existing higher levels are preserved; Intermediate/Expert progression will be defined later.
+
+v73 — Unified Student Portal + Lesson Progress
+- Student Home, Booking, Lessons/Photos/Profile and Messages use the same portal shell, sidebar, content width and spacing.
+- Instructor lesson completion shows the real Beginner/Kiter level from the progress system.
+- "Τι δουλέψατε σήμερα;" now starts with Level 1/2/3/4 selection and then shows only that Level's techniques.
+- Instructor can mark one or more techniques as Practicing or Mastered during lesson completion.
+- Saving a completed lesson updates Student Progress automatically and promotes Beginner -> Kiter when all 18 skills are Mastered.

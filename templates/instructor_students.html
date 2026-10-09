@@ -4,7 +4,7 @@
 <div class="im-shell">
   <div class="card"><h1>Οι μαθητές μου</h1><form method="get" style="margin-top:12px"><input class="im-search" name="q" value="{{q}}" placeholder="🔎 Αναζήτηση μαθητή..."></form></div>
   <div class="card">
-    <div class="im-filters"><span class="im-chip active">Όλοι</span><span class="im-chip">Ενεργοί</span><span class="im-chip">Beginner</span><span class="im-chip">Intermediate</span><span class="im-chip">Advanced</span></div><br>
+    <div class="im-filters"><span class="im-chip active">Όλοι</span><span class="im-chip">Ενεργοί</span><span class="im-chip">Beginner</span><span class="im-chip">Kiter</span><span class="im-chip">Intermediate</span><span class="im-chip">Expert</span></div><br>
     <div class="im-student-list">
       {% for s in students %}
       <a class="im-student" href="{{url_for('instructor_student_detail',student_id=s.id)}}">
