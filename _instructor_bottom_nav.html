@@ -1,0 +1,5 @@
+<div class="im-bottom-nav">
+  <a class="{% if active_tab=='schedule' %}active{% endif %}" href="{{url_for('instructor')}}"><span class="im-nav-ico">▣</span>Πρόγραμμα</a>
+  <a class="{% if active_tab=='students' %}active{% endif %}" href="{{url_for('instructor_students')}}"><span class="im-nav-ico">♙</span>Μαθητές</a>
+  <a class="{% if active_tab=='profile' %}active{% endif %}" href="{{url_for('instructor_profile')}}"><span class="im-nav-ico">♙</span>Προφίλ</a>
+</div>

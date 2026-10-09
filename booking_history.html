@@ -1,0 +1,49 @@
+{% extends "base.html" %}{% block content %}
+<link rel="stylesheet" href="{{url_for('static',filename='admin-shared.css')}}">
+<link rel="stylesheet" href="{{url_for('static',filename='admin-v4.css')}}">
+
+<style>
+.history-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}.history-meta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:14px}.history-meta .itembox{background:#f7fafc;border:1px solid var(--l);border-radius:14px;padding:12px}.timeline{display:flex;flex-direction:column;gap:12px}.timeline-item{display:grid;grid-template-columns:150px minmax(0,1fr);gap:12px;padding:14px;border:1px solid var(--l);border-radius:15px;background:#fff}.timeline-time{font-size:12px;color:var(--m);font-weight:800}.timeline-title{font-weight:900}.timeline-sub{font-size:12px;color:var(--m);margin-top:4px}.timeline-details{margin-top:8px;font-size:12px;color:#4d6376;background:#f7fafc;border-radius:10px;padding:10px}.status{font-size:11px;font-weight:950;padding:6px 9px;border-radius:999px;display:inline-block;white-space:nowrap}.s-booked{background:#e4f2ff;color:#075a9a}.s-pending{background:#fff0d7;color:#a85f00}.s-completed{background:#dff7e8;color:#087846}.s-noshow{background:#ffe8df;color:#ad4e20}.s-cancelled{background:#edf1f4;color:#758592}.muted-mini{font-size:12px;color:var(--m)}@media(max-width:760px){.history-meta{grid-template-columns:1fr 1fr}.timeline-item{grid-template-columns:1fr}}@media(max-width:520px){.history-meta{grid-template-columns:1fr}}
+</style>
+<div class="admin-shell">
+  {% set admin_active='bookings' %}{% include '_admin_sidebar_static.html' %}
+  <main class="admin-main">
+<div class="card">
+  {% set state=booking_state_meta(booking.status,booking.payment_status) %}
+  <div class="history-head">
+    <div>
+      <a href="{{back_url}}" class="muted" style="text-decoration:none">{{back_label}}</a>
+      <h1 style="margin-top:8px">{{page_title}}</h1>
+      <div class="muted-mini">{{booking.lesson_date|gr_long_date}} · {{booking.start_time|hm24}} · {{booking.duration|round(1)}}h · {{booking.spot_name or '—'}}</div>
+    </div>
+    <span class="status s-{{state.class}}">{{state.label}}</span>
+  </div>
+  <div class="history-meta">
+    <div class="itembox"><b>Μαθητής</b><div>{{booking.participant_names or (booking.student_name ~ (' ' ~ booking.student_surname if booking.student_surname else ''))}}</div><div class="muted-mini">{% if booking.participant_count and booking.participant_count>1 %}{{booking.participant_count}}P Group{% else %}{{booking.student_code}} · {{booking.student_level or '—'}}{% endif %}</div></div>
+    <div class="itembox"><b>Instructor</b><div>{{booking.instructor_name}}{% if booking.instructor_surname %} {{booking.instructor_surname}}{% endif %}</div></div>
+    <div class="itembox"><b>Πληρωμή</b><div>{{booking.payment_status or '—'}}</div></div>
+    <div class="itembox"><b>Booking ID</b><div>#{{booking.id}}</div></div>
+  </div>
+</div>
+<div class="card">
+  <h2>Audit history</h2>
+  {% if history %}
+  <div class="timeline">
+    {% for h in history %}
+    <div class="timeline-item">
+      <div class="timeline-time">{{h.created_at[:10]|gr_date}}<br>{{h.created_at[11:16]}}</div>
+      <div>
+        <div class="timeline-title">{{h.summary}}</div>
+        <div class="timeline-sub">{{h.event_type|replace('_',' ')|title}} · {% if h.actor_name %}{{h.actor_name}}{% if h.actor_surname %} {{h.actor_surname}}{% endif %}{% elif h.actor_role %}{{h.actor_role|title}}{% else %}System{% endif %}</div>
+        {% if h.details %}<div class="timeline-details">{{h.details}}</div>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="muted">Δεν υπάρχει ακόμα καταγεγραμμένο ιστορικό για αυτή την κράτηση.</div>
+  {% endif %}
+</div>
+</main>
+</div>
+{% endblock %}

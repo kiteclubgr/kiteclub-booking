@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+kiteclub.db
+static/uploads/
+.local_secret_key
+*.db-wal
+*.db-shm
+backups/

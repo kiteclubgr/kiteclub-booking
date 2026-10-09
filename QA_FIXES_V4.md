@@ -1,0 +1,1 @@
+KiteClub v75.2 QA Fixes v4: Instructor student/lesson details now share instructor portal sidebar and full-width shell; Admin sidebar compact under 1000px height so version appears above logout within visible desktop height. All previous v3 logic preserved.

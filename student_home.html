@@ -1,0 +1,32 @@
+{% extends "base.html" %}{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='student-portal.css') }}">
+<link rel="stylesheet" href="{{url_for('static',filename='role-sidebar-v3.css')}}?v=3">
+<script>document.body.classList.add('student-portal-body')</script>
+<div class="student-portal-shell">
+  {% set student_nav='home' %}{% include '_student_portal_sidebar.html' %}
+  <main class="student-portal-main">
+    <div class="student-portal-top"><strong>{{student.name}}{% if student.surname %} {{student.surname}}{% endif %}</strong> · <a href="{{url_for('student_profile')}}">Προφίλ</a></div>
+    <div class="student-portal-content">
+      <section class="sp-hero">
+        {% set hero_photo = student_photos[0] if student_photos else none %}
+        <div class="sp-welcome {% if hero_photo %}has-photo{% endif %}" {% if hero_photo %}style="background-image:linear-gradient(90deg,rgba(4,29,48,.68),rgba(4,29,48,.10)),url('{{url_for('static',filename=hero_photo.file_path)}}')"{% endif %}>
+          <div class="sp-welcome-copy"><h1>Καλωσόρισες, {{student.name}}!</h1><p>Έτοιμος για την επόμενη συνεδρία;</p></div>
+        </div>
+      </section>
+      <div class="sp-home-cards">
+        <article class="sp-home-card"><div class="ico">▣</div><small>Επόμενη κράτηση</small>{% if upcoming %}<b>{{upcoming[0].lesson_date|gr_date}}</b><div>{{upcoming[0].start_time|hm24}} · {{upcoming[0].spot}}</div><a class="btn" href="{{url_for('student')}}">Προβολή κράτησης</a>{% else %}<b>Δεν υπάρχει</b><div class="muted">Κλείσε το επόμενο μάθημά σου</div><a class="btn" href="{{url_for('student')}}">Νέα κράτηση</a>{% endif %}</article>
+        <article class="sp-home-card"><div class="ico" style="background:#e8f9ef;color:#0b9a5b">◆</div><small>Διαθέσιμα credits</small><b>{{student.credits}} ώρες</b><div class="muted">Υπόλοιπο πακέτου</div><a class="btn alt" href="{{url_for('student_profile')}}#payments">Τα πακέτα μου</a></article>
+        <article class="sp-home-card"><div class="ico">●</div><small>Τύπος μαθημάτων</small><b>{{'Private' if student.lesson_type=='private' else ('2P Group' if student.lesson_type=='2p' else '3P Group')}}</b><div class="muted">Ορίζεται από τη σχολή</div><a class="btn alt" href="{{url_for('student_profile')}}">Προβολή λεπτομερειών</a></article>
+      </div>
+      <div class="sp-quick">
+        <a href="{{url_for('student')}}"><span class="qicon">▣</span>Νέα κράτηση</a>
+        <a href="{{url_for('student_profile')}}#lessons"><span class="qicon">🎓</span>Τα μαθήματά μου</a>
+        <a href="{{url_for('student_profile')}}#photos"><span class="qicon" style="background:#fff1e9;color:#e76b2e">▧</span>Φωτογραφίες</a>
+        <a href="{{url_for('student_profile')}}#payments"><span class="qicon" style="background:#f1edff;color:#6d52d9">€</span>Πληρωμές</a>
+        <a href="{{url_for('student_profile')}}"><span class="qicon">●</span>Προφίλ μου</a>
+        <a href="{{url_for('student_messages')}}"><span class="qicon">✉</span>Μηνύματα{% if message_unread_count %} ({{message_unread_count}}){% endif %}</a>
+      </div>
+    </div>
+  </main>
+</div>
+{% endblock %}

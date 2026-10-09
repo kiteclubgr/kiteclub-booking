@@ -1,0 +1,193 @@
+{% extends "base.html" %}{% block content %}
+<link rel="stylesheet" href="{{url_for('static',filename='admin-shared.css')}}">
+<style>
+.student-profile{max-width:1520px;margin:0 auto}.profile-hero{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:22px;align-items:center;padding:22px 24px}.avatar-box{width:112px;height:112px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,#dfeef6,#c9e3f0);display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:950;color:#4b7088;border:4px solid #fff;box-shadow:0 7px 24px rgba(11,35,64,.11)}.avatar-box img{width:100%;height:100%;object-fit:cover}.hero-name{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.hero-name h2{font-size:28px;margin:0}.hero-meta{display:flex;gap:12px;flex-wrap:wrap;color:var(--m);font-size:13px;margin-top:7px}.hero-badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px}.hero-actions{display:flex;gap:8px;align-self:start}.profile-tabs{display:flex;gap:8px;overflow:auto;padding:8px;background:#fff;border:1px solid var(--l);border-radius:16px;margin-bottom:14px;position:sticky;top:8px;z-index:8;box-shadow:0 7px 22px rgba(11,35,64,.04)}.profile-tab{border:0;background:transparent;color:#607586;padding:11px 15px;border-radius:10px;font:inherit;font-size:13px;font-weight:900;cursor:pointer;white-space:nowrap}.profile-tab.active{background:#eaf6ff;color:#0873b7;box-shadow:inset 0 -2px 0 #0788c8}.profile-pane{display:none}.profile-pane.active{display:block}.overview-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(340px,.85fr) minmax(280px,.65fr);gap:14px}.section-card{background:#fff;border:1px solid var(--l);border-radius:17px;padding:18px;box-shadow:0 7px 22px rgba(11,35,64,.045);margin-bottom:14px}.section-card h2{margin:0 0 4px}.section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}.edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.edit-grid .full{grid-column:1/-1}.edit-grid label,.field-label{display:block;font-size:12px;font-weight:900;margin-bottom:5px}.edit-grid input,.edit-grid select{width:100%}.crew-card{background:linear-gradient(145deg,#f3fff7,#e9f9ef);border:1px solid #cfead8}.crew-card.inactive{background:#f6f8fa;border-color:#dfe6eb}.crew-card.inactive .crew-title{color:#607586}.crew-card.inactive .crew-status-box{border-color:#e1e7eb;background:#fff}.crew-title{display:flex;align-items:center;gap:8px;color:#087846;font-size:20px;font-weight:950}.crew-badge{background:#dff7e8;color:#08753d;border:1px solid #bfe8cd;border-radius:999px;padding:6px 10px;font-size:12px;font-weight:950}.crew-expired{background:#fff0f1;color:#b83242;border-color:#f5cfd4}.crew-scheduled{background:#fff8e7;color:#9a6500;border-color:#f2dfae}.crew-status-box{margin-top:14px;padding:14px;border-radius:13px;background:rgba(255,255,255,.72);border:1px solid #d9eee0}.crew-status-box strong{font-size:22px;display:block;margin-top:3px}.stats-stack{display:grid;gap:9px}.stat-line{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid #edf2f5}.stat-line:last-child{border-bottom:0}.stat-line span{color:var(--m);font-size:13px;font-weight:750}.stat-line b{font-size:17px}.group-settings{border:1px solid #d9e6ee;border-radius:14px;padding:14px;background:#f8fbfd}.group-members{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.group-member{background:#eaf6ff;color:#0b5f97;border:1px solid #cbe7f8;border-radius:999px;padding:6px 10px;font-size:12px;font-weight:850}.group-help{font-size:12px;color:var(--m);margin-top:6px}.metrics{display:grid;grid-template-columns:repeat(6,minmax(135px,1fr));gap:10px;margin-bottom:14px}.metric-box{background:#fff;border:1px solid var(--l);border-radius:14px;padding:14px}.metric-box span{display:block;color:var(--m);font-size:11px;font-weight:800}.metric-box b{display:block;font-size:23px;margin-top:4px}.credit-add{display:grid;grid-template-columns:170px 1fr auto;gap:8px;align-items:end}.package-buy{display:grid;grid-template-columns:1.2fr 180px 1fr auto;gap:8px;align-items:end}.package-history{display:grid;gap:9px}.package-row{border:1px solid var(--l);border-radius:13px;padding:12px;display:grid;grid-template-columns:1.25fr .6fr .7fr .95fr 1.2fr;gap:10px;align-items:center}.pay-actions{display:flex;gap:6px;flex-wrap:wrap}.pay-actions form{display:inline-flex;gap:6px;align-items:center}.pay-actions .btn{padding:8px 10px}.money-paid{color:#078248}.money-due{color:#c53b47}.status-partial{background:#fff1c7;color:#8d5b00}.status-unpaid{background:#ffe2e2;color:#ad3030}.package-row b{display:block}.package-stat{font-size:12px;color:var(--m)}.history-table{width:100%;border-collapse:collapse;min-width:820px}.history-table th,.history-table td{padding:10px;border-bottom:1px solid var(--l);text-align:left;vertical-align:middle}.history-table th{background:#f6f9fb;color:#536d80;font-size:11px;text-transform:uppercase}.table-wrap{overflow:auto;border:1px solid var(--l);border-radius:13px}.credit-plus{color:#078248;font-weight:900}.credit-minus{color:#c53b47;font-weight:900}.mini-list{display:grid;gap:8px}.mini-booking{display:grid;grid-template-columns:58px 1fr auto;gap:10px;align-items:center;padding:10px;border:1px solid var(--l);border-radius:12px;background:#fbfdff}.mini-date{text-align:center;font-size:12px;font-weight:950}.mini-date b{display:block;font-size:18px}.mini-title{font-weight:900}.mini-sub{font-size:11px;color:var(--m);margin-top:2px}
+.gallery-upload{display:grid;grid-template-columns:minmax(0,1fr) 220px 1fr auto;gap:10px;align-items:end}.gallery-upload input[type=file]{padding:10px;background:#fff}.gallery-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.gallery-card{border:1px solid var(--l);border-radius:14px;overflow:hidden;background:#fff}.gallery-card img{width:100%;height:210px;object-fit:cover;display:block;background:#eef4f8}.gallery-meta{padding:10px 12px}.gallery-date{font-size:12px;color:var(--m);font-weight:800}.gallery-caption{margin-top:4px;font-weight:800}.gallery-actions{display:flex;justify-content:flex-end;margin-top:8px}.gallery-empty{text-align:center;padding:34px;color:var(--m);border:1px dashed #cbd9e2;border-radius:14px}.lightbox{position:fixed;inset:0;background:rgba(5,20,38,.82);display:none;align-items:center;justify-content:center;padding:24px;z-index:9999}.lightbox.open{display:flex}.lightbox img{max-width:94vw;max-height:88vh;border-radius:12px;box-shadow:0 20px 70px rgba(0,0,0,.35)}.lightbox button{position:absolute;top:20px;right:20px;border:0;background:#fff;border-radius:999px;width:42px;height:42px;font-size:22px;cursor:pointer}.level-badge{background:#edf3f8;color:#4c6377}.progress-program{padding:18px}.progress-top{display:grid;grid-template-columns:minmax(0,1fr) minmax(360px,.55fr);gap:28px;align-items:center;margin-bottom:18px}.progress-title-wrap{display:flex;align-items:center;gap:15px}.progress-title-wrap h2{font-size:28px;margin:0 0 3px}.progress-icon{width:58px;height:58px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#e8f2ff;font-size:27px}.progress-total-card{background:linear-gradient(135deg,#f4f8ff,#edf4ff);border-radius:13px;padding:15px 18px}.progress-total-line{display:flex;justify-content:space-between;gap:16px;align-items:center}.progress-total-line b{font-size:14px}.progress-total-line span{font-weight:650;color:var(--m);font-size:12px}.progress-track{height:12px;background:#e4ebf2;border-radius:999px;overflow:hidden}.progress-track.compact{margin:10px 0 0}.progress-track.mini{height:9px;margin:8px 0}.progress-fill{height:100%;background:linear-gradient(90deg,#1684f8,#1b6fe8);border-radius:999px}.progress-level-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.progress-level-card{border:1px solid #dce6ee;border-radius:14px;background:#fff;overflow:hidden;min-width:0}.progress-level-card.done{border-color:#a9dcc0}.progress-level-head{padding:17px 18px 14px;border-bottom:1px solid #e8eef3;min-height:126px}.level-1 .progress-level-head{background:linear-gradient(135deg,#fff2f3,#ffe7e9)}.level-2 .progress-level-head{background:linear-gradient(135deg,#fff9e9,#fff0bf)}.level-3 .progress-level-head{background:linear-gradient(135deg,#f0fff4,#ddf7e4)}.level-4 .progress-level-head{background:linear-gradient(135deg,#f1f7ff,#dcecff)}.progress-level-title{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:21px}.level-count{font-size:12px;background:rgba(255,255,255,.7);padding:6px 9px;border-radius:999px}.level-percent{font-weight:900;margin-top:10px}.level-sub{font-size:12px;color:#526b7f;font-weight:700;margin-top:3px}.level-hours{font-size:11px;color:#73899a;margin-top:4px}.progress-skills{padding:0 14px}.progress-skill-row{display:grid;grid-template-columns:minmax(0,1fr) 128px;gap:8px;align-items:center;padding:10px 0;border-top:1px solid #edf2f5}.progress-skill-row:first-child{border-top:0}.progress-skill-row.mastered .progress-skill-name{color:#087846}.progress-skill-row.practicing .progress-skill-name{color:#8a6400}.progress-skill-name{font-weight:850;font-size:13px}.progress-skill-meta{font-size:10px;color:var(--m);margin-top:3px}.progress-select{width:100%;padding:8px 10px;border:1px solid #d5e0e8;border-radius:10px;background:#f5f7f9;font-size:12px}.progress-select.status-practicing{background:#eef6ff;color:#096bd8;border-color:#cfe4ff}.progress-select.status-mastered{background:#e9f9ed;color:#087846;border-color:#ccecd6}.next-level-box{margin-top:16px;border:1px solid #cfe1ff;border-radius:13px;background:#fbfdff;padding:15px 18px;display:flex;gap:15px;align-items:center}.next-level-lock{width:48px;height:48px;flex:0 0 48px;border-radius:50%;background:#d9eaff;display:flex;align-items:center;justify-content:center;font-size:22px}.next-level-box>b,.next-level-box b{font-size:16px}.next-level-box div div{font-size:12px;margin-top:3px}@media(max-width:1300px){.progress-level-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:820px){.progress-top{grid-template-columns:1fr}.progress-level-grid{grid-template-columns:1fr}.progress-skill-row{grid-template-columns:1fr 130px}}
+@media(max-width:980px){.gallery-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.gallery-upload{grid-template-columns:1fr 1fr}.gallery-upload .wide{grid-column:1/-1}}
+@media(max-width:1200px){.overview-grid{grid-template-columns:1fr 1fr}.stats-card{grid-column:1/-1}.metrics{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:760px){.profile-hero{grid-template-columns:1fr;text-align:center}.avatar-box{margin:auto}.hero-name,.hero-meta,.hero-badges{justify-content:center}.hero-actions{justify-content:center}.overview-grid{grid-template-columns:1fr}.edit-grid{grid-template-columns:1fr}.edit-grid .full{grid-column:auto}.metrics{grid-template-columns:repeat(2,1fr)}.credit-add,.package-buy,.package-row{grid-template-columns:1fr}.package-row>div:first-child{grid-column:auto}.admin-main{padding:10px}.profile-tabs{top:0}}
+</style>
+<div class="admin-shell">
+  {% set admin_active='students' %}{% include '_admin_sidebar_static.html' %}
+  <main class="admin-main">
+    <div class="student-profile">
+      <div class="admin-page-head">
+        <div><div class="admin-page-sub">Μαθητές › Προφίλ μαθητή</div></div>
+        <a class="btn alt" href="{{url_for('admin')}}#students">← Μαθητές</a>
+      </div>
+
+      <section class="card profile-hero">
+        <div class="avatar-box">{% if student.profile_photo %}<img src="{{url_for('static',filename=student.profile_photo)}}" alt="{{student.name}}">{% else %}{{student.name[:1]}}{{student.surname[:1] if student.surname else ''}}{% endif %}</div>
+        <div>
+          <div class="hero-name"><h2>{{student.name}}{% if student.surname %} {{student.surname}}{% endif %}</h2>{% if crew_status=='active' %}<span class="crew-badge">★ CREW MEMBER</span>{% elif crew_status=='expired' %}<span class="crew-badge crew-expired">CREW EXPIRED</span>{% elif crew_status=='scheduled' %}<span class="crew-badge crew-scheduled">CREW SCHEDULED</span>{% endif %}</div>
+          <div class="hero-meta"><span>✉ {{student.email}}</span>{% if student.phone %}<span>☎ {{student.phone}}</span>{% endif %}{% if student.instagram %}<span>◎ {{student.instagram}}</span>{% endif %}</div>
+          <div class="hero-badges"><span class="badge off">ID: {{student.student_code}}</span><span class="badge ok">{{student.credits}} διαθέσιμες ώρες</span><span class="badge off level-badge">{{progress.current_level}}</span><span class="badge off">{{'Private' if student.lesson_type=='private' else ('2P Group' if student.lesson_type=='2p' else '3P Group')}}</span><span class="badge off">{{completed_hours}} completed ώρες</span></div>
+        </div>
+        <div class="hero-actions"></div>
+      </section>
+
+      <div class="profile-tabs" role="tablist">
+        <button class="profile-tab active" type="button" data-tab="details">👤 Στοιχεία</button>
+        <button class="profile-tab" type="button" data-tab="progress">✓ Πρόοδος</button>
+        <button class="profile-tab" type="button" data-tab="bookings">▣ Κρατήσεις</button>
+        <button class="profile-tab" type="button" data-tab="packages">▤ Πακέτα / Credits</button>
+        <button class="profile-tab" type="button" data-tab="payments">▰ Πληρωμές</button>
+        <button class="profile-tab" type="button" data-tab="history">◷ Ιστορικό</button>
+        <button class="profile-tab" type="button" data-tab="photos">▧ Φωτογραφίες</button>
+      </div>
+
+      <section class="profile-pane active" data-pane="details">
+        <div class="overview-grid">
+          <div class="section-card">
+            <div class="section-head"><div><h2>Βασικά στοιχεία</h2><div class="muted">Προσωπικά στοιχεία και τύπος μαθήματος.</div></div></div>
+            <form method="post" enctype="multipart/form-data" class="edit-grid" id="studentEditForm"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+              <div><label>Όνομα</label><input name="name" value="{{student.name}}" required></div>
+              <div><label>Επώνυμο</label><input name="surname" value="{{student.surname or ''}}"></div>
+              <div class="full"><label>Email</label><input type="email" name="email" value="{{student.email}}" required></div>
+              <div><label>Τηλέφωνο</label><input name="phone" value="{{student.phone or ''}}"></div>
+              <div><label>Επίπεδο</label><input value="{{progress.current_level}}" readonly><div class="group-help">Beginner → Kiter αλλάζει αυτόματα από την Πρόοδο.</div></div>
+              <div><label>Τύπος μαθήματος</label><select name="lesson_type" id="lessonTypeSelect"><option value="private" {% if student.lesson_type=='private' %}selected{% endif %}>Private</option><option value="2p" {% if student.lesson_type=='2p' %}selected{% endif %}>2P Group</option><option value="3p" {% if student.lesson_type=='3p' %}selected{% endif %}>3P Group</option></select></div>
+              <div><label>Νέο password</label><input name="password" placeholder="Άφησέ το κενό ή βάλε 8+ χαρακτήρες με γράμματα και αριθμούς"></div>
+              <div><label>IG account</label><input name="instagram" value="{{student.instagram or ''}}" placeholder="@username"></div>
+              <div><label>Φωτογραφία προφίλ</label><input type="file" name="profile_photo" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"></div>
+              <div class="full group-settings" id="groupSettings"><b>Σταθερά μέλη group</b><div class="group-help">Η σύνδεση συγχρονίζεται αυτόματα στα profiles όλων των μελών.</div><div class="edit-grid" style="margin-top:10px"><div id="groupMember1Wrap"><label>2ο άτομο</label><select name="group_member_id" id="groupMember1"><option value="">— Επιλογή μαθητή —</option>{% for s in all_students %}<option value="{{s.id}}" {% if group_partner_ids|length>0 and group_partner_ids[0]==s.id %}selected{% endif %}>{{s.student_code}} · {{s.name}}{% if s.surname %} {{s.surname}}{% endif %}</option>{% endfor %}</select></div><div id="groupMember2Wrap"><label>3ο άτομο</label><select name="group_member_id" id="groupMember2"><option value="">— Επιλογή μαθητή —</option>{% for s in all_students %}<option value="{{s.id}}" {% if group_partner_ids|length>1 and group_partner_ids[1]==s.id %}selected{% endif %}>{{s.student_code}} · {{s.name}}{% if s.surname %} {{s.surname}}{% endif %}</option>{% endfor %}</select></div></div>{% if group_members|length > 1 %}<div class="group-members">{% for m in group_members %}<span class="group-member">{{m.student_code}} · {{m.name}}{% if m.surname %} {{m.surname}}{% endif %}</span>{% endfor %}</div>{% endif %}</div>
+              <div class="full"><button class="btn" type="submit">Αποθήκευση αλλαγών</button></div>
+            </form>
+          </div>
+
+          <div class="section-card crew-card {{'inactive' if crew_status=='inactive' else ''}}">
+            <div class="section-head"><div class="crew-title">★ Crew Member</div>{% if crew_status=='active' %}<span class="crew-badge">ACTIVE</span>{% elif crew_status=='expired' %}<span class="crew-badge crew-expired">EXPIRED</span>{% elif crew_status=='scheduled' %}<span class="crew-badge crew-scheduled">SCHEDULED</span>{% else %}<span class="badge off">INACTIVE</span>{% endif %}</div>
+            <div class="muted" style="font-size:13px;margin-bottom:14px">Ετήσια συνδρομή Crew Member. Τα προνόμια μπορούν να προστεθούν αργότερα.</div>
+            <div class="edit-grid">
+              <div class="full"><label>Κατάσταση</label><select name="crew_member" form="studentEditForm"><option value="0" {% if not student.crew_member %}selected{% endif %}>Όχι Crew Member</option><option value="1" {% if student.crew_member %}selected{% endif %}>Ναι - Crew Member</option></select></div>
+              <div><label>Ημερομηνία έναρξης</label><input type="date" name="crew_start_date" form="studentEditForm" value="{{student.crew_start_date or ''}}"></div>
+              <div><label>Ημερομηνία λήξης</label><input type="date" name="crew_end_date" form="studentEditForm" value="{{student.crew_end_date or ''}}"></div>
+              <div class="full"><label>Ετήσια συνδρομή (€)</label><input type="number" min="0" step="0.01" name="crew_fee" form="studentEditForm" value="{{student.crew_fee or 0}}"></div>
+            </div>
+            <div class="crew-status-box"><span class="muted">Κατάσταση συνδρομής</span><strong>{% if crew_status=='active' %}ACTIVE{% elif crew_status=='expired' %}EXPIRED{% elif crew_status=='scheduled' %}SCHEDULED{% else %}INACTIVE{% endif %}</strong>{% if student.crew_end_date %}<div class="muted" style="margin-top:4px">Λήξη: {{student.crew_end_date|gr_date}}</div>{% endif %}</div>
+          </div>
+
+          <div class="section-card stats-card">
+            <h2>Στατιστικά μαθητή</h2><div class="stats-stack"><div class="stat-line"><span>Διαθέσιμα credits</span><b>{{student.credits}}h</b></div><div class="stat-line"><span>Συνολικές κρατημένες ώρες</span><b>{{total_booked_hours}}h</b></div><div class="stat-line"><span>Completed ώρες</span><b>{{completed_hours}}h</b></div><div class="stat-line"><span>Make-up</span><b>{{makeup_hours}}h</b></div><div class="stat-line"><span>No-show</span><b>{{no_show_count}}</b></div><div class="stat-line"><span>Σύνολο προσθηκών credits</span><b>{{total_credit_in}}h</b></div></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="profile-pane" data-pane="progress">
+        <div class="section-card progress-program" id="progress">
+          <div class="progress-top">
+            <div class="progress-title-wrap">
+              <div class="progress-icon">🎓</div>
+              <div><h2>{{progress.current_level}}</h2><div class="muted">Όταν γίνουν Mastered και οι 18 τεχνικές στα 4 Levels, ο μαθητής γίνεται αυτόματα <b>Kiter</b>.</div></div>
+            </div>
+            <div class="progress-total-card">
+              <div class="progress-total-line"><b>{{progress.total_mastered}} / {{progress.total_skills}} skills completed</b><b>{{progress.percent}}% <span>mastered</span></b></div>
+              <div class="progress-track compact"><div class="progress-fill" style="width:{{progress.percent}}%"></div></div>
+            </div>
+          </div>
+          <div class="progress-level-grid">
+            {% for level in progress.levels %}
+            <div class="progress-level-card level-{{level.number}} {% if level.complete %}done{% endif %}">
+              <div class="progress-level-head">
+                <div class="progress-level-title"><b>{{level.title}}</b><span class="level-count">{{level.mastered}} / {{level.count}}</span></div>
+                <div class="level-percent">{{((level.mastered / level.count * 100)|round|int) if level.count else 0}}%</div>
+                <div class="progress-track mini"><div class="progress-fill" style="width:{{((level.mastered / level.count * 100)|round|int) if level.count else 0}}%"></div></div>
+                <div class="level-sub">{% if level.number==1 %}Θεωρία, χειρισμός και βασικές τεχνικές{% elif level.number==2 %}Βελτίωση ελέγχου και ασφάλειας{% elif level.number==3 %}Προχωρημένες τεχνικές bodydrag{% else %}Riding και upwind{% endif %}</div>
+                {% if level.usual_hours %}<div class="level-hours">{{level.usual_hours}}</div>{% endif %}
+              </div>
+              <div class="progress-skills">
+                {% for skill in level.skills %}<div class="progress-skill-row {{skill.status}}"><div><div class="progress-skill-name">{% if skill.status=='mastered' %}✓{% elif skill.status=='practicing' %}◐{% else %}○{% endif %} {{skill.name}}</div>{% if skill.updated_at %}<div class="progress-skill-meta">{{skill.updated_at[:16].replace('T',' ')}}{% if skill.updater_name %} · {{skill.updater_name}}{% if skill.updater_surname %} {{skill.updater_surname}}{% endif %}{% endif %}</div>{% endif %}</div><form method="post" action="{{url_for('admin_student_progress',student_id=student.id)}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="skill_key" value="{{skill.key}}"><select class="progress-select status-{{skill.status}}" name="status" onchange="this.form.submit()"><option value="not_started" {% if skill.status=='not_started' %}selected{% endif %}>Not started</option><option value="practicing" {% if skill.status=='practicing' %}selected{% endif %}>Practicing</option><option value="mastered" {% if skill.status=='mastered' %}selected{% endif %}>Mastered</option></select></form></div>{% endfor %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          <div class="next-level-box"><div class="next-level-lock">🔒</div><div><b>Next Level: Kiter</b><div>Ολοκλήρωσε και τις 18 τεχνικές στα Level 1, 2, 3 και 4 για να γίνει αυτόματα <b>Kiter</b>.</div><div class="muted">Τρέχουσα πρόοδος: {{progress.total_mastered}} / {{progress.total_skills}} skills ({{progress.percent}}%)</div></div></div>
+        </div>
+      </section>
+
+      <section class="profile-pane" data-pane="bookings">
+        <div class="metrics"><div class="metric-box"><span>Διαθέσιμα credits</span><b>{{student.credits}}h</b></div><div class="metric-box"><span>Κρατημένες ώρες</span><b>{{total_booked_hours}}h</b></div><div class="metric-box"><span>Completed</span><b>{{completed_hours}}h</b></div><div class="metric-box"><span>Make-up</span><b>{{makeup_hours}}h</b></div><div class="metric-box"><span>No-show</span><b>{{no_show_count}}</b></div><div class="metric-box"><span>Credit additions</span><b>{{total_credit_in}}h</b></div></div>
+        <div class="section-card"><h2>Report κρατήσεων</h2><div class="muted">Όλες οι κρατήσεις του μαθητή.</div><br>{% if booking_report %}<div class="table-wrap"><table class="history-table"><thead><tr><th>Ημερομηνία</th><th>Ώρα</th><th>Instructor</th><th>Spot</th><th>Διάρκεια</th><th>Status</th><th>Payment</th></tr></thead><tbody>{% for b in booking_report %}<tr><td>{{b.lesson_date|gr_date}}</td><td>{{b.start_time|hm24}}</td><td>{{b.instructor}}{% if b.instructor_surname %} {{b.instructor_surname}}{% endif %}</td><td>{{b.spot}}</td><td>{{b.duration}}h</td><td>{% if b.status=='no_show' %}<span class="badge off">No-show</span>{% elif b.status=='makeup' %}<span class="badge wait">Make-up</span>{% elif b.status=='completed' %}<span class="badge ok">Completed</span>{% else %}{{b.status}}{% endif %}</td><td>{{b.payment_status}}</td></tr>{% endfor %}</tbody></table></div>{% else %}<p class="muted">Δεν υπάρχουν κρατήσεις.</p>{% endif %}</div>
+      </section>
+
+      <section class="profile-pane" data-pane="packages">
+        <div class="section-card"><div class="section-head"><div><h2>Credits</h2><div class="muted">Πρόσθεσε ή αφαίρεσε ώρες από το υπόλοιπο.</div></div><span class="badge ok">Υπόλοιπο: {{student.credits}}h</span></div><form method="post" action="{{url_for('admin_student_profile_credit_adjustment',student_id=student.id)}}" class="credit-add"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}"><div><label class="field-label">Μεταβολή ωρών</label><input type="number" step="0.5" name="amount" placeholder="+2 ή -1" required></div><div><label class="field-label">Σημείωση</label><input name="note" placeholder="π.χ. Αγορά πακέτου 6 ωρών"></div><button class="btn" type="submit">Καταχώρηση</button></form></div>
+        <div class="section-card"><div class="section-head"><div><h2>Πακέτα</h2><div class="muted">Ανάθεσε έτοιμο πακέτο στον μαθητή.</div></div><a class="btn alt" href="{{url_for('admin_packages')}}">Διαχείριση πακέτων</a></div>{% if available_packages %}<form method="post" action="{{url_for('admin_student_package_purchase',student_id=student.id)}}" class="package-buy"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}"><div><label class="field-label">Πακέτο</label><select name="package_id" required>{% for p in available_packages %}<option value="{{p.id}}">{{p.name}} · {% if (p.package_type or 'lesson')=='crew' %}Crew Μάιος→Απρίλιος{% else %}{{p.hours}}h{% endif %} · {{'%.2f'|format(p.price)}}€</option>{% endfor %}</select></div><div><label class="field-label">Πληρωμή</label><select name="payment_status"><option value="unpaid">Unpaid</option><option value="paid">Paid</option></select></div><div><label class="field-label">Σημείωση</label><input name="note" placeholder="π.χ. μετρητά / POS"></div><button class="btn" type="submit">Προσθήκη πακέτου</button></form>{% else %}<div class="muted">Δεν υπάρχουν ενεργά πακέτα.</div>{% endif %}</div>
+      </section>
+
+      <section class="profile-pane" data-pane="payments">
+        <div class="section-card">
+          <h2>Αγορές & πληρωμές</h2>
+          <div class="muted">Το lesson status είναι ανεξάρτητο από την πληρωμή. Τα 1h/2h μπορούν να γίνουν και πριν πληρωθούν.</div><br>
+          {% if package_history %}
+          <div class="package-history">
+            {% for p in package_history %}
+            {% set paid = p.paid_amount or 0 %}{% set due = (p.price or 0) - paid %}
+            <div class="package-row">
+              <div><b>{{p.package_name}}</b><div class="package-stat">{{p.purchased_at[:16].replace('T',' ') if p.purchased_at else '—'}}{% if p.note %} · {{p.note}}{% endif %}</div></div>
+              <div>{% if (p.package_type or 'lesson')=='crew' %}<b>Crew</b><div class="package-stat">membership</div>{% else %}<b>{{p.hours_total}}h</b><div class="package-stat">{{p.hours_remaining}}h διαθέσιμες</div>{% endif %}</div>
+              <div><b class="money-paid">{{'%.2f'|format(paid)}}€</b><div class="package-stat">πληρωμένα / {{'%.2f'|format(p.price)}}€</div><b class="money-due">{{'%.2f'|format(due if due>0 else 0)}}€</b><div class="package-stat">υπόλοιπο</div></div>
+              <div>{% if p.payment_status=='paid' %}<span class="badge ok">PAID</span>{% elif p.payment_status=='partial' %}<span class="badge status-partial">PARTIALLY PAID</span>{% else %}<span class="badge status-unpaid">UNPAID</span>{% endif %}<div class="package-stat" style="margin-top:6px">{% if p.credits_activated %}Ώρες ενεργές{% else %}Ώρες μη ενεργές{% endif %}</div></div>
+              <div class="pay-actions">
+                {% if due > 0 %}
+                  {% if (p.hours_total|float)==8 and (p.price|float)==360 %}
+                    {% if paid < 180 %}<form method="post" action="{{url_for('admin_package_purchase_add_payment',purchase_id=p.id)}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="amount" value="180"><input type="hidden" name="method" value="manual"><button class="btn alt" type="submit">+ 180€</button></form>{% endif %}
+                    <form method="post" action="{{url_for('admin_package_purchase_add_payment',purchase_id=p.id)}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="amount" value="{{due}}"><input type="hidden" name="method" value="manual"><button class="btn" type="submit">+ {{'%.0f'|format(due)}}€</button></form>
+                  {% else %}
+                    <form method="post" action="{{url_for('admin_package_purchase_add_payment',purchase_id=p.id)}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="amount" value="{{due}}"><input type="hidden" name="method" value="manual"><button class="btn" type="submit">Εξόφληση {{'%.0f'|format(due)}}€</button></form>
+                  {% endif %}
+                {% else %}<span class="badge ok">Εξοφλημένο</span>{% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}<p class="muted">Δεν υπάρχουν αγορές ακόμη.</p>{% endif %}
+        </div>
+        <div class="section-card">
+          <h2>Ιστορικό πληρωμών</h2><div class="muted">Κάθε δόση καταγράφεται ξεχωριστά.</div><br>
+          {% if package_payments %}<div class="table-wrap"><table class="history-table"><thead><tr><th>Ημερομηνία</th><th>Ποσό</th><th>Τρόπος</th><th>Σημείωση</th></tr></thead><tbody>{% for py in package_payments %}<tr><td>{{py.payment_date|gr_date}}</td><td class="money-paid">{{'%.2f'|format(py.amount)}}€</td><td>{{py.method or 'manual'}}</td><td>{{py.note or '—'}}</td></tr>{% endfor %}</tbody></table></div>{% else %}<p class="muted">Δεν υπάρχουν καταχωρημένες πληρωμές.</p>{% endif %}
+        </div>
+      </section>
+
+      <section class="profile-pane" data-pane="photos">
+        <div class="section-card">
+          <div class="section-head"><div><h2>Φωτογραφίες μαθημάτων</h2><div class="muted">Ανέβασε μία ή περισσότερες φωτογραφίες. Ο μαθητής θα τις βλέπει στο δικό του profile.</div></div><span class="badge off">{{student_photos|length}} φωτογραφίες</span></div>
+          <form method="post" enctype="multipart/form-data" action="{{url_for('admin_student_photo_upload',student_id=student.id)}}" class="gallery-upload"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            <div class="wide"><label class="field-label">Φωτογραφίες</label><input type="file" name="photos" accept="image/jpeg,image/png,image/webp" multiple required></div>
+            <div><label class="field-label">Ημερομηνία</label><input type="date" name="photo_date"></div>
+            <div><label class="field-label">Caption (προαιρετικό)</label><input name="caption" placeholder="π.χ. Πρώτο water start"></div>
+            <button class="btn" type="submit">Ανέβασμα</button>
+          </form>
+        </div>
+        <div class="section-card">
+          <div class="section-head"><div><h2>Gallery μαθητή</h2><div class="muted">Πάτησε σε φωτογραφία για μεγαλύτερη προβολή.</div></div></div>
+          {% if student_photos %}<div class="gallery-grid">{% for ph in student_photos %}<article class="gallery-card"><button type="button" class="photo-open" data-src="{{url_for('static',filename=ph.file_path)}}" style="all:unset;cursor:pointer;display:block;width:100%"><img src="{{url_for('static',filename=ph.file_path)}}" alt="{{ph.caption or 'Φωτογραφία μαθήματος'}}"></button><div class="gallery-meta"><div class="gallery-date">{{ph.photo_date|gr_date if ph.photo_date else ''}}</div><div class="gallery-caption">{{ph.caption or 'Φωτογραφία μαθήματος'}}</div><div class="gallery-actions"><form method="post" action="{{url_for('admin_student_photo_delete',student_id=student.id,photo_id=ph.id)}}" onsubmit="return confirm('Διαγραφή φωτογραφίας;')"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}"><button class="btn alt" type="submit">Διαγραφή</button></form></div></div></article>{% endfor %}</div>{% else %}<div class="gallery-empty">Δεν υπάρχουν φωτογραφίες ακόμη.</div>{% endif %}
+        </div>
+      </section>
+
+      <section class="profile-pane" data-pane="history">
+        <div class="section-card"><h2>Ολοκληρωμένα μαθήματα</h2><div class="muted">Completed μαθήματα και επόμενη τεχνική.</div><br>{% if completed_report %}<div class="table-wrap"><table class="history-table"><thead><tr><th>Ημερομηνία</th><th>Ώρα</th><th>Instructor</th><th>Spot</th><th>Διάρκεια</th><th>Επόμενη τεχνική</th></tr></thead><tbody>{% for b in completed_report %}<tr><td>{{b.lesson_date|gr_date}}</td><td>{{b.start_time|hm24}}</td><td>{{b.instructor}}{% if b.instructor_surname %} {{b.instructor_surname}}{% endif %}</td><td>{{b.spot}}</td><td>{{b.duration}}h</td><td>{{b.next_skill or '—'}}</td></tr>{% endfor %}</tbody></table></div>{% else %}<p class="muted">Δεν υπάρχουν completed μαθήματα.</p>{% endif %}</div>
+        <div class="section-card"><h2>Make-up report</h2><div class="muted">Μαθήματα με δικαίωμα αναπλήρωσης.</div><br>{% if makeup_report %}<div class="table-wrap"><table class="history-table"><thead><tr><th>Ημερομηνία</th><th>Ώρα</th><th>Instructor</th><th>Spot</th><th>Διάρκεια</th><th>Status</th></tr></thead><tbody>{% for b in makeup_report %}<tr><td>{{b.lesson_date|gr_date}}</td><td>{{b.start_time|hm24}}</td><td>{{b.instructor}}{% if b.instructor_surname %} {{b.instructor_surname}}{% endif %}</td><td>{{b.spot}}</td><td>{{b.duration}}h</td><td><span class="badge wait">Make-up</span></td></tr>{% endfor %}</tbody></table></div>{% else %}<p class="muted">Δεν υπάρχουν Make-up.</p>{% endif %}</div>
+        <div class="section-card"><h2>No-show report</h2><div class="muted">Οι ώρες παραμένουν χρεωμένες.</div><br>{% if no_show_report %}<div class="table-wrap"><table class="history-table"><thead><tr><th>Ημερομηνία</th><th>Ώρα</th><th>Instructor</th><th>Spot</th><th>Διάρκεια</th><th>Status</th></tr></thead><tbody>{% for b in no_show_report %}<tr><td>{{b.lesson_date|gr_date}}</td><td>{{b.start_time|hm24}}</td><td>{{b.instructor}}{% if b.instructor_surname %} {{b.instructor_surname}}{% endif %}</td><td>{{b.spot}}</td><td>{{b.duration}}h</td><td><span class="badge off">No-show</span></td></tr>{% endfor %}</tbody></table></div>{% else %}<p class="muted">Δεν υπάρχουν No-show.</p>{% endif %}</div>
+        <div class="section-card"><div class="section-head"><div><h2>Ιστορικό credits</h2><div class="muted">Προσθήκες, κρατήσεις και επιστροφές.</div></div><div class="row"><span class="badge ok">+{{total_credit_in}}h</span><span class="badge off">-{{total_credit_out}}h</span></div></div>{% if credit_history %}<div class="table-wrap"><table class="history-table"><thead><tr><th>Ημερομηνία</th><th>Μεταβολή</th><th>Τύπος</th><th>Σημείωση</th></tr></thead><tbody>{% for c in credit_history %}<tr><td>{{c.created_at[:16].replace('T',' ') if c.created_at else '—'}}</td><td class="{{'credit-plus' if c.amount >= 0 else 'credit-minus'}}">{{'+' if c.amount > 0 else ''}}{{c.amount}}h</td><td>{{c.kind}}</td><td>{{c.note or '—'}}</td></tr>{% endfor %}</tbody></table></div>{% else %}<p class="muted">Δεν υπάρχει ιστορικό credits.</p>{% endif %}</div>
+      </section>
+    </div>
+  </main>
+</div>
+<div class="lightbox" id="studentLightbox" aria-hidden="true"><button type="button" id="studentLightboxClose" aria-label="Κλείσιμο">×</button><img id="studentLightboxImage" alt="Μεγάλη προβολή φωτογραφίας"></div>
+<script>
+(function(){
+  const tabs=[...document.querySelectorAll('.profile-tab')], panes=[...document.querySelectorAll('.profile-pane')];
+  function show(name){tabs.forEach(t=>t.classList.toggle('active',t.dataset.tab===name));panes.forEach(p=>p.classList.toggle('active',p.dataset.pane===name));try{history.replaceState(null,'','#'+name)}catch(e){}}
+  tabs.forEach(t=>t.addEventListener('click',()=>show(t.dataset.tab)));document.querySelectorAll('[data-tab-go]').forEach(b=>b.addEventListener('click',()=>show(b.dataset.tabGo)));const initial=(location.hash||'#details').slice(1);if(tabs.some(t=>t.dataset.tab===initial))show(initial);
+  const type=document.getElementById('lessonTypeSelect'),box=document.getElementById('groupSettings'),w1=document.getElementById('groupMember1Wrap'),w2=document.getElementById('groupMember2Wrap'),s1=document.getElementById('groupMember1'),s2=document.getElementById('groupMember2');
+  function sync(){const v=type.value;box.style.display=v==='private'?'none':'block';w1.style.display=v==='private'?'none':'block';w2.style.display=v==='3p'?'block':'none';s1.disabled=v==='private';s2.disabled=v!=='3p';if(v==='private'){s1.value='';s2.value='';}if(v==='2p')s2.value='';}
+  type.addEventListener('change',sync);sync();
+  const lb=document.getElementById('studentLightbox'),lbi=document.getElementById('studentLightboxImage'),lbc=document.getElementById('studentLightboxClose');
+  document.querySelectorAll('.photo-open').forEach(b=>b.addEventListener('click',()=>{lbi.src=b.dataset.src;lb.classList.add('open');lb.setAttribute('aria-hidden','false')}));
+  function closeLb(){lb.classList.remove('open');lb.setAttribute('aria-hidden','true');lbi.src=''}
+  if(lbc)lbc.addEventListener('click',closeLb);if(lb)lb.addEventListener('click',e=>{if(e.target===lb)closeLb()});
+})();
+</script>
+<link rel="stylesheet" href="{{url_for('static',filename='admin-v4.css')}}">
+{% endblock %}

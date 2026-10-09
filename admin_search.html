@@ -1,0 +1,8 @@
+{% extends "base.html" %}{% block content %}
+<link rel="stylesheet" href="{{url_for('static',filename='admin-shared.css')}}">
+<div class="admin-shell">{% set admin_active='search' %}{% include '_admin_sidebar_static.html' %}
+<main class="admin-main"><div class="admin-page-head"><div><h1>Αναζήτηση</h1><div class="admin-page-sub">Μαθητές και instructors από όλο το σύστημα.</div></div></div>
+<div class="card"><form method="get" class="admin-global-search big"><input type="search" name="q" value="{{q}}" placeholder="Όνομα, επώνυμο, Student ID, email ή τηλέφωνο" autofocus><button class="btn">Αναζήτηση</button></form></div>
+<div class="card" style="margin-top:14px">{% if q and results %}<div style="display:grid;gap:9px">{% for r in results %}<div style="display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px;border:1px solid var(--l);border-radius:12px"><div><b>{{r.name}}{% if r.surname %} {{r.surname}}{% endif %}</b><div class="muted" style="font-size:12px">{{'Μαθητής · '~r.student_code if r.role=='student' else 'Instructor'}} · {{r.email}}{% if r.phone %} · {{r.phone}}{% endif %}</div></div>{% if r.role=='student' %}<a class="btn alt" href="{{url_for('admin_student_profile',student_id=r.id)}}">Άνοιγμα</a>{% else %}<a class="btn alt" href="{{url_for('admin_instructor_profile',instructor_id=r.id)}}">Άνοιγμα</a>{% endif %}</div>{% endfor %}</div>{% elif q %}<div class="muted" style="padding:25px;text-align:center">Δεν βρέθηκαν αποτελέσματα.</div>{% else %}<div class="muted" style="padding:25px;text-align:center">Γράψε κάτι στην αναζήτηση.</div>{% endif %}</div></main></div>
+<link rel="stylesheet" href="{{url_for('static',filename='admin-v4.css')}}">
+{% endblock %}

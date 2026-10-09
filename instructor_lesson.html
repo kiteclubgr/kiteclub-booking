@@ -1,0 +1,33 @@
+{% extends "base.html" %}{% block content %}
+<link rel="stylesheet" href="{{url_for('static',filename='instructor-v39.css',v='qa-v4')}}">
+<link rel="stylesheet" href="{{url_for('static',filename='role-sidebar-v3.css')}}?v=3">
+<script>document.body.classList.add('instructor-portal-body')</script>
+{% include '_instructor_mobile_chrome.html' %}
+<style>.attendance-pill{font-size:11px;font-weight:900;padding:5px 8px;border-radius:999px}.att-completed{background:#dff7e8;color:#087846}.att-makeup{background:#e8f1ff;color:#165fa8}.att-no_show{background:#ffe8df;color:#ad4e20}.att-pending{background:#eef2f5;color:#697985}.audit-list{display:flex;flex-direction:column;gap:10px}.audit-row{display:grid;grid-template-columns:110px minmax(0,1fr);gap:10px;padding:11px;border:1px solid var(--l);border-radius:12px;background:#fbfdff}.audit-time{font-size:12px;color:var(--m);font-weight:800}.audit-title{font-weight:900}.audit-sub{font-size:11px;color:var(--m);margin-top:3px}.audit-details{margin-top:6px;font-size:12px;color:#516778}@media(max-width:620px){.audit-row{grid-template-columns:1fr}}</style>
+<div class="instructor-portal-shell">
+  {% set instructor_nav='schedule' %}{% include '_instructor_sidebar.html' %}
+  <main class="instructor-main"><div class="instructor-content">
+<div class="im-shell">
+  <div class="card"><a href="{{url_for('instructor',date=lesson.lesson_date|gr_date)}}" class="muted" style="text-decoration:none">‹ Επιστροφή στο πρόγραμμα</a><br><br><div class="im-hero"><div class="im-avatar">{% if lesson.student_photo %}<img src="{{url_for('static',filename=lesson.student_photo)}}" alt="">{% else %}{{lesson.student[:1]}}{% endif %}</div><div><h1>{% if lesson.participant_count and lesson.participant_count>1 %}{{lesson.participant_count}}P Group{% else %}{{lesson.student}}{% if lesson.student_surname %} {{lesson.student_surname}}{% endif %}{% endif %}</h1><div class="muted">{% if lesson.participant_count and lesson.participant_count>1 %}{{lesson.participant_names}}{% else %}{{lesson.level or '—'}}{% if lesson.student_phone %} · ☎ {{lesson.student_phone}}{% endif %}{% endif %}</div></div>{% if not (lesson.participant_count and lesson.participant_count>1) %}<div style="margin-left:auto"><a class="im-chevron" href="{{url_for('instructor_student_detail',student_id=lesson.student_id)}}">›</a></div>{% endif %}</div></div>
+  {% if participants|length>1 %}<div class="card"><h2>Μαθητές group</h2><div class="im-history">{% for p in participants %}<a class="im-history-row" href="{{url_for('instructor_student_detail',student_id=p.student_id)}}" style="text-decoration:none;color:inherit"><b>{{p.student_code}}</b><div>{{p.name}}{% if p.surname %} {{p.surname}}{% endif %}<div class="muted">{{p.level or '—'}} · {{p.payment_status}}</div></div>{% set ps=p.attendance_status or 'pending' %}<span class="attendance-pill att-{{ps}}">{{'Completed' if ps=='completed' else ('Make-up' if ps=='makeup' else ('No-show' if ps=='no_show' else 'Pending'))}}</span></a>{% endfor %}</div></div>{% endif %}
+  <div class="card">{% set state=booking_state_meta(lesson.status,lesson.payment_status) %}<div class="im-facts"><div class="im-fact">📅 {{lesson.lesson_date|gr_long_date}}</div><div class="im-fact">🕐 {{lesson.start_time|hm24}} – {{lesson.end_time|hm24}} ({{lesson.duration}}h)</div><div class="im-fact">📍 {{lesson.spot}}</div><div class="im-fact"><span class="attendance-pill att-{{state.class if state.class in ['completed','pending','cancelled','booked'] else 'pending'}}">{{state.label}}</span></div></div></div>
+  {% if lesson.instructor_notes %}<div class="card"><h2>Σημειώσεις μαθήματος</h2><div class="im-note">{{lesson.instructor_notes}}</div></div>{% endif %}
+  <div class="card"><div class="spread"><h2 style="margin:0">Booking audit history</h2></div><div class="audit-list" style="margin-top:12px">{% for h in audit_history %}<div class="audit-row"><div class="audit-time">{{h.created_at[:10]|gr_date}}<br>{{h.created_at[11:16]}}</div><div><div class="audit-title">{{h.summary}}</div><div class="audit-sub">{% if h.actor_name %}{{h.actor_name}}{% if h.actor_surname %} {{h.actor_surname}}{% endif %}{% elif h.actor_role %}{{h.actor_role|title}}{% else %}System{% endif %} · {{h.event_type|replace('_',' ')|title}}</div>{% if h.details %}<div class="audit-details">{{h.details}}</div>{% endif %}</div></div>{% else %}<p class="muted">Δεν υπάρχει ακόμη καταγεγραμμένο history για αυτή την κράτηση.</p>{% endfor %}</div></div>
+
+  <div class="card"><h2>Προηγούμενα μαθήματα</h2><div class="im-history">{% for p in previous %}<div class="im-history-row"><b>{{p.lesson_date|gr_date}}</b><div>{{p.next_skill or 'Completed lesson'}}</div><span class="badge ok">Completed</span></div>{% else %}<p class="muted">Δεν υπάρχουν προηγούμενα completed μαθήματα.</p>{% endfor %}</div></div>
+  {% if lesson.status in ['confirmed','pending_payment'] %}
+  <div class="im-lesson-actions">
+    <a class="btn im-save" href="{{url_for('instructor_complete_lesson',booking_id=lesson.id)}}">✓ {% if participants|length>1 %}Παρουσία / Ολοκλήρωση group{% else %}Ολοκλήρωση μαθήματος{% endif %}</a>
+    {% if participants|length==1 %}<form method="post" action="{{url_for('instructor_no_show',booking_id=lesson.id)}}" onsubmit="return confirm('Να σημειωθεί ο μαθητής ως No-show; Οι ώρες θα χρεωθούν κανονικά και ΔΕΝ θα επιστραφούν.');"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}"><button class="btn im-save im-noshow-btn" type="submit">⚠ No-show — Δεν προσήλθε</button></form>{% endif %}
+  </div>
+  {% elif participants|length>1 and lesson.status in ['completed','no_show'] %}
+  <div class="card"><b>Η παρουσία του group έχει καταχωρηθεί.</b><div class="muted" style="margin-top:5px">Τα αποτελέσματα φαίνονται ξεχωριστά δίπλα σε κάθε μαθητή.</div></div>
+  {% elif lesson.status=='completed' %}
+  <div class="card"><span class="badge ok">✓ Το μάθημα ολοκληρώθηκε</span>{% if lesson.next_skill %}<div style="margin-top:9px"><b>Επόμενη τεχνική:</b> {{lesson.next_skill}}</div>{% endif %}</div>
+  {% elif lesson.status=='no_show' %}
+  <div class="card im-noshow-card"><span class="im-status noshow">No-show</span><div style="margin-top:9px"><b>Ο μαθητής δεν προσήλθε.</b></div><div class="muted" style="margin-top:4px">Οι ώρες παραμένουν χρεωμένες στο πακέτο και δεν επιστρέφονται.</div></div>
+  {% endif %}
+</div>
+</div></main></div>
+{% set active_tab='schedule' %}{% include '_instructor_bottom_nav.html' %}
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends "base.html" %}{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='student-portal.css') }}">
+<link rel="stylesheet" href="{{url_for('static',filename='role-sidebar-v3.css')}}?v=3">
+<script>document.body.classList.add('student-portal-body')</script>
+<style>
+.edit-page{max-width:980px;margin:0 auto}.edit-card{background:#fff;border:1px solid var(--sp-line);border-radius:18px;padding:24px;box-shadow:0 7px 22px rgba(7,36,63,.05)}.edit-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:20px}.edit-head h1{margin:0}.edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.field label{display:block;font-size:12px;font-weight:850;margin-bottom:6px}.field input{width:100%}.photo-preview{display:flex;align-items:center;gap:14px;padding:14px;border:1px solid var(--sp-line);border-radius:14px;background:#f8fbfd}.photo-preview .avatar{width:84px;height:84px;border-radius:50%;overflow:hidden;background:#dcebf4;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:900;color:#46708a}.photo-preview .avatar img{width:100%;height:100%;object-fit:cover}.edit-help{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px}.help-box{border-radius:14px;padding:14px;background:#f0fbf4;border:1px solid #d3efdc;font-size:13px}.help-box.locked{background:#fff5f5;border-color:#f4d6da}.help-box b{display:block;margin-bottom:7px}.help-box ul{margin:0;padding-left:18px;line-height:1.7}.actions{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}@media(max-width:800px){.edit-grid,.edit-help{grid-template-columns:1fr}.edit-card{padding:17px}.edit-head{align-items:flex-start}}
+</style>
+<div class="student-portal-shell">
+  {% set student_nav='profile' %}{% include '_student_portal_sidebar.html' %}
+  <main class="student-portal-main">
+    <div class="student-portal-top"><strong>{{student.name}}{% if student.surname %} {{student.surname}}{% endif %}</strong> · <a href="{{url_for('student_profile')}}">Προφίλ</a></div>
+    <div class="student-portal-content">
+      <div class="edit-page">
+        <div class="edit-head"><div><a href="{{url_for('student_profile')}}">← Επιστροφή στο προφίλ</a><h1>Επεξεργασία προφίλ</h1><div class="muted">Ενημέρωσε τα προσωπικά σου στοιχεία.</div></div></div>
+        <form class="edit-card" action="{{url_for('student_profile_edit')}}" method="post" enctype="multipart/form-data"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <div class="photo-preview">
+            <div class="avatar">{% if student.profile_photo %}<img src="{{url_for('static',filename=student.profile_photo)}}" alt="{{student.name}}">{% else %}{{student.name[:1]}}{{student.surname[:1] if student.surname else ''}}{% endif %}</div>
+            <div><b>Φωτογραφία προφίλ</b><div class="muted">JPG, PNG ή WEBP.</div><input type="file" name="profile_photo" accept="image/jpeg,image/png,image/webp" style="margin-top:8px"></div>
+          </div>
+          <div class="edit-grid" style="margin-top:18px">
+            <div class="field"><label>Όνομα *</label><input name="name" value="{{student.name}}" required></div>
+            <div class="field"><label>Επώνυμο</label><input name="surname" value="{{student.surname or ''}}"></div>
+            <div class="field"><label>Email *</label><input type="email" name="email" value="{{student.email}}" required></div>
+            <div class="field"><label>Τηλέφωνο</label><input name="phone" value="{{student.phone or ''}}"></div>
+            <div class="field"><label>Instagram</label><input name="instagram" value="{{student.instagram or ''}}" placeholder="@username"></div>
+            <div></div>
+            <div class="field"><label>Νέος κωδικός</label><input type="password" name="new_password" autocomplete="new-password" placeholder="Άφησέ το κενό ή βάλε 8+ χαρακτήρες με γράμματα και αριθμούς"></div>
+            <div class="field"><label>Επιβεβαίωση νέου κωδικού</label><input type="password" name="confirm_password" autocomplete="new-password" placeholder="Επανάληψη νέου κωδικού"></div>
+          </div>
+          <div class="edit-help">
+            <div class="help-box"><b>✓ Μπορείς να αλλάξεις</b><ul><li>Όνομα και επώνυμο</li><li>Email και τηλέφωνο</li><li>Instagram</li><li>Φωτογραφία προφίλ</li><li>Κωδικό πρόσβασης</li></ul></div>
+            <div class="help-box locked"><b>✕ Αλλάζουν μόνο από τον Admin</b><ul><li>Student ID και credits</li><li>Level και τύπος μαθήματος</li><li>Group members</li><li>Packages / πληρωμές</li><li>Crew Membership</li></ul></div>
+          </div>
+          <div class="actions"><button class="btn" type="submit">Αποθήκευση αλλαγών</button><a class="btn alt" href="{{url_for('student_profile')}}">Ακύρωση</a></div>
+        </form>
+      </div>
+    </div>
+  </main>
+</div>
+{% endblock %}

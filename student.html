@@ -1,0 +1,550 @@
+{% extends "base.html" %}{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='student-portal.css') }}">
+<link rel="stylesheet" href="{{url_for('static',filename='role-sidebar-v3.css')}}?v=3">
+<script>document.body.classList.add('student-portal-body')</script>
+<style>
+:root{
+  --kc-blue:#087fc0;
+  --kc-blue-dark:#075f96;
+  --kc-green:#0c9660;
+  --kc-green-bg:#dff7e8;
+  --kc-red:#d7434d;
+  --kc-red-bg:#ffe7ea;
+  --kc-grey-bg:#edf2f5;
+  --kc-line:#d9e6ee;
+}
+.student-wrap{max-width:1260px;margin:auto}
+.mobile-topbar{display:none}
+.booking-hero{padding:15px 17px}
+.hero-title{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.hero-title h1{font-size:25px;margin:0;display:flex;align-items:center;gap:9px}
+.date-icon{width:22px;height:22px;border:2px solid #3a6e93;border-radius:4px;display:inline-block;position:relative;box-sizing:border-box}
+.date-icon:before,.date-icon:after{content:"";position:absolute;top:-5px;width:3px;height:7px;background:#3a6e93;border-radius:2px}
+.date-icon:before{left:4px}.date-icon:after{right:4px}
+.date-icon{background:
+  linear-gradient(#3a6e93,#3a6e93) 0 5px/100% 2px no-repeat,
+  linear-gradient(#3a6e93,#3a6e93) 5px 10px/3px 3px no-repeat,
+  linear-gradient(#3a6e93,#3a6e93) 11px 10px/3px 3px no-repeat,
+  linear-gradient(#3a6e93,#3a6e93) 5px 15px/3px 3px no-repeat}
+.week-nav{display:flex;align-items:center;gap:8px}
+.weekbar{display:grid;grid-template-columns:repeat(7,1fr);gap:7px;margin-top:12px}
+.daymini{
+  border:1px solid var(--kc-line);border-radius:12px;padding:9px 6px;text-align:center;
+  text-decoration:none;color:var(--n);background:#fff;min-height:82px;transition:.15s ease
+}
+.daymini.selected{border:2px solid var(--kc-blue);background:#eef8ff;box-shadow:0 3px 10px rgba(8,127,192,.08)}
+.daymini.disabled{opacity:.48;pointer-events:none}
+.daymini b{display:block;font-size:12px}
+.daymini small{display:block;color:var(--m);font-size:10px;margin:3px 0 6px}
+.daymini .spot{font-size:11px;font-weight:900;color:#078248;line-height:1.1}
+.daymini.selected .spot{color:#046ea8}
+
+.spot-strip{
+  display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:13px;
+  border-top:1px solid var(--kc-line);padding-top:12px
+}
+.spot-info{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:800;color:#17649b}
+.spot-info.muted-info{font-weight:600;color:var(--m)}
+
+.student-summary{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  border:1px solid var(--kc-line);border-radius:14px;padding:12px 14px;
+  background:linear-gradient(90deg,#f8fcff,#eef7fc);margin-top:13px;text-decoration:none;color:inherit
+}
+.student-person{display:flex;align-items:center;gap:12px}
+.student-avatar,.inst-avatar{
+  border-radius:50%;overflow:hidden;background:linear-gradient(145deg,#58aee3,#1b79bd);
+  display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;flex:0 0 auto
+}
+.student-avatar{width:48px;height:48px;font-size:20px}
+.student-avatar img,.inst-avatar img{width:100%;height:100%;object-fit:cover}
+.student-summary b{font-size:18px;display:block}
+.student-summary .creditline{font-size:13px;color:var(--m);margin-top:2px}
+
+.duration-row{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:13px}
+.duration-left{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.seg{display:inline-flex;background:#edf3f7;border-radius:12px;padding:4px}
+.seg button{padding:10px 20px;border-radius:9px;background:transparent;color:var(--n);border:0;font-weight:800;cursor:pointer}
+.seg button.active{background:var(--kc-blue);color:#fff;box-shadow:0 2px 7px rgba(8,127,192,.22)}
+.info-dot{width:28px;height:28px;border:2px solid #6e8293;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;color:#60788b}
+
+.booking-card{overflow:auto;border:1px solid var(--kc-line);border-radius:16px;background:#fff}
+.booking-table{border-collapse:separate;border-spacing:0;width:100%;min-width:680px}
+.booking-table th,.booking-table td{border-right:1px solid var(--kc-line);border-bottom:1px solid var(--kc-line);padding:7px;text-align:center}
+.booking-table th{background:#f7fafc;vertical-align:bottom}
+.booking-table th:first-child,.booking-table td:first-child{
+  position:sticky;left:0;background:#f7fafc;z-index:3;min-width:66px;width:66px;font-weight:900
+}
+.inst-head{min-width:118px;padding:1px 0 3px}
+.inst-avatar{width:46px;height:46px;margin:0 auto 4px;font-size:16px}
+.inst-name{font-weight:900;font-size:13px}
+.inst-sub{font-size:10px;color:var(--m);margin-top:2px}
+.slotbtn{
+  width:100%;min-height:43px;border-radius:9px;font-weight:800;border:0;
+  font-size:12px;cursor:default;transition:.12s ease;padding:7px 5px
+}
+.slot-open{background:var(--kc-green-bg);color:#078248;cursor:pointer}
+.slot-open:hover{filter:brightness(.98);transform:translateY(-1px)}
+.slot-unavailable{background:var(--kc-red-bg);color:var(--kc-red)}
+.slot-empty{background:var(--kc-grey-bg);color:#8996a2}
+.slot-own{background:#1688d4;color:#fff}
+.slot-selected{background:#0b76bd!important;color:#fff!important;box-shadow:inset 0 0 0 2px #075d96}
+.slot-icon{font-weight:900;margin-right:3px}
+
+.legend{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.legend span{padding:6px 9px;border-radius:999px;font-size:11px;font-weight:800}
+
+.confirmbar{
+  display:none;margin-top:13px;border:1px solid var(--kc-line);border-radius:14px;padding:12px 14px;
+  background:#f8fcff
+}
+.confirmbar.show{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+
+.modal{display:none;position:fixed;inset:0;background:rgba(11,35,64,.48);z-index:100;align-items:flex-end;justify-content:center}
+.modal.show{display:flex}
+.sheet{
+  background:#fff;border-radius:24px 24px 0 0;padding:20px;width:min(600px,100%);
+  box-shadow:0 -14px 44px rgba(0,0,0,.18);max-height:90vh;overflow:auto
+}
+.sheet-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.close-x{border:0;background:transparent;font-size:28px;color:#657b8d;cursor:pointer}
+.confirm-instructor{
+  display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:13px 0
+}
+.confirm-box{border:1px solid var(--kc-line);border-radius:13px;padding:12px;background:#fbfdff}
+.confirm-person{display:flex;align-items:center;gap:10px}
+.confirm-avatar{width:62px;height:62px;border-radius:50%;overflow:hidden;background:#e8f1f6;display:flex;align-items:center;justify-content:center;font-weight:900}
+.confirm-avatar img{width:100%;height:100%;object-fit:cover}
+.confirm-facts{display:grid;gap:7px;font-size:13px}
+.confirm-note{display:flex;gap:11px;align-items:center;background:#f2f7fa;border-radius:13px;padding:13px;margin-bottom:15px}
+.sheet-actions{display:grid;grid-template-columns:1fr 1.4fr;gap:10px}
+.sheet-actions .btn{width:100%;text-align:center;font-size:15px}
+
+.lessons-card .item{background:#fff}
+.bottom-nav{display:none}
+
+@media(max-width:760px){
+  body>nav{display:none}
+  body{padding-bottom:76px}
+  .wrap{padding:0 7px 12px}
+  .student-wrap{max-width:none}
+  .mobile-topbar{
+    display:grid;grid-template-columns:44px 1fr 44px;align-items:center;padding:10px 14px 8px;
+    background:#fff;position:sticky;top:0;z-index:20;border-bottom:1px solid #e4edf2;gap:8px
+  }
+  .mobile-logo{display:flex;justify-content:center;align-items:center}
+  .mobile-logo img{height:46px;width:auto;display:block;object-fit:contain}
+  .mobile-spacer{width:44px;height:1px}
+  .hamburger{font-size:27px;line-height:1;text-align:right}
+  .card{border-radius:15px;padding:13px;margin-bottom:9px;box-shadow:none}
+  .booking-hero{padding:12px}
+  .hero-title h1{font-size:17px;gap:7px}
+  .date-icon{width:19px;height:19px}
+  .week-nav .badge{display:none}
+  .weekbar{
+    grid-template-columns:repeat(7,64px);
+    overflow:auto;
+    gap:4px;
+    padding-bottom:2px;
+    margin-top:9px;
+    scrollbar-width:none
+  }
+  .weekbar::-webkit-scrollbar{display:none}
+  .daymini{min-width:64px;min-height:72px;padding:6px 2px;border-radius:10px}
+  .daymini b{font-size:10px}
+  .daymini small{font-size:8px;margin:2px 0 4px}
+  .daymini .spot{font-size:9px;line-height:1.05}
+  .spot-strip{grid-template-columns:1fr auto auto;gap:4px;padding-top:9px;margin-top:10px}
+  .spot-info{font-size:11px}.spot-info.muted-info{font-size:9px}
+  .student-summary{padding:9px 10px;margin-top:10px}
+  .student-avatar{width:40px;height:40px}
+  .student-summary b{font-size:16px}
+  .duration-row{margin:2px 0 8px}
+  .duration-left{gap:7px;font-size:12px}
+  .seg button{padding:9px 17px;font-size:12px}
+  .booking-card{border-radius:12px}
+  .booking-table{min-width:455px}
+  .booking-table th,.booking-table td{padding:3px}
+  .booking-table th:first-child,.booking-table td:first-child{min-width:50px;width:50px;font-size:10px;padding-left:2px;padding-right:2px}
+  .inst-head{min-width:101px;padding-top:0;padding-bottom:2px}
+  .inst-avatar{width:39px;height:39px;margin-bottom:3px}
+  .inst-name{font-size:10px}.inst-sub{font-size:8px;line-height:1.05}
+  .slotbtn{min-height:36px;font-size:9px;padding:5px 3px}
+  .legend{gap:4px}.legend span{font-size:9px;padding:5px 7px}
+  .confirmbar{position:sticky;bottom:70px;z-index:8}
+  .sheet{padding:16px 14px 18px}
+  .sheet h2{font-size:21px}
+  .confirm-instructor{grid-template-columns:1fr 1fr}
+  .confirm-box{padding:10px}
+  .confirm-avatar{width:52px;height:52px}
+  .sheet-actions{grid-template-columns:1fr 1.35fr}
+  .lessons-card{margin-bottom:8px}
+  .bottom-nav{
+    display:grid;grid-template-columns:repeat(3,1fr);position:fixed;bottom:0;left:0;right:0;
+    background:#fff;border-top:1px solid #d9e6ee;z-index:40;padding:7px 8px 8px
+  }
+  .bottom-nav a{text-decoration:none;text-align:center;color:#60788b;font-size:10px;font-weight:800}
+  .bottom-nav a.active{color:var(--kc-blue)}
+  .nav-ico{display:block;font-size:19px;margin-bottom:2px}
+}
+
+@media(min-width:761px){
+  .student-portal-main .student-wrap{max-width:1260px;margin:0 auto}
+  .student-portal-main .mobile-topbar{display:none}
+}
+</style>
+
+<div class="student-portal-shell">
+  {% set student_nav='booking' %}{% include '_student_portal_sidebar.html' %}
+  <main class="student-portal-main">
+    <div class="student-portal-content">
+<div class="mobile-topbar">
+  <div class="mobile-spacer" aria-hidden="true"></div>
+  <div class="mobile-logo"><img src="{{ url_for('static', filename='img/kiteclub-logo.png') }}" alt="KiteClub"></div>
+  <div class="hamburger">☰</div>
+</div>
+
+<div class="student-wrap">
+
+  <div class="card booking-hero">
+    <div class="hero-title">
+      <h1><span class="date-icon" aria-hidden="true"></span>{{date|gr_long_date}}</h1>
+      <div class="week-nav">
+        <a class="btn alt" href="{{url_for('student',date=prev_week|gr_date)}}">‹</a>
+        <span class="badge off">{{week_start|gr_date}} – {{week_end|gr_date}}</span>
+        <a class="btn alt" href="{{url_for('student',date=next_week|gr_date)}}">›</a>
+      </div>
+    </div>
+
+    <div class="weekbar">
+      {% for d in week_days %}
+        {% if d.has_program %}
+        <a class="daymini {% if d.selected %}selected{% endif %}" href="{{url_for('student',date=d.iso|gr_date)}}">
+          <b>{{d.label[:3]}}</b>
+          <small>{{d.iso[8:10]}}/{{d.iso[5:7]}}</small>
+          <div class="spot">{{d.spot}}</div>
+        </a>
+        {% else %}
+        <div class="daymini disabled">
+          <b>{{d.label[:3]}}</b>
+          <small>{{d.iso[8:10]}}/{{d.iso[5:7]}}</small>
+          <div class="spot">–</div>
+        </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+
+    <div class="spot-strip">
+      <div class="spot-info">📍 {% if selected_spot %}{{selected_spot.name}}{% else %}—{% endif %}</div>
+      <div class="spot-info muted-info">💨 Άνεμος: —</div>
+      <div class="spot-info muted-info">🌊 Συνθήκες: —</div>
+    </div>
+
+    <a class="student-summary" href="{{url_for('student_profile')}}">
+      <div class="student-person">
+        <div class="student-avatar">
+          {% if student.profile_photo %}
+            <img src="{{url_for('static',filename=student.profile_photo)}}" alt="{{student.name}}">
+          {% else %}
+            {{student.name[:1] if student.name else 'Μ'}}
+          {% endif %}
+        </div>
+        <div>
+          <b>{{student.name}}{% if student.surname %} {{student.surname}}{% endif %}</b>
+          <div class="creditline">{{student.student_code}} · Υπόλοιπο πακέτου: <strong>{{student.credits}} ώρες</strong></div>
+          <div class="group-line">{{'Private' if student.lesson_type=='private' else ('2P Group' if student.lesson_type=='2p' else '3P Group')}}</div>
+          {% if group_members|length > 1 %}<div class="group-names">{% for m in group_members %}{{m.name}}{% if m.surname %} {{m.surname}}{% endif %}{% if not loop.last %} · {% endif %}{% endfor %}</div>{% endif %}
+        </div>
+      </div>
+      <div style="font-size:26px;color:#56768d">›</div>
+    </a>
+  </div>
+
+  <div class="card">
+    <div class="duration-row">
+      <div class="duration-left">
+        <strong>Διάρκεια μαθήματος</strong>
+        <div class="seg">
+          <button type="button" class="dur active" data-dur="1">1 ώρα</button>
+          <button type="button" class="dur" data-dur="2">2 ώρες</button>
+        </div>
+      </div>
+      <div class="info-dot">i</div>
+    </div>
+
+    {% if selected_spot and hours and day_columns %}
+    <div class="booking-card">
+      <table class="booking-table" id="bookingTable">
+        <thead>
+          <tr>
+            <th>Ώρα</th>
+            {% for c in day_columns %}
+            <th>
+              <div class="inst-head">
+                <div class="inst-avatar">
+                  {% if c.instructor_photo %}
+                    <img src="{{url_for('static',filename=c.instructor_photo)}}" alt="{{c.instructor_name}}">
+                  {% else %}
+                    {{c.instructor_name[:1]}}
+                  {% endif %}
+                </div>
+                <div class="inst-name">{{c.instructor_name}}{% if c.instructor_surname %} {{c.instructor_surname}}{% endif %}</div>
+                <div class="inst-sub">KiteClub Instructor</div>
+              </div>
+            </th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+        {% for h in hours %}
+          <tr>
+            <td>{{h|hm24}}</td>
+            {% for c in day_columns %}
+              {% set data = slot_matrix.get((h,c.instructor_id)) %}
+              <td>
+                {% if data %}
+                  {% if data.own %}
+                    {% if data.booking.status == 'no_show' %}
+                      <button class="slotbtn slot-unavailable" disabled>⚠ No-show</button>
+                    {% elif data.booking.status == 'completed' %}
+                      <button class="slotbtn slot-empty" disabled>✓ Ολοκληρώθηκε</button>
+                    {% else %}
+                      <button class="slotbtn slot-own" disabled><span class="slot-icon">✓</span> Η κράτησή μου</button>
+                    {% endif %}
+                  {% elif data.effective_status == 'open' %}
+                    <button class="slotbtn slot-open selectable"
+                            data-slot="{{data.slot.id}}"
+                            data-hour="{{h}}"
+                            data-inst="{{c.instructor_id}}"
+                            data-instname="{{c.instructor_name}}{% if c.instructor_surname %} {{c.instructor_surname}}{% endif %}"
+                            data-photo="{% if c.instructor_photo %}{{url_for('static',filename=c.instructor_photo)}}{% endif %}">
+                      <span class="slot-icon">＋</span> Διαθέσιμο
+                    </button>
+                  {% elif data.effective_status == 'pending_payment' %}
+                    <button class="slotbtn slot-unavailable" disabled>Pending</button>
+                  {% elif data.effective_status == 'booked' %}
+                    <button class="slotbtn slot-unavailable" disabled><span class="slot-icon">●</span> Κλεισμένο</button>
+                  {% elif data.effective_status == 'standby' %}
+                    <button class="slotbtn slot-empty" disabled>— Μη διαθέσιμο</button>
+                  {% elif data.effective_status == 'closed' %}
+                    <button class="slotbtn slot-unavailable" disabled><span class="slot-icon">●</span> Κλεισμένο</button>
+                  {% elif data.effective_status == 'completed' %}
+                    <button class="slotbtn slot-empty" disabled>Ολοκληρώθηκε</button>
+                  {% else %}
+                    <button class="slotbtn slot-empty" disabled>—</button>
+                  {% endif %}
+                {% else %}
+                  <button class="slotbtn slot-empty" disabled>—</button>
+                {% endif %}
+              </td>
+            {% endfor %}
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="legend">
+      <span style="background:#dff7e8;color:#087846">＋ Διαθέσιμο</span>
+      <span style="background:#ffe5e8;color:#bf3b48">● Κλεισμένο</span>
+      <span style="background:#1688d4;color:white">✓ Η κράτησή μου</span>
+      <span style="background:#eef2f5;color:#8996a2">— Μη διαθέσιμο</span>
+    </div>
+
+    <div id="confirmbar" class="confirmbar">
+      <div id="selectionText"></div>
+      <button class="btn" type="button" onclick="openConfirm()">Συνέχεια</button>
+    </div>
+    {% else %}
+      <p class="muted">Δεν υπάρχει διαθέσιμο πρόγραμμα για αυτή την ημέρα.</p>
+    {% endif %}
+  </div>
+
+  <div class="card lessons-card" id="my-lessons">
+    <h2>Τα μαθήματά μου</h2>
+    {% for b in bookings %}
+    <div class="item spread">
+      <div>
+        <b>{{b.lesson_date|gr_date}} · {{b.start_time|hm24}} · {{b.instructor}}{% if b.instructor_surname %} {{b.instructor_surname}}{% endif %}</b>
+        <div class="muted">{{b.spot}} · {{b.duration}} ώρες{% if b.participant_count and b.participant_count>1 %} · {{b.participant_count}}P Group{% endif %}</div>
+        {% if b.participant_count and b.participant_count>1 %}<div class="group-names">{{b.participant_names}}</div>{% endif %}
+        {% if b.status in ['confirmed','pending_payment'] %}
+          {% if b.can_cancel %}
+            <div class="muted" style="margin-top:4px">Μπορείς να ακυρώσεις έως 6 ώρες πριν.</div>
+          {% else %}
+            <div class="muted" style="margin-top:4px">Η προθεσμία ακύρωσης έχει λήξει.</div>
+          {% endif %}
+        {% endif %}
+      </div>
+      <div class="row">
+        <span class="badge {{'off' if b.status=='no_show' else ('ok' if b.status in ['confirmed','completed'] else 'wait')}}">{{'No-show' if b.status=='no_show' else ('Make-up' if b.status=='makeup' else b.status)}}</span>
+        {% if b.can_cancel %}
+        <form method="post" action="{{url_for('cancel_student_booking',booking_id=b.id)}}" onsubmit="return confirm('{{ 'Η ακύρωση θα ακυρώσει την κοινή κράτηση για όλο το group. Συνέχεια;' if b.participant_count and b.participant_count > 1 else 'Θέλεις να ακυρώσεις την κράτηση; Οι ώρες θα επιστραφούν στο πακέτο σου.' }}')">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <button class="btn alt" type="submit">Ακύρωση</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+    {% else %}
+    <p class="muted">Δεν υπάρχουν κρατήσεις ακόμη.</p>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="modal" id="confirmModal">
+  <div class="sheet">
+    <div class="sheet-head">
+      <h2>Επιβεβαίωση κράτησης</h2>
+      <button type="button" class="close-x" onclick="closeConfirm()">×</button>
+    </div>
+
+    <div class="confirm-instructor">
+      <div class="confirm-box">
+        <div class="confirm-person">
+          <div class="confirm-avatar" id="modalAvatar"></div>
+          <div>
+            <b id="modalInstructor"></b>
+            <div class="muted" style="font-size:12px">KiteClub Instructor</div>
+          </div>
+        </div>
+      </div>
+      <div class="confirm-box confirm-facts">
+        <div>📅 {{date|gr_long_date}}</div>
+        <div>🕐 <span id="modalTime"></span></div>
+        <div>📍 {% if selected_spot %}{{selected_spot.name}}{% else %}—{% endif %}</div>
+      </div>
+    </div>
+
+    <div class="confirm-note">
+      <div style="font-size:28px">👥</div>
+      <div>
+        <b>Διάρκεια: <span id="modalDuration"></span></b>
+        {% if group_members|length > 1 %}
+          <div class="group-line" style="margin-top:4px">Η κράτηση θα γίνει αυτόματα για {{group_members|length}} άτομα:</div>
+          <div class="group-names">{% for m in group_members %}{{m.name}}{% if m.surname %} {{m.surname}}{% endif %}{% if not loop.last %} · {% endif %}{% endfor %}</div>
+        {% endif %}
+        <div class="muted" id="creditMessage" style="margin-top:3px"></div>
+      </div>
+    </div>
+
+    <form id="bookForm" method="post"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="duration" id="durationInput" value="1">
+      <div class="sheet-actions">
+        <button type="button" class="btn alt" onclick="closeConfirm()">Ακύρωση</button>
+        <button class="btn">Επιβεβαίωση κράτησης</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="bottom-nav">
+  <a class="active" href="{{url_for('student')}}"><span class="nav-ico">▣</span>Κράτηση</a>
+  <a href="#my-lessons"><span class="nav-ico">▤</span>Τα μαθήματά μου</a>
+  <a href="{{url_for('student_profile')}}"><span class="nav-ico">♙</span>Προφίλ</a>
+</div>
+    </div>
+  </main>
+</div>
+<script>
+let duration=1, selected=null;
+const allButtons=[...document.querySelectorAll(".selectable")];
+const studentCredits=parseFloat({{student.credits|default(0)}});
+
+document.querySelectorAll(".dur").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    document.querySelectorAll(".dur").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    duration=parseInt(btn.dataset.dur);
+    clearSelection();
+  });
+});
+
+function clearSelection(){
+  allButtons.forEach(b=>b.classList.remove("slot-selected"));
+  selected=null;
+  const bar=document.getElementById("confirmbar");
+  if(bar) bar.classList.remove("show");
+}
+
+function toMinutes(t){
+  const [h,m]=t.split(":").map(Number);
+  return h*60+m;
+}
+
+function endTime(start,dur){
+  const total=toMinutes(start)+dur*60;
+  const h=String(Math.floor(total/60)).padStart(2,"0");
+  const m=String(total%60).padStart(2,"0");
+  return `${h}:${m}`;
+}
+
+allButtons.forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    clearSelection();
+    const start=btn.dataset.hour;
+    const inst=btn.dataset.inst;
+    let chosen=[btn];
+
+    if(duration===2){
+      const targetMin=toMinutes(start)+60;
+      const second=allButtons.find(b=>b.dataset.inst===inst && toMinutes(b.dataset.hour)===targetMin);
+      if(!second){
+        alert("Δεν υπάρχουν 2 συνεχόμενες διαθέσιμες ώρες με τον ίδιο εκπαιδευτή.");
+        return;
+      }
+      chosen.push(second);
+    }
+
+    chosen.forEach(b=>b.classList.add("slot-selected"));
+    selected={
+      slot:btn.dataset.slot,
+      start:start,
+      inst:inst,
+      instname:btn.dataset.instname,
+      photo:btn.dataset.photo || "",
+      duration:duration
+    };
+
+    document.getElementById("selectionText").innerHTML=
+      `<b>${selected.instname}</b> · ${selected.start}–${endTime(selected.start,selected.duration)} · ${selected.duration} ${selected.duration===1?"ώρα":"ώρες"}`;
+    document.getElementById("confirmbar").classList.add("show");
+  });
+});
+
+function openConfirm(){
+  if(!selected) return;
+  document.getElementById("modalInstructor").textContent=selected.instname;
+  document.getElementById("modalTime").textContent=`${selected.start} – ${endTime(selected.start,selected.duration)}`;
+  document.getElementById("modalDuration").textContent=`${selected.duration} ${selected.duration===1?"ώρα":"ώρες"}`;
+
+  const avatar=document.getElementById("modalAvatar");
+  if(selected.photo){
+    avatar.innerHTML=`<img src="${selected.photo}" alt="">`;
+  }else{
+    avatar.textContent=selected.instname ? selected.instname[0] : "I";
+  }
+
+  const remaining=studentCredits-selected.duration;
+  const credit=document.getElementById("creditMessage");
+  const isGroup={{ 'true' if group_members|length > 1 else 'false' }};
+  if(remaining>=0){
+    credit.innerHTML=`Θα αφαιρεθούν <b>${selected.duration}</b> ώρες από το δικό σου πακέτο. Υπόλοιπο μετά την κράτηση: <b>${remaining.toFixed(1)} ώρες</b>.${isGroup?' Τα υπόλοιπα μέλη ελέγχονται και χρεώνονται ξεχωριστά.':''}`;
+  }else{
+    credit.innerHTML=`Η κράτηση απαιτεί ${selected.duration} ώρες και το τρέχον υπόλοιπό σου είναι ${studentCredits.toFixed(1)} ώρες.${isGroup?' Η κοινή κράτηση θα δημιουργηθεί για όλο το group και τυχόν μέλος χωρίς credits θα εμφανιστεί ως Pending payment.':''}`;
+  }
+
+  document.getElementById("durationInput").value=selected.duration;
+  document.getElementById("bookForm").action="/book/"+selected.slot;
+  document.getElementById("confirmModal").classList.add("show");
+}
+
+function closeConfirm(){
+  document.getElementById("confirmModal").classList.remove("show");
+}
+
+document.getElementById("confirmModal").addEventListener("click",(e)=>{
+  if(e.target.id==="confirmModal") closeConfirm();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends "base.html" %}{% block content %}
+<link rel="stylesheet" href="{{url_for('static',filename='admin-shared.css')}}">
+<style>
+.finance-grid{display:grid;grid-template-columns:repeat(4,minmax(170px,1fr));gap:13px;margin-bottom:15px}.fin-card{background:#fff;border:1px solid var(--l);border-radius:17px;padding:17px;min-width:0}.fin-card .k{font-size:12px;color:var(--m);font-weight:850}.fin-card .v{font-size:28px;font-weight:950;margin-top:6px;letter-spacing:-.4px}.fin-card .sub{font-size:11px;color:var(--m);font-weight:750;margin-top:5px}.positive{color:#087846}.negative{color:#b73232}.warn{color:#a15c00}.finance-layout{display:grid;grid-template-columns:1.2fr .8fr;gap:14px}.bars{display:flex;align-items:flex-end;gap:10px;height:210px;padding:24px 8px 0;border-bottom:1px solid var(--l)}.bar-col{flex:1;min-width:55px;text-align:center}.bar{margin:auto;width:min(50px,78%);border-radius:9px 9px 0 0;background:linear-gradient(#25a6df,#147bd3);min-height:3px}.bar-val{font-size:11px;font-weight:900;margin-bottom:5px}.bar-label{font-size:10px;color:var(--m);margin-top:7px}.finance-table{width:100%;border-collapse:collapse}.finance-table th,.finance-table td{padding:10px;border-bottom:1px solid var(--l);text-align:left;vertical-align:top}.finance-table th{font-size:11px;color:#5f7485;background:#f8fafc}.type-pill{display:inline-block;padding:4px 8px;border-radius:999px;font-size:10px;font-weight:900;background:#eef6fb;color:#245b7d}.type-pill.crew{background:#e8f7ee;color:#0b7b48}.status-paid{color:#087846;font-weight:900}.status-pending{color:#a15c00;font-weight:900}.month-form{display:flex;gap:9px;align-items:end;flex-wrap:wrap}.month-form label{font-size:11px;font-weight:850;color:var(--m)}.money-split{display:grid;grid-template-columns:1fr 1fr;gap:10px}.mini-row{display:flex;justify-content:space-between;gap:10px;padding:11px 0;border-bottom:1px solid var(--l)}.mini-row:last-child{border-bottom:0}.delta{display:inline-flex;align-items:center;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:900;background:#eef6fb;color:#315c78}.delta.up{background:#e9f8ef;color:#087846}.delta.down{background:#fff0f0;color:#a92e2e}@media(max-width:1050px){.finance-grid{grid-template-columns:repeat(2,1fr)}.finance-layout{grid-template-columns:1fr}}@media(max-width:620px){.finance-grid{grid-template-columns:1fr 1fr}.finance-grid .fin-card{padding:13px}.fin-card .v{font-size:22px}.money-split{grid-template-columns:1fr}.admin-main{padding:10px}.month-form{width:100%}}
+</style>
+<div class="admin-shell">
+  {% set admin_active='finance' %}{% include '_admin_sidebar_static.html' %}
+  <main class="admin-main">
+    <div class="admin-page-head">
+      <div><h1>Οικονομικά</h1><div class="admin-page-sub">Καθαρή οικονομική εικόνα για {{month_label}}.</div></div>
+      <form method="get" class="month-form"><div><label>Μήνας</label><input type="month" name="month" value="{{month}}"></div><button class="btn" type="submit">Εφαρμογή</button></form>
+    </div>
+
+    <div class="finance-grid">
+      <div class="fin-card"><div class="k">Συνολικά έσοδα</div><div class="v positive">{{'%.2f'|format(summary.total_revenue)}}€</div><div class="sub">Πληρωμένα packages + Crew</div></div>
+      <div class="fin-card"><div class="k">Lesson packages</div><div class="v">{{'%.2f'|format(summary.lesson_revenue)}}€</div><div class="sub">Έσοδα μαθημάτων</div></div>
+      <div class="fin-card"><div class="k">Crew memberships</div><div class="v">{{'%.2f'|format(summary.crew_revenue)}}€</div><div class="sub">Annual Crew package</div></div>
+      <div class="fin-card"><div class="k">Pending προς είσπραξη</div><div class="v warn">{{'%.2f'|format(summary.pending_total)}}€</div><div class="sub">Πακέτα + pending bookings</div></div>
+      <div class="fin-card"><div class="k">Πληρωμές instructors</div><div class="v negative">{{'%.2f'|format(summary.instructor_paid)}}€</div><div class="sub">Cash out μέσα στον μήνα</div></div>
+      <div class="fin-card"><div class="k">Δεδουλευμένα instructors</div><div class="v">{{'%.2f'|format(summary.instructor_earned)}}€</div><div class="sub">Completed ώρες × ωριαία αμοιβή</div></div>
+      <div class="fin-card"><div class="k">Υπόλοιπο instructors</div><div class="v warn">{{'%.2f'|format(summary.instructor_balance)}}€</div><div class="sub">Δεδουλευμένα μείον πληρωμένα</div></div>
+      <div class="fin-card"><div class="k">Καθαρή ταμειακή εικόνα</div><div class="v {{'positive' if summary.net_cash>=0 else 'negative'}}">{{'%.2f'|format(summary.net_cash)}}€</div><div class="sub">Έσοδα μείον πληρωμές instructors</div></div>
+    </div>
+
+    <div class="finance-layout">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><h2 style="margin:0">Έσοδα ανά εβδομάδα</h2>{% if summary.revenue_change is not none %}<span class="delta {{'up' if summary.revenue_change>=0 else 'down'}}">{{'+' if summary.revenue_change>=0 else ''}}{{'%.1f'|format(summary.revenue_change)}}% vs {{prev_label}}</span>{% else %}<span class="delta">{{'%.2f'|format(summary.prev_revenue)}}€ τον {{prev_label}}</span>{% endif %}</div>
+        <div class="bars">{% for w in weeks %}<div class="bar-col"><div class="bar-val">{{'%.0f'|format(w.value)}}€</div><div class="bar" style="height:{{(w.value/max_week*150)|int}}px"></div><div class="bar-label">{{w.label}}</div></div>{% endfor %}</div>
+      </div>
+      <div class="card">
+        <h2>Pending breakdown</h2>
+        <div class="mini-row"><span>Pending packages</span><b>{{'%.2f'|format(summary.pending_packages)}}€</b></div>
+        <div class="mini-row"><span>Pending bookings</span><b>{{'%.2f'|format(summary.pending_bookings)}}€</b></div>
+        <div class="mini-row"><span>Σύνολο προς είσπραξη</span><b class="warn">{{'%.2f'|format(summary.pending_total)}}€</b></div>
+        <div style="margin-top:18px;padding:13px;border-radius:12px;background:#f5fafc;font-size:12px;color:var(--m);font-weight:750">Crew season σήμερα: <b style="color:var(--t)">{{crew_from|gr_date}} → {{crew_to|gr_date}}</b></div>
+      </div>
+    </div>
+
+    <div class="finance-layout" style="margin-top:14px">
+      <div class="card"><h2>Top packages του μήνα</h2><div style="overflow:auto"><table class="finance-table"><thead><tr><th>Πακέτο</th><th>Τύπος</th><th>Πωλήσεις</th><th>Έσοδα</th></tr></thead><tbody>{% for r in sales_rows %}<tr><td><b>{{r.package_name}}</b></td><td><span class="type-pill {{'crew' if r.package_type=='crew' else ''}}">{{'Crew' if r.package_type=='crew' else 'Lessons'}}</span></td><td>{{r.sales}}</td><td><b>{{'%.2f'|format(r.revenue)}}€</b></td></tr>{% else %}<tr><td colspan="4" class="muted">Δεν υπάρχουν πληρωμένες πωλήσεις αυτόν τον μήνα.</td></tr>{% endfor %}</tbody></table></div></div>
+      <div class="card"><h2>Πληρωμές instructors</h2><div style="overflow:auto"><table class="finance-table"><thead><tr><th>Ημερομηνία</th><th>Instructor</th><th>Ποσό</th></tr></thead><tbody>{% for r in payment_rows %}<tr><td>{{r.payment_date|gr_date}}</td><td>{{r.name}}{% if r.surname %} {{r.surname}}{% endif %}</td><td><b>{{'%.2f'|format(r.amount)}}€</b>{% if r.note %}<div class="muted">{{r.note}}</div>{% endif %}</td></tr>{% else %}<tr><td colspan="3" class="muted">Δεν υπάρχουν πληρωμές instructors αυτόν τον μήνα.</td></tr>{% endfor %}</tbody></table></div></div>
+    </div>
+
+    <div class="card" style="margin-top:14px"><h2>Κινήσεις πακέτων / Crew</h2><div style="overflow:auto"><table class="finance-table"><thead><tr><th>Ημερομηνία</th><th>Μαθητής</th><th>Πακέτο</th><th>Status</th><th>Ποσό</th></tr></thead><tbody>{% for r in recent_sales %}<tr><td>{{r.sale_date|gr_date}}</td><td><b>{{r.name}}{% if r.surname %} {{r.surname}}{% endif %}</b><div class="muted">{{r.student_code or ''}}</div></td><td>{{r.package_name}} <span class="type-pill {{'crew' if r.package_type=='crew' else ''}}">{{'Crew' if r.package_type=='crew' else 'Lessons'}}</span></td><td><span class="{{'status-paid' if r.payment_status=='paid' else 'status-pending'}}">{{'Paid' if r.payment_status=='paid' else 'Pending'}}</span></td><td><b>{{'%.2f'|format(r.price)}}€</b></td></tr>{% else %}<tr><td colspan="5" class="muted">Δεν υπάρχουν κινήσεις για τον επιλεγμένο μήνα.</td></tr>{% endfor %}</tbody></table></div></div>
+  </main>
+</div>
+<link rel="stylesheet" href="{{url_for('static',filename='admin-v4.css')}}">
+{% endblock %}

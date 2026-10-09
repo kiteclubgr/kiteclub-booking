@@ -1,0 +1,60 @@
+{% extends "base.html" %}{% block content %}
+<link rel="stylesheet" href="{{url_for('static',filename='admin-shared.css')}}">
+<style>
+.report-grid{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:12px;margin-bottom:14px}.report-card{background:#fff;border:1px solid var(--l);border-radius:16px;padding:16px}.report-card span{display:block;color:var(--m);font-size:12px;font-weight:800}.report-card b{display:block;font-size:27px;margin-top:5px}.report-layout{display:grid;grid-template-columns:1.2fr .8fr;gap:14px}.report-table{width:100%;border-collapse:collapse}.report-table th,.report-table td{padding:10px;border-bottom:1px solid var(--l);text-align:left}.report-table th{font-size:11px;color:#5f7485;background:#f8fafc}.bars{display:flex;align-items:flex-end;gap:10px;height:180px;padding:18px 8px 0;border-bottom:1px solid var(--l)}.bar-col{flex:1;min-width:42px;text-align:center}.bar{margin:auto;width:min(42px,80%);border-radius:8px 8px 0 0;background:#1495d2;min-height:3px}.bar-val{font-size:11px;font-weight:900;margin-bottom:5px}.bar-label{font-size:10px;color:var(--m);margin-top:7px}.filters{display:flex;gap:10px;align-items:end;flex-wrap:wrap}.filters>div{min-width:170px}.money{color:#087846}.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}.pill-row{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--l)}.pill-row:last-child{border-bottom:0}@media(max-width:1000px){.report-grid{grid-template-columns:repeat(2,1fr)}.report-layout,.two-col{grid-template-columns:1fr}}@media(max-width:620px){.report-grid{grid-template-columns:1fr 1fr}.admin-main{padding:10px}.filters>div{min-width:0;flex:1 1 140px}}
+</style>
+<div class="admin-shell">
+  {% set admin_active='reports' %}{% include '_admin_sidebar_static.html' %}
+  <main class="admin-main">
+    <div class="admin-page-head">
+      <div><h1>Αναφορές Σχολής</h1><div class="admin-page-sub">Συνολική εικόνα μαθημάτων, οικονομικών και Crew Membership.</div></div>
+      <form method="get" class="filters">
+        <div><label>Από</label><input type="date" name="from" value="{{date_from}}"></div>
+        <div><label>Έως</label><input type="date" name="to" value="{{date_to}}"></div>
+        <button class="btn" type="submit">Εφαρμογή</button>
+      </form>
+    </div>
+
+    <div class="report-grid">
+      <div class="report-card"><span>Booked ώρες</span><b>{{summary.booked_hours|int}}</b></div>
+      <div class="report-card"><span>Completed ώρες</span><b>{{summary.completed_hours|int}}</b></div>
+      <div class="report-card"><span>Shared / Group ώρες</span><b>{{summary.shared_hours|int}}</b></div>
+      <div class="report-card"><span>Ενεργοί μαθητές</span><b>{{summary.active_students}}</b></div>
+      <div class="report-card"><span>No-show μαθητές</span><b>{{summary.no_show}}</b></div>
+      <div class="report-card"><span>Έσοδα πακέτων</span><b class="money">{{'%.2f'|format(summary.revenue)}}€</b></div>
+      <div class="report-card"><span>Πληρωμές instructors</span><b>{{'%.2f'|format(summary.instructor_paid)}}€</b></div>
+      <div class="report-card"><span>Εκκρεμής αμοιβή instructors</span><b>{{'%.2f'|format(summary.instructor_balance)}}€</b></div>
+    </div>
+
+    <div class="report-layout">
+      <div class="card">
+        <h2>Completed ώρες ανά εβδομάδα</h2>
+        <div class="bars">{% for w in weeks %}<div class="bar-col"><div class="bar-val">{{w.value}}</div><div class="bar" style="height:{{(w.value/max_week*135)|int}}px"></div><div class="bar-label">{{w.label}}</div></div>{% endfor %}</div>
+      </div>
+      <div class="card">
+        <h2>Τύποι μαθημάτων</h2>
+        <div class="pill-row"><span>Private ώρες</span><b>{{lesson_mix.private}}</b></div>
+        <div class="pill-row"><span>2P Group ώρες</span><b>{{lesson_mix['2p']}}</b></div>
+        <div class="pill-row"><span>3P Group ώρες</span><b>{{lesson_mix['3p']}}</b></div>
+        <div class="pill-row"><span>Shared / Admin multi-student</span><b>{{lesson_mix.shared}}</b></div>
+      </div>
+    </div>
+
+
+    <div class="card" style="margin-top:14px">
+      <h2>Packages & Crew Membership</h2>
+      <div class="report-grid" style="margin:12px 0 0">
+        <div class="report-card"><span>Lesson packages που πληρώθηκαν</span><b>{{summary.package_sales}}</b></div>
+        <div class="report-card"><span>Crew packages που πληρώθηκαν</span><b>{{summary.crew_sales}}</b></div>
+        <div class="report-card"><span>Crew ACTIVE σήμερα</span><b>{{summary.crew_active}}</b></div>
+        <div class="report-card"><span>Crew EXPIRED</span><b>{{summary.crew_expired}}</b></div>
+      </div>
+    </div>
+    <div class="two-col" style="margin-top:14px">
+      <div class="card"><h2>Ώρες ανά instructor</h2><div style="overflow:auto"><table class="report-table"><thead><tr><th>Instructor</th><th>Booked</th><th>Completed</th><th>Εκτίμηση αμοιβής</th></tr></thead><tbody>{% for i in instructors %}<tr><td><a href="{{url_for('admin_instructor_profile',instructor_id=i.id)}}"><b>{{i.name}}{% if i.surname %} {{i.surname}}{% endif %}</b></a></td><td>{{i.booked_hours}}h</td><td>{{i.completed_hours}}h</td><td>{{'%.2f'|format(i.estimated_pay)}}€</td></tr>{% endfor %}</tbody></table></div></div>
+      <div class="card"><h2>Top μαθητές</h2><div style="overflow:auto"><table class="report-table"><thead><tr><th>Μαθητής</th><th>Booked</th><th>Completed</th></tr></thead><tbody>{% for s in top_students %}<tr><td><a href="{{url_for('admin_student_profile',student_id=s.id)}}"><b>{{s.name}}{% if s.surname %} {{s.surname}}{% endif %}</b></a><div class="muted">{{s.student_code}}</div></td><td>{{s.lesson_hours}}h</td><td>{{s.completed_hours}}h</td></tr>{% else %}<tr><td colspan="3" class="muted">Δεν υπάρχουν δεδομένα για την περίοδο.</td></tr>{% endfor %}</tbody></table></div></div>
+    </div>
+  </main>
+</div>
+<link rel="stylesheet" href="{{url_for('static',filename='admin-v4.css')}}">
+{% endblock %}

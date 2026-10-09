@@ -1,0 +1,19 @@
+
+<!doctype html><html lang="el"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KiteClub Booking</title>
+<style>
+:root{--n:#0b2340;--b:#0788c8;--bg:#f3f8fb;--g:#dff7e8;--gt:#0c7c46;--r:#ffe3e6;--rt:#bd3541;--o:#fff0d6;--ot:#a86100;--l:#d9e6ee;--m:#6f8190}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--n);font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif}
+nav{height:74px;background:#fff;border-bottom:1px solid var(--l);display:flex;align-items:center;justify-content:space-between;padding:0 max(16px,calc((100% - 1120px)/2));position:sticky;top:0;z-index:10}
+.logo{display:flex;align-items:center}.logo img{height:52px;width:auto;display:block;object-fit:contain}a{color:inherit}.wrap{max-width:1120px;margin:auto;padding:20px}.card{background:#fff;border:1px solid var(--l);border-radius:18px;padding:18px;box-shadow:0 7px 22px rgba(11,35,64,.05);margin-bottom:14px}
+h1{font-size:28px;margin:0 0 6px}h2{font-size:20px;margin-top:0}.muted{color:var(--m)}.btn{border:0;border-radius:11px;padding:11px 15px;font-weight:800;cursor:pointer;background:var(--b);color:#fff;text-decoration:none;display:inline-block}.btn.alt{background:#fff;color:var(--n);border:1px solid var(--l)}
+.grid{overflow:auto;border:1px solid var(--l);border-radius:15px}.grid table{border-collapse:collapse;width:100%;min-width:680px}.grid th,.grid td{padding:9px;border-right:1px solid var(--l);border-bottom:1px solid var(--l);text-align:center}.grid th{background:#f7fafc}
+.badge{display:inline-block;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:800}.ok{background:var(--g);color:var(--gt)}.bad{background:var(--r);color:var(--rt)}.wait{background:var(--o);color:var(--ot)}.off{background:#edf1f4;color:#778695}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.spread{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.metric{background:#fff;border:1px solid var(--l);border-radius:15px;padding:15px}.metric b{font-size:24px;display:block}
+input,select{padding:10px;border:1px solid var(--l);border-radius:10px;background:#fff;font:inherit}.flash{padding:12px 14px;border-radius:12px;margin-bottom:12px;font-weight:600}.flash.info,.flash.message{background:#e8f6ff;border:1px solid #bce4fa}.flash.success{background:#e9f9ed;border:1px solid #ccebd7}.flash.warning{background:#fff5dd;border:1px solid #f3dfaa}.flash.error{background:#fff0f1;border:1px solid #f1c8cf}
+.item{border:1px solid var(--l);border-radius:14px;padding:14px;margin:9px 0}.right{text-align:right}
+@media(max-width:700px){.wrap{padding:11px}.cards{grid-template-columns:1fr}.hide-mobile{display:none}}
+</style></head>
+<body><nav><div class="logo"><img src="{{ url_for('static', filename='img/kiteclub-logo.png') }}" alt="KiteClub"></div><div>{% if me %}<span class="hide-mobile">{{me.name}} · </span>{% if session.get('role')=='student' %}<a href="{{url_for('student_profile')}}">Προφίλ</a> · {% elif session.get('role')=='instructor' %}<a href="{{url_for('instructor_profile')}}">Προφίλ</a> · {% endif %}<a href="{{url_for('logout')}}">Logout</a>{% endif %}</div></nav>
+<div class="wrap">{% with messages=get_flashed_messages(with_categories=true) %}{% for category,m in messages %}<div class="flash {{category if category else 'info'}}">{{m}}</div>{% endfor %}{% endwith %}{% block content %}{% endblock %}</div>
+</body></html>
