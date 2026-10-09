@@ -55,3 +55,7 @@
 }
 .kc-sidebar .kc-search{margin-top:2px!important}
 @media(max-width:900px){.kc-sidebar .admin-brand{display:none!important}}
+
+/* Shared build version directly above Admin logout. */
+.kc-sidebar .kc-admin-version{display:block;text-align:center;font-size:11px;font-weight:750;color:#78899b;padding:3px 0 9px}
+@media(max-width:900px){.kc-sidebar .kc-admin-version{display:none!important}}

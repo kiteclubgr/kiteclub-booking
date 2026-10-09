@@ -9,7 +9,7 @@
 <a class="kc-role-nav-item {% if student_nav=='messages' %}active{% endif %}" href="{{url_for('student_messages')}}"><svg class="kc-role-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 6 10 8L22 6"/></svg><span class="kc-role-label">Μηνύματα</span>{% if message_unread_count %}<b class="sp-badge">{{message_unread_count}}</b>{% endif %}</a>
 </div>
 <div class="sp-side-art kc-role-art" aria-hidden="true"><div class="sun"></div><div class="palm"></div><div class="palm2"></div><div class="moon"></div></div>
-<div class="kc-role-version" aria-label="Έκδοση εφαρμογής">KiteClub v75.2 · Sidebar v3</div>
+<div class="kc-role-version" aria-label="Έκδοση εφαρμογής">{{app_version}}</div>
 <a class="sp-logout kc-role-logout" href="{{url_for('logout')}}"><svg class="kc-role-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg><span>Αποσύνδεση</span></a>
 </aside>
 <script>

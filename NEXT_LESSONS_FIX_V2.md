@@ -1,0 +1,1 @@
+Next Lessons Fix v2: Upcoming student/instructor lessons sorted ascending (date,time,id), completed/history unaffected. One APP_VERSION exposed globally for Admin, Student, Instructor sidebars. Test next lesson chronologically with two future entries and confirm excluded cancelled/completed.

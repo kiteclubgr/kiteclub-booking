@@ -1,7 +1,13 @@
 {% extends "base.html" %}{% block content %}
+<link rel="stylesheet" href="{{url_for('static',filename='admin-shared.css')}}">
+<link rel="stylesheet" href="{{url_for('static',filename='admin-v4.css')}}">
+
 <style>
 .history-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}.history-meta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:14px}.history-meta .itembox{background:#f7fafc;border:1px solid var(--l);border-radius:14px;padding:12px}.timeline{display:flex;flex-direction:column;gap:12px}.timeline-item{display:grid;grid-template-columns:150px minmax(0,1fr);gap:12px;padding:14px;border:1px solid var(--l);border-radius:15px;background:#fff}.timeline-time{font-size:12px;color:var(--m);font-weight:800}.timeline-title{font-weight:900}.timeline-sub{font-size:12px;color:var(--m);margin-top:4px}.timeline-details{margin-top:8px;font-size:12px;color:#4d6376;background:#f7fafc;border-radius:10px;padding:10px}.status{font-size:11px;font-weight:950;padding:6px 9px;border-radius:999px;display:inline-block;white-space:nowrap}.s-booked{background:#e4f2ff;color:#075a9a}.s-pending{background:#fff0d7;color:#a85f00}.s-completed{background:#dff7e8;color:#087846}.s-noshow{background:#ffe8df;color:#ad4e20}.s-cancelled{background:#edf1f4;color:#758592}.muted-mini{font-size:12px;color:var(--m)}@media(max-width:760px){.history-meta{grid-template-columns:1fr 1fr}.timeline-item{grid-template-columns:1fr}}@media(max-width:520px){.history-meta{grid-template-columns:1fr}}
 </style>
+<div class="admin-shell">
+  {% set admin_active='bookings' %}{% include '_admin_sidebar_static.html' %}
+  <main class="admin-main">
 <div class="card">
   {% set state=booking_state_meta(booking.status,booking.payment_status) %}
   <div class="history-head">
@@ -37,5 +43,7 @@
   {% else %}
   <div class="muted">Δεν υπάρχει ακόμα καταγεγραμμένο ιστορικό για αυτή την κράτηση.</div>
   {% endif %}
+</div>
+</main>
 </div>
 {% endblock %}

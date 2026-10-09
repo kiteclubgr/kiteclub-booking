@@ -9,6 +9,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from pathlib import Path
 
 BASE = os.path.dirname(os.path.abspath(__file__))
+APP_VERSION = "KiteClub v75.2 · QA Fixes v3"
 
 # v70: production-ready storage. Locally everything stays inside the project.
 # On Railway mount a persistent volume at /data and set DATA_DIR=/data.
@@ -1462,7 +1463,7 @@ def inject():
         con=db()
         unread=con.execute("SELECT COUNT(*) n FROM messages WHERE recipient_id=? AND read_at IS NULL",(me["id"],)).fetchone()["n"]
         con.close()
-    return {"me": me, "message_unread_count": unread, "booking_state_meta": booking_state_meta}
+    return {"me": me, "message_unread_count": unread, "booking_state_meta": booking_state_meta, "app_version": APP_VERSION}
 
 @app.get("/healthz")
 def healthz():
@@ -1825,6 +1826,8 @@ def student_profile():
             cancelled.append(item)
         elif status in ("confirmed","pending_payment") and dt>=now_dt:
             upcoming.append(item)
+    # Upcoming lessons must be chronological, regardless of descending history query.
+    upcoming.sort(key=lambda b: (b["lesson_date"], b["start_time"], b["id"]))
     package_history=con.execute("""
       SELECT * FROM student_packages WHERE student_id=?
       ORDER BY purchased_at DESC,id DESC
@@ -2547,22 +2550,39 @@ def payment_received(booking_id):
     u=current_user()
     if not u or u["role"]!="admin": return redirect(url_for("login"))
     con=db()
-    b=con.execute("""
-      SELECT b.*,s.lesson_date,s.start_time,sp.name spot,sp.info,sp.map_url
-      FROM bookings b JOIN slots s ON s.id=b.slot_id JOIN spots sp ON sp.id=s.spot_id
-      WHERE b.id=?
-    """,(booking_id,)).fetchone()
-    if b:
-        con.execute("UPDATE bookings SET payment_status='paid',status='confirmed' WHERE id=?",(booking_id,))
+    try:
+        # A cancelled, completed or no-show booking must never be reopened by payment.
+        # Require pending payment and an active booking; the conditional UPDATE also
+        # prevents a repeated POST from producing a second audit entry or email.
+        updated=con.execute("""
+          UPDATE bookings SET payment_status='paid',status='confirmed'
+          WHERE id=? AND status IN ('pending_payment','confirmed')
+            AND payment_status='pending'
+        """,(booking_id,))
+        if updated.rowcount != 1:
+            con.rollback()
+            flash("Η πληρωμή δεν μπορεί να επιβεβαιωθεί: η κράτηση ακυρώθηκε, ολοκληρώθηκε ή δεν εκκρεμεί πληρωμή.")
+            return redirect(url_for("admin"))
         con.execute("UPDATE booking_participants SET payment_status='paid' WHERE booking_id=? AND payment_status='pending'",(booking_id,))
+        b=con.execute("""
+          SELECT b.*,s.lesson_date,s.start_time,sp.name spot,sp.info,sp.map_url
+          FROM bookings b JOIN slots s ON s.id=b.slot_id JOIN spots sp ON sp.id=s.spot_id
+          WHERE b.id=?
+        """,(booking_id,)).fetchone()
         participants=_booking_participants(con,booking_id)
         log_booking_audit(con,booking_id,"payment_received","Επιβεβαιώθηκε η πληρωμή της κράτησης.",u["id"],u["role"],"")
         con.commit()
-        for person in participants:
-            if person["email"]:
-                send_email(person["email"],"KiteClub — Η πληρωμή και η κράτησή σου επιβεβαιώθηκαν",
-                  f"Γεια σου {person['name']},\nΗ κράτησή σου είναι confirmed.\n{b['lesson_date']} {b['start_time']} — {b['spot']}\n{b['info']}\nΧάρτης: {b['map_url']}")
-    con.close(); flash("Η πληρωμή επιβεβαιώθηκε."); return redirect(url_for("admin"))
+    except Exception:
+        con.rollback()
+        raise
+    finally:
+        con.close()
+    for person in participants:
+        if person["email"]:
+            send_email(person["email"],"KiteClub — Η πληρωμή και η κράτησή σου επιβεβαιώθηκαν",
+              f"Γεια σου {person['name']},\nΗ κράτησή σου είναι confirmed.\n{b['lesson_date']} {b['start_time']} — {b['spot']}\n{b['info']}\nΧάρτης: {b['map_url']}")
+    flash("Η πληρωμή επιβεβαιώθηκε.")
+    return redirect(url_for("admin"))
 
 @app.post("/admin/add-slot")
 def add_slot():
@@ -4822,6 +4842,8 @@ def instructor_profile():
         if row["status"] in ("completed","no_show"): history.append(item)
         elif dt>=now_dt: upcoming.append(item)
 
+    # List the nearest upcoming lesson first; leave history newest-first.
+    upcoming.sort(key=lambda b: (b["lesson_date"], b["start_time"], b["id"]))
     rate=float(inst["hourly_rate"] or 0)
     total_pay=total_hours*rate; day_pay=day_hours*rate; week_pay=week_hours*rate; month_pay=month_hours*rate
     con.close()
