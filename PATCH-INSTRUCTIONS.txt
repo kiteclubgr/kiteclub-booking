@@ -1,16 +1,22 @@
-KiteClub v75.2 — Finance & Student Fix v12
-PATCH ON TOP OF Settlement Price v11.
-Replace ONLY these files in the EXISTING repository:
-  app.py
-  templates/admin.html
-  templates/base.html
-Do not delete the database or other files. Do not install older patches afterwards.
+KiteClub v75.2 — Credits Fix v13
 
-Fixes:
-- Reports actual receipts match Finance, including partial installments and legacy paid purchases.
-- New student form shows separate first name and surname and no initial-credit input.
-- Admin success flashes no longer push its sidebar/footer below the viewport on desktop.
-- Version label: KiteClub v75.2 · Finance & Student Fix v12
+Base: Finance & Student Fix v12. Replace ONLY app.py.
+Database is not included; never overwrite your live DB.
 
-Not changed: flexible settlements, payment request idempotency, booking/credit rules.
-Test on demo first. Verify an unpaid package / immediate credits separately; not changed by this patch.
+Changes:
+- New lesson package purchases activate all credits immediately regardless of Paid/Unpaid.
+- The initial lesson service for a newly-created student also activates immediately.
+- Crew Membership purchase/payment behavior is unchanged.
+- Payment installment and settlement code is unchanged.
+- Version label updated on all portals via APP_VERSION.
+
+Existing unpaid purchases are NOT automatically modified on startup.
+Repair them separately using repair_existing_credits_v13.py:
+1) Back up your Railway volume and take a DB snapshot (or download safely).
+2) Inspect: python repair_existing_credits_v13.py --db PATH --student-id 16
+3) Verify exact purchase IDs and eligibility; do not assume they are consecutive.
+4) Only when verified run with --purchase-ids ID1,ID2 --apply.
+   Script creates a .bak snapshot before modification and protects against second application.
+
+IMPORTANT: Do NOT upload the repair script as a public web route or run it automatically at startup.
+Test on a copy of the database first. A user_id must be confirmed from the live DB; STU-0012 is not necessarily user_id=12.

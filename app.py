@@ -9,7 +9,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from pathlib import Path
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "KiteClub v75.2 · Finance & Student Fix v12"
+APP_VERSION = "KiteClub v75.2 · Credits Fix v13"
 
 # v70: production-ready storage. Locally everything stays inside the project.
 # On Railway mount a persistent volume at /data and set DATA_DIR=/data.
@@ -2633,7 +2633,7 @@ def add_student():
                 now=datetime.now().isoformat(); rule=(pkg["activation_rule"] or "paid_only")
                 curp=con.execute("""INSERT INTO student_packages(student_id,package_id,package_name,hours_total,hours_remaining,price,payment_status,purchased_at,paid_at,note,package_type,valid_from,valid_until,activation_rule,paid_amount,credits_activated) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",(uid,pkg["id"],pkg["name"],hours,0.0,price,"unpaid",now,None,"Αρχική υπηρεσία","lesson",None,None,rule,0.0,0))
                 purchase=con.execute("SELECT * FROM student_packages WHERE id=?",(curp.lastrowid,)).fetchone()
-                if rule=="immediate": _activate_student_purchase(con,purchase,"Initial service")
+                _activate_student_purchase(con,purchase,"Initial service - credits on purchase")
         con.commit(); flash("Ο μαθητής δημιουργήθηκε.")
     except sqlite3.IntegrityError:
         con.rollback(); flash("Υπάρχει ήδη χρήστης με αυτό το email.")
@@ -4568,7 +4568,7 @@ def admin_student_package_purchase(student_id):
     paid_amount=float(package["price"] or 0) if payment_status=="paid" else 0.0
     cur=con.execute("""INSERT INTO student_packages(student_id,package_id,package_name,hours_total,hours_remaining,price,payment_status,purchased_at,paid_at,note,package_type,valid_from,valid_until,activation_rule,paid_amount,credits_activated) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",(student_id,package["id"],package["name"],float(package["hours"] or 0),0.0,float(package["price"] or 0),payment_status,now,now if payment_status=="paid" else None,note,package_type,valid_from,valid_until,rule,paid_amount,0))
     purchase=con.execute("SELECT * FROM student_packages WHERE id=?",(cur.lastrowid,)).fetchone()
-    if package_type=="lesson" and (rule=="immediate" or payment_status=="paid"): _activate_student_purchase(con,purchase,"Package purchase")
+    if package_type=="lesson": _activate_student_purchase(con,purchase,"Package purchase - credits on purchase")
     if payment_status=="paid" and float(package["price"] or 0)>0:
         con.execute("INSERT INTO student_payments(student_id,purchase_id,amount,payment_date,method,note,created_at) VALUES(?,?,?,?,?,?,?)",(student_id,purchase["id"],float(package["price"] or 0),datetime.now().date().isoformat(),"manual",note,now))
     if payment_status=="paid" and package_type=="crew": con.execute("UPDATE students SET crew_member=1,crew_start_date=?,crew_end_date=?,crew_fee=? WHERE user_id=?",(valid_from,valid_until,float(package["price"] or 0),student_id))
