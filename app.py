@@ -9,7 +9,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from pathlib import Path
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "KiteClub v75.2 · Settlement Price v11"
+APP_VERSION = "KiteClub v75.2 · Finance & Student Fix v12"
 
 # v70: production-ready storage. Locally everything stays inside the project.
 # On Railway mount a persistent volume at /data and set DATA_DIR=/data.
@@ -4304,13 +4304,38 @@ def admin_reports():
       GROUP BY u.id ORDER BY lesson_hours DESC,u.name,u.surname LIMIT 10
     """,(date_from,date_to)).fetchall()
 
+    # Reports revenue must mean CASH RECEIVED IN THE SELECTED PERIOD, exactly
+    # as Finance: installments count when received; negotiated discounts never
+    # count as cash. Keep paid purchase counts as their own separate metric.
     sales=con.execute("""
-      SELECT package_type,COUNT(*) n,COALESCE(SUM(price),0) revenue
+      SELECT COALESCE(package_type,'lesson') package_type,COUNT(*) n
       FROM student_packages
       WHERE payment_status='paid' AND substr(COALESCE(paid_at,purchased_at),1,10) BETWEEN ? AND ?
-      GROUP BY package_type
+      GROUP BY COALESCE(package_type,'lesson')
     """,(date_from,date_to)).fetchall()
-    sales_map={r["package_type"] or "lesson":{"count":int(r["n"]),"revenue":float(r["revenue"] or 0)} for r in sales}
+    sales_map={r["package_type"]:{"count":int(r["n"]),"revenue":0.0} for r in sales}
+    receipts=con.execute("""
+      SELECT COALESCE(sp.package_type,'lesson') package_type,
+             COALESCE(SUM(py.amount),0) revenue
+      FROM student_payments py JOIN student_packages sp ON sp.id=py.purchase_id
+      WHERE py.payment_date BETWEEN ? AND ?
+      GROUP BY COALESCE(sp.package_type,'lesson')
+    """,(date_from,date_to)).fetchall()
+    for r in receipts:
+        sales_map.setdefault(r["package_type"],{"count":0,"revenue":0.0})["revenue"]+=float(r["revenue"] or 0)
+    # Older imports may have a paid purchase without individual receipt rows.
+    # Finance intentionally includes these, but never counts them twice.
+    legacy_receipts=con.execute("""
+      SELECT COALESCE(sp.package_type,'lesson') package_type,
+             COALESCE(SUM(sp.price),0) revenue
+      FROM student_packages sp
+      WHERE sp.payment_status='paid'
+        AND substr(COALESCE(sp.paid_at,sp.purchased_at),1,10) BETWEEN ? AND ?
+        AND NOT EXISTS(SELECT 1 FROM student_payments py WHERE py.purchase_id=sp.id)
+      GROUP BY COALESCE(sp.package_type,'lesson')
+    """,(date_from,date_to)).fetchall()
+    for r in legacy_receipts:
+        sales_map.setdefault(r["package_type"],{"count":0,"revenue":0.0})["revenue"]+=float(r["revenue"] or 0)
     total_revenue=sum(v["revenue"] for v in sales_map.values())
     instructor_paid=float(con.execute("""SELECT COALESCE(SUM(amount),0) v FROM instructor_payments WHERE payment_date BETWEEN ? AND ?""",(date_from,date_to)).fetchone()["v"] or 0)
     active_students=int(con.execute("""

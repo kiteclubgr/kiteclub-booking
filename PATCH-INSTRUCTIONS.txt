@@ -1,13 +1,16 @@
-KiteClub v75.2 — Settlement Price v11
-PATCH on top of Flexible Payments v10.
-Replace only:
+KiteClub v75.2 — Finance & Student Fix v12
+PATCH ON TOP OF Settlement Price v11.
+Replace ONLY these files in the EXISTING repository:
   app.py
-  templates/admin_student_profile.html
-Do NOT replace kiteclub.db, /data, or other project files.
+  templates/admin.html
+  templates/base.html
+Do not delete the database or other files. Do not install older patches afterwards.
 
-Behavior: "Δόση" reduces balance. "Εξόφληση" accepts any positive amount up to balance;
-sets final sale price to previously paid + current amount, marks PAID, balance 0,
-and records original price / agreed discount in notes.
-Example: 2h at 110€, settle 100€ => price 100€, paid 100€, due 0€, 2h unchanged.
-The existing request-ID idempotency and transaction remain in place.
-Test on demo data before Railway production use.
+Fixes:
+- Reports actual receipts match Finance, including partial installments and legacy paid purchases.
+- New student form shows separate first name and surname and no initial-credit input.
+- Admin success flashes no longer push its sidebar/footer below the viewport on desktop.
+- Version label: KiteClub v75.2 · Finance & Student Fix v12
+
+Not changed: flexible settlements, payment request idempotency, booking/credit rules.
+Test on demo first. Verify an unpaid package / immediate credits separately; not changed by this patch.

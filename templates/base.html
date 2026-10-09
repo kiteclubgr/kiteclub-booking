@@ -13,7 +13,17 @@ h1{font-size:28px;margin:0 0 6px}h2{font-size:20px;margin-top:0}.muted{color:var
 input,select{padding:10px;border:1px solid var(--l);border-radius:10px;background:#fff;font:inherit}.flash{padding:12px 14px;border-radius:12px;margin-bottom:12px;font-weight:600}.flash.info,.flash.message{background:#e8f6ff;border:1px solid #bce4fa}.flash.success{background:#e9f9ed;border:1px solid #ccebd7}.flash.warning{background:#fff5dd;border:1px solid #f3dfaa}.flash.error{background:#fff0f1;border:1px solid #f1c8cf}
 .item{border:1px solid var(--l);border-radius:14px;padding:14px;margin:9px 0}.right{text-align:right}
 @media(max-width:700px){.wrap{padding:11px}.cards{grid-template-columns:1fr}.hide-mobile{display:none}}
-</style></head>
+</style><style>
+/* v12: floating Admin notifications must not push the sticky sidebar/footer down. */
+@media (min-width: 801px) {
+  .wrap:has(.admin-sidebar.kc-sidebar) > .flash {
+    position: fixed !important; top: 12px; right: 18px; left: auto;
+    max-width: min(460px, calc(100vw - 260px));
+    margin: 0 !important; z-index: 250; box-shadow: 0 8px 28px rgba(0,0,0,.14);
+  }
+}
+</style>
+</head>
 {% set instructor_detail_portal = request.endpoint in ['instructor_student_detail', 'instructor_lesson'] %}
 <body{% if instructor_detail_portal %} class="instructor-portal-body kc-instructor-detail-v5"{% endif %}><nav><div class="logo"><img src="{{ url_for('static', filename='img/kiteclub-logo.png') }}" alt="KiteClub"></div><div>{% if me %}<span class="hide-mobile">{{me.name}} · </span>{% if session.get('role')=='student' %}<a href="{{url_for('student_profile')}}">Προφίλ</a> · {% elif session.get('role')=='instructor' %}<a href="{{url_for('instructor_profile')}}">Προφίλ</a> · {% endif %}<a href="{{url_for('logout')}}">Logout</a>{% endif %}</div></nav>
 <div class="wrap">{% with messages=get_flashed_messages(with_categories=true) %}{% for category,m in messages %}<div class="flash {{category if category else 'info'}}">{{m}}</div>{% endfor %}{% endwith %}{% block content %}{% endblock %}</div>

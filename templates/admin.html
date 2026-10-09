@@ -922,7 +922,8 @@
     <div style="min-width:280px;max-width:440px;flex:1"><label style="font-size:11px;font-weight:900">Αναζήτηση μαθητή</label><input id="adminStudentSearch" type="search" placeholder="Όνομα, επώνυμο, Student ID, email ή τηλέφωνο" style="width:100%"></div>
   </div>
   <form method="post" action="{{url_for('add_student')}}" class="row" style="margin-bottom:14px"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-    <input name="name" placeholder="Όνομα" required>
+    <input name="name" placeholder="Όνομα" autocomplete="given-name" required>
+    <input name="surname" placeholder="Επώνυμο" autocomplete="family-name" required>
     <input type="email" name="email" placeholder="Email" required>
     <input name="phone" placeholder="Τηλέφωνο">
     <input value="Beginner" readonly><input type="hidden" name="level" value="Beginner">
@@ -932,7 +933,7 @@
       <option value="2h">2 ώρες · 110€</option>
       <option value="8h">Πακέτο 8 ωρών · 360€</option>
     </select>
-    <input type="number" step="0.5" name="credits" value="0" style="width:90px" title="Χειροκίνητα αρχικά credits">
+
     <input name="password" type="password" placeholder="8+ χαρακτήρες με γράμματα και αριθμούς" minlength="8" pattern="(?=.*[A-Za-zΑ-Ωα-ω])(?=.*\d).{8,}" title="Τουλάχιστον 8 χαρακτήρες, με γράμματα και αριθμούς" required style="width:160px">
     <button class="btn">+ Νέος μαθητής</button>
   </form>
