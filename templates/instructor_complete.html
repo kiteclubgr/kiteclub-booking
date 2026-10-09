@@ -1,5 +1,6 @@
 {% extends "base.html" %}{% block content %}
 <link rel="stylesheet" href="{{url_for('static',filename='instructor-v39.css')}}">
+<link rel="stylesheet" href="{{url_for('static',filename='role-sidebar-v3.css')}}?v=3">
 {% include '_instructor_mobile_chrome.html' %}
 <style>
 .group-attendance{display:grid;gap:12px}.participant-card{border:1px solid var(--l);border-radius:15px;padding:14px;background:#fff}.participant-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}.participant-id{font-size:11px;color:var(--m)}.attendance-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.attendance-grid .full{grid-column:1/-1}.status-select{font-weight:800}.status-help{font-size:11px;color:var(--m);margin-top:6px}.participant-card textarea{min-height:78px}@media(max-width:620px){.attendance-grid{grid-template-columns:1fr}}

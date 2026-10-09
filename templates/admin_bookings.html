@@ -3,11 +3,11 @@
 <style>
 .booking-metrics{display:grid;grid-template-columns:repeat(5,minmax(130px,1fr));gap:12px;margin-bottom:16px}.booking-metric{background:#fff;border:1px solid var(--l);border-radius:15px;padding:15px;box-shadow:0 7px 20px rgba(11,35,64,.035)}.booking-metric b{display:block;font-size:28px;line-height:1.05;margin-bottom:5px}.booking-metric span{font-size:12px;color:var(--m);font-weight:800}.booking-metric.blue{background:#f4f9ff}.booking-metric.green{background:#f1fbf5}.booking-metric.orange{background:#fff8ed}.booking-metric.purple{background:#f7f2ff}.booking-metric.red{background:#fff3f3}
 .filter-card{padding:15px}.booking-filters{display:grid;grid-template-columns:minmax(210px,1.5fr) 160px 180px 170px 170px auto;gap:9px;align-items:end}.booking-filters label{font-size:11px;font-weight:900;color:var(--m);display:flex;flex-direction:column;gap:5px}.booking-filters input,.booking-filters select{width:100%}.filter-actions{display:flex;gap:7px}.filter-actions .btn{white-space:nowrap}
-.booking-table-wrap{overflow:auto;border:1px solid var(--l);border-radius:14px}.booking-table{width:100%;min-width:1100px;border-collapse:collapse}.booking-table th,.booking-table td{padding:11px 10px;border-bottom:1px solid var(--l);text-align:left;vertical-align:middle}.booking-table th{background:#f5f9fc;color:#536d80;font-size:11px;text-transform:uppercase;letter-spacing:.3px}.booking-table tbody tr:hover{background:#f9fcfe}.person{font-weight:950}.sub{font-size:11px;color:var(--m);margin-top:2px}.status{font-size:11px;font-weight:950;padding:6px 9px;border-radius:999px;display:inline-block;white-space:nowrap}.s-booked{background:#e4f2ff;color:#075a9a}.s-pending{background:#fff0d7;color:#a85f00}.s-completed{background:#dff7e8;color:#087846}.s-noshow{background:#ffe8df;color:#ad4e20}.s-cancelled{background:#edf1f4;color:#758592}.row-actions{display:flex;gap:6px;align-items:center}.small-btn{border:1px solid var(--l);background:#fff;color:var(--n);padding:7px 9px;border-radius:9px;font-size:11px;font-weight:900;cursor:pointer;text-decoration:none;white-space:nowrap}.small-btn.primary{background:#eaf6ff;border-color:#c6e7f9;color:#08639f}.small-btn.danger{background:#fff1f2;border-color:#f5ced2;color:#b63f49}
+.booking-table-wrap{overflow:auto;border:1px solid var(--l);border-radius:14px}.booking-table{width:100%;min-width:1100px;border-collapse:collapse}.booking-cards{display:none;gap:12px;flex-direction:column}.booking-card{border:1px solid var(--l);border-radius:16px;padding:14px;background:#fff;box-shadow:0 7px 20px rgba(11,35,64,.035)}.booking-card-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.booking-card-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}.booking-card-grid b{display:block;font-size:11px;color:var(--m);margin-bottom:3px}.booking-card-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}.booking-table th,.booking-table td{padding:11px 10px;border-bottom:1px solid var(--l);text-align:left;vertical-align:middle}.booking-table th{background:#f5f9fc;color:#536d80;font-size:11px;text-transform:uppercase;letter-spacing:.3px}.booking-table tbody tr:hover{background:#f9fcfe}.person{font-weight:950}.sub{font-size:11px;color:var(--m);margin-top:2px}.status{font-size:11px;font-weight:950;padding:6px 9px;border-radius:999px;display:inline-block;white-space:nowrap}.s-booked{background:#e4f2ff;color:#075a9a}.s-pending{background:#fff0d7;color:#a85f00}.s-completed{background:#dff7e8;color:#087846}.s-noshow{background:#ffe8df;color:#ad4e20}.s-cancelled{background:#edf1f4;color:#758592}.row-actions{display:flex;gap:6px;align-items:center}.small-btn{border:1px solid var(--l);background:#fff;color:var(--n);padding:7px 9px;border-radius:9px;font-size:11px;font-weight:900;cursor:pointer;text-decoration:none;white-space:nowrap}.small-btn.primary{background:#eaf6ff;border-color:#c6e7f9;color:#08639f}.small-btn.danger{background:#fff1f2;border-color:#f5ced2;color:#b63f49}
 .booking-modal-backdrop{display:none;position:fixed;inset:0;background:rgba(6,25,44,.52);z-index:200;align-items:center;justify-content:center;padding:18px}.booking-modal-backdrop.open{display:flex}.booking-modal{width:min(650px,100%);max-height:88vh;overflow:hidden;background:#fff;border-radius:20px;box-shadow:0 24px 70px rgba(4,22,40,.28);display:flex;flex-direction:column}.booking-modal-head{display:flex;justify-content:space-between;align-items:center;padding:18px 20px;border-bottom:1px solid var(--l)}.booking-modal-head h2{margin:0}.booking-modal-close{border:0;background:#eef3f7;width:36px;height:36px;border-radius:50%;font-size:20px;cursor:pointer;color:var(--n)}.booking-modal-body{padding:18px 20px;overflow:auto}.edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.edit-grid .full{grid-column:1/-1}.edit-grid label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:900}.edit-grid input,.edit-grid select{width:100%}.picked{font-size:11px;color:var(--m);font-weight:750}.edit-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid var(--l)}
 .empty{text-align:center;padding:42px 16px;color:var(--m)}
 @media(max-width:1200px){.booking-metrics{grid-template-columns:repeat(3,1fr)}.booking-filters{grid-template-columns:1fr 1fr 1fr}}
-@media(max-width:700px){.booking-metrics{grid-template-columns:repeat(2,1fr)}.booking-filters{grid-template-columns:1fr}.filter-actions{width:100%}.filter-actions .btn{flex:1}.edit-grid{grid-template-columns:1fr}.edit-grid .full{grid-column:auto}}
+@media(max-width:700px){.booking-metrics{grid-template-columns:repeat(2,1fr)}.booking-filters{grid-template-columns:1fr}.filter-actions{width:100%}.filter-actions .btn{flex:1}.edit-grid{grid-template-columns:1fr}.edit-grid .full{grid-column:auto}.booking-table-wrap{display:none}.booking-cards{display:flex}.booking-card-grid{grid-template-columns:1fr}}
 </style>
 <div class="admin-shell">
   {% set admin_active='bookings' %}{% include '_admin_sidebar_static.html' %}
@@ -49,22 +49,18 @@
       <div class="booking-table-wrap"><table class="booking-table">
         <thead><tr><th>Ημερομηνία / Ώρα</th><th>Μαθητής</th><th>Instructor</th><th>Spot</th><th>Διάρκεια</th><th>Κατάσταση</th><th>Πληρωμή</th><th>Ενέργειες</th></tr></thead>
         <tbody>{% for b in bookings %}
+          {% set state=booking_state_meta(b.status,b.payment_status) %}
           <tr>
             <td><b>{{b.lesson_date|gr_date}}</b><div class="sub">{{b.start_time|hm24}}</div></td>
             <td><div class="person"><a href="{{url_for('admin_student_profile',student_id=b.student_id)}}">{{b.participant_names or (b.student_name ~ (' ' ~ b.student_surname if b.student_surname else ''))}}</a></div><div class="sub">{% if b.participant_count and b.participant_count>1 %}{{b.participant_count}}P Group · {{b.participant_codes}}{% else %}{{b.student_code}} · {{b.student_level or '—'}} · {{b.student_email}}{% endif %}</div></td>
             <td><div class="person">{{b.instructor_name}}{% if b.instructor_surname %} {{b.instructor_surname}}{% endif %}</div></td>
             <td>{{b.spot_name or '—'}}</td>
             <td><b>{{b.duration|round(1)}}h</b></td>
-            <td>
-              {% if b.status=='completed' %}<span class="status s-completed">Completed</span>
-              {% elif b.status=='no_show' %}<span class="status s-noshow">No-show</span>
-              {% elif b.status and b.status[:9]=='cancelled' %}<span class="status s-cancelled">Cancelled</span>
-              {% elif b.status=='pending_payment' or b.payment_status=='pending' %}<span class="status s-pending">Pending</span>
-              {% else %}<span class="status s-booked">Booked</span>{% endif %}
-            </td>
-            <td>{{b.payment_status or '—'}}{% if b.amount %}<div class="sub">{{'%.2f'|format(b.amount)}}€</div>{% endif %}</td>
+            <td><span class="status s-{{state.class}}">{{state.label}}</span></td>
+            <td>{{'Paid / credits' if b.payment_status in ['credit','paid'] else ('Pending payment' if b.payment_status=='pending' else (b.payment_status or '—'))}}{% if b.amount %}<div class="sub">{{'%.2f'|format(b.amount)}}€</div>{% endif %}</td>
             <td><div class="row-actions">
               <a class="small-btn" href="{{url_for('admin',date=b.lesson_date)}}#day">Ημέρα</a>
+              <a class="small-btn" href="{{url_for('admin_booking_history',booking_id=b.id)}}">History</a>
               {% if b.status in ('confirmed','pending_payment') %}
                 <button type="button" class="small-btn primary edit-booking" data-id="{{b.id}}" data-student="{{b.student_id}}" data-date="{{b.lesson_date}}" data-time="{{b.start_time}}" data-instructor="{{b.instructor_id}}" data-duration="{{b.duration}}" data-state="{{'pending' if b.status=='pending_payment' or b.payment_status=='pending' else 'booked'}}">Επεξεργασία</button>
               {% else %}<span class="sub">Κλειδωμένη</span>{% endif %}
@@ -72,6 +68,26 @@
           </tr>
         {% endfor %}</tbody>
       </table></div>
+      <div class="booking-cards">{% for b in bookings %}
+        {% set state=booking_state_meta(b.status,b.payment_status) %}
+        <article class="booking-card">
+          <div class="booking-card-top">
+            <div><div class="person">{{b.participant_names or (b.student_name ~ (' ' ~ b.student_surname if b.student_surname else ''))}}</div><div class="sub">{{b.lesson_date|gr_date}} · {{b.start_time|hm24}}</div></div>
+            <span class="status s-{{state.class}}">{{state.label}}</span>
+          </div>
+          <div class="sub" style="margin-top:6px">{% if b.participant_count and b.participant_count>1 %}{{b.participant_count}}P Group · {{b.participant_codes}}{% else %}{{b.student_code}} · {{b.student_level or '—'}} · {{b.student_email}}{% endif %}</div>
+          <div class="booking-card-grid">
+            <div><b>Instructor</b>{{b.instructor_name}}{% if b.instructor_surname %} {{b.instructor_surname}}{% endif %}</div>
+            <div><b>Spot</b>{{b.spot_name or '—'}}</div>
+            <div><b>Διάρκεια</b>{{b.duration|round(1)}}h</div>
+            <div><b>Πληρωμή</b>{{'Paid / credits' if b.payment_status in ['credit','paid'] else ('Pending payment' if b.payment_status=='pending' else (b.payment_status or '—'))}}{% if b.amount %} · {{'%.2f'|format(b.amount)}}€{% endif %}</div>
+          </div>
+          <div class="booking-card-actions">
+            <a class="small-btn" href="{{url_for('admin',date=b.lesson_date)}}#day">Ημέρα</a>
+            <a class="small-btn" href="{{url_for('admin_booking_history',booking_id=b.id)}}">History</a>
+            {% if b.status in ('confirmed','pending_payment') %}<button type="button" class="small-btn primary edit-booking" data-id="{{b.id}}" data-student="{{b.student_id}}" data-date="{{b.lesson_date}}" data-time="{{b.start_time}}" data-instructor="{{b.instructor_id}}" data-duration="{{b.duration}}" data-state="{{'pending' if b.status=='pending_payment' or b.payment_status=='pending' else 'booked'}}">Επεξεργασία</button>{% endif %}
+          </div>
+        </article>{% endfor %}</div>
       {% else %}<div class="empty">Δεν βρέθηκαν κρατήσεις με αυτά τα φίλτρα.</div>{% endif %}
     </div>
   </main>
@@ -119,4 +135,5 @@
   document.getElementById('modalClose').addEventListener('click',close);document.getElementById('modalCancel').addEventListener('click',close);modal.addEventListener('click',e=>{if(e.target===modal)close();});document.addEventListener('keydown',e=>{if(e.key==='Escape')close();});
 })();
 </script>
+<link rel="stylesheet" href="{{url_for('static',filename='admin-v4.css')}}">
 {% endblock %}

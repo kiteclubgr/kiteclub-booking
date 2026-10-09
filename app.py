@@ -289,6 +289,57 @@ def send_email(to_email, subject, body):
         s.send_message(msg)
 
 
+def password_meets_policy(password):
+    """Regular passwords: simple but reasonable policy for local/demo usage."""
+    password=(password or "")
+    return len(password) >= 8 and any(ch.isalpha() for ch in password) and any(ch.isdigit() for ch in password)
+
+
+def password_policy_message():
+    return "Ο κωδικός πρέπει να έχει τουλάχιστον 8 χαρακτήρες και να περιέχει γράμματα και αριθμούς."
+
+
+def live_level_case(student_id_expr):
+    return f"""(CASE WHEN (SELECT COUNT(DISTINCT spp.skill_key)
+      FROM student_skill_progress spp
+      WHERE spp.student_id={student_id_expr}
+        AND spp.status='mastered'
+        AND spp.skill_key IN ('l1_theory','l1_trim','l1_control','l1_quick_release','l1_power_strike','l1_bodydrag','l2_control','l2_water_relaunch','l2_bodydrag','l2_self_rescue','l3_control','l3_bodydrag_downwind','l3_bodydrag_upwind','l3_bodydrag_board','l4_bodydrag','l4_waterstart','l4_keep_going','l4_upwind')) = 18
+      THEN 'Kiter' ELSE 'Beginner' END)"""
+
+
+def booking_state_meta(status, payment_status=None):
+    status=(status or "").strip()
+    payment_status=(payment_status or "").strip()
+    if status=="completed":
+        return {"label":"Completed","class":"completed"}
+    if status=="no_show":
+        return {"label":"No-show","class":"noshow"}
+    if status.startswith("cancelled"):
+        return {"label":"Cancelled","class":"cancelled"}
+    if status=="pending_payment" or payment_status=="pending":
+        return {"label":"Pending payment","class":"pending"}
+    return {"label":"Booked","class":"booked"}
+
+
+def log_booking_audit(con, booking_id, event_type, summary, actor_id=None, actor_role=None, details=""):
+    con.execute("""
+      INSERT INTO booking_audit(booking_id,actor_id,actor_role,event_type,summary,details,created_at)
+      VALUES(?,?,?,?,?,?,?)
+    """,(booking_id,actor_id,actor_role,event_type,summary,(details or ""),datetime.now().isoformat()))
+
+
+def get_booking_audit(con, booking_id, limit=100):
+    return con.execute("""
+      SELECT ba.*,u.name actor_name,u.surname actor_surname
+      FROM booking_audit ba
+      LEFT JOIN users u ON u.id=ba.actor_id
+      WHERE ba.booking_id=?
+      ORDER BY ba.created_at DESC, ba.id DESC
+      LIMIT ?
+    """,(booking_id,limit)).fetchall()
+
+
 def ensure_column(con, table, column, definition):
     cols=[r["name"] for r in con.execute(f"PRAGMA table_info({table})").fetchall()]
     if column not in cols:
@@ -354,6 +405,16 @@ def init_db():
     CREATE TABLE IF NOT EXISTS day_spots(
       lesson_date TEXT PRIMARY KEY,
       spot_id INTEGER NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS booking_audit(
+      id INTEGER PRIMARY KEY,
+      booking_id INTEGER NOT NULL,
+      actor_id INTEGER,
+      actor_role TEXT,
+      event_type TEXT NOT NULL,
+      summary TEXT NOT NULL,
+      details TEXT,
+      created_at TEXT NOT NULL
     );
     """)
     con.commit()
@@ -721,9 +782,9 @@ def init_db():
     if con.execute("SELECT COUNT(*) AS n FROM users").fetchone()["n"] == 0:
         admin_email = os.getenv("ADMIN_EMAIL", "").strip().lower()
         admin_password = os.getenv("ADMIN_PASSWORD", "")
-        if not admin_email or len(admin_password) < 12:
+        if not admin_email or not password_meets_policy(admin_password):
             con.close()
-            raise RuntimeError("Empty database: set ADMIN_EMAIL and ADMIN_PASSWORD (12+ chars), or ENABLE_DEMO_DATA=1 for local demo")
+            raise RuntimeError("Empty database: set ADMIN_EMAIL and ADMIN_PASSWORD (8+ chars with letters and numbers), or ENABLE_DEMO_DATA=1 for local demo")
         con.execute("INSERT INTO users(name,email,phone,role,password_hash) VALUES(?,?,?,?,?)",
                     ("Admin", admin_email, "", "admin", generate_password_hash(admin_password)))
         con.commit()
@@ -774,7 +835,7 @@ def _group_members(con, student_id):
       WHERE u.id IN ({q})
       ORDER BY CASE WHEN u.id=? THEN 0 ELSE 1 END,u.name,u.surname
     """,(*ids,student_id)).fetchall()
-    return rows
+    return students_with_progress_levels(con, rows)
 
 
 def _set_student_group(con, student_id, lesson_type, partner_ids):
@@ -828,7 +889,7 @@ def _set_student_group(con, student_id, lesson_type, partner_ids):
 
 def _booking_participants(con, booking_id):
     return con.execute("""
-      SELECT bp.*,u.name,u.surname,u.email,u.phone,s.student_code,s.level,s.credits,s.lesson_type,s.group_id
+      SELECT bp.*,u.name,u.surname,u.email,u.phone,s.student_code,(CASE WHEN (SELECT COUNT(DISTINCT spp.skill_key) FROM student_skill_progress spp WHERE spp.student_id=bp.student_id AND spp.status='mastered' AND spp.skill_key IN ('l1_theory','l1_trim','l1_control','l1_quick_release','l1_power_strike','l1_bodydrag','l2_control','l2_water_relaunch','l2_bodydrag','l2_self_rescue','l3_control','l3_bodydrag_downwind','l3_bodydrag_upwind','l3_bodydrag_board','l4_bodydrag','l4_waterstart','l4_keep_going','l4_upwind')) = 18 THEN 'Kiter' ELSE 'Beginner' END) AS level,s.credits,s.lesson_type,s.group_id
       FROM booking_participants bp
       JOIN users u ON u.id=bp.student_id
       LEFT JOIN students s ON s.user_id=bp.student_id
@@ -1401,7 +1462,7 @@ def inject():
         con=db()
         unread=con.execute("SELECT COUNT(*) n FROM messages WHERE recipient_id=? AND read_at IS NULL",(me["id"],)).fetchone()["n"]
         con.close()
-    return {"me": me, "message_unread_count": unread}
+    return {"me": me, "message_unread_count": unread, "booking_state_meta": booking_state_meta}
 
 @app.get("/healthz")
 def healthz():
@@ -1820,8 +1881,8 @@ def student_profile_edit():
     if new_password and new_password!=confirm_password:
         flash("Οι κωδικοί δεν ταιριάζουν.")
         return redirect(url_for("student_profile_edit"))
-    if new_password and len(new_password)<6:
-        flash("Ο νέος κωδικός πρέπει να έχει τουλάχιστον 6 χαρακτήρες.")
+    if new_password and not password_meets_policy(new_password):
+        flash(password_policy_message())
         return redirect(url_for("student_profile_edit"))
 
     con=db(); con.execute("BEGIN IMMEDIATE")
@@ -1916,6 +1977,7 @@ def book(slot_id):
 
     sp=con.execute("SELECT sp.* FROM spots sp JOIN slots s ON s.spot_id=sp.id WHERE s.id=?",(slot_id,)).fetchone()
     participants=_booking_participants(con,bid)
+    log_booking_audit(con,bid,"created",f"Νέα κράτηση από μαθητή για {slot['lesson_date']} {slot['start_time']} ({duration:g}h).",u["id"],u["role"],f"participants={len(participant_ids)}; payment={pay}; amount={amount}")
     con.commit()
     booked_date=slot["lesson_date"]
     con.close()
@@ -1978,6 +2040,7 @@ def cancel_student_booking(booking_id):
     # A group booking belongs to the fixed group, so cancellation by any member cancels the shared slot for everyone.
     con.execute("UPDATE bookings SET status='cancelled_student' WHERE id=?",(booking_id,))
     _refund_booking_participants(con,booking_id,"booking_refund","Refund for cancelled booking")
+    log_booking_audit(con,booking_id,"cancelled","Ακύρωση κράτησης από μαθητή.",u["id"],u["role"],f"refunded_hours=yes; participants={participant_count}")
 
     linked=con.execute("SELECT slot_id FROM booking_slots WHERE booking_id=?",(booking_id,)).fetchall()
     for r in linked:
@@ -2075,6 +2138,9 @@ def admin_global_search():
                  OR LOWER(COALESCE(s.student_code,'')) LIKE ?)
           ORDER BY u.role,u.name,u.surname LIMIT 50
         """,(like,like,like,like,like)).fetchall()
+        student_rows=[r for r in results if r['role']=='student']
+        student_levels={r['id']:r for r in students_with_progress_levels(con, student_rows)} if student_rows else {}
+        results=[dict(r, level=student_levels.get(r['id'],{}).get('level', r['level'])) for r in results]
         con.close()
     return render_template("admin_search.html",q=q,results=results,admin_active="search")
 
@@ -2311,7 +2377,7 @@ def admin():
              base.lesson_date booking_lesson_date,base.start_time booking_start_time,
              base.instructor_id booking_instructor_id,
              su.id student_id,su.name student_name,su.surname student_surname,
-             st.level student_level,
+             (CASE WHEN (SELECT COUNT(DISTINCT spp.skill_key) FROM student_skill_progress spp WHERE spp.student_id=su.id AND spp.status='mastered' AND spp.skill_key IN ('l1_theory','l1_trim','l1_control','l1_quick_release','l1_power_strike','l1_bodydrag','l2_control','l2_water_relaunch','l2_bodydrag','l2_self_rescue','l3_control','l3_bodydrag_downwind','l3_bodydrag_upwind','l3_bodydrag_board','l4_bodydrag','l4_waterstart','l4_keep_going','l4_upwind')) = 18 THEN 'Kiter' ELSE 'Beginner' END) student_level,
              (SELECT COUNT(*) FROM booking_participants bp2 WHERE bp2.booking_id=b.id) participant_count,
              (SELECT GROUP_CONCAT(TRIM(pu.name || ' ' || COALESCE(pu.surname,'')), ' · ')
                 FROM booking_participants bp3 JOIN users pu ON pu.id=bp3.student_id
@@ -2338,7 +2404,7 @@ def admin():
     today_multi_rows=con.execute("""
       SELECT s.id slot_id,s.start_time,s.instructor_id,b.id booking_id,b.status booking_status,b.payment_status,b.duration,
              base.lesson_date booking_lesson_date,base.start_time booking_start_time,base.instructor_id booking_instructor_id,
-             su.id student_id,su.name student_name,su.surname student_surname,st.level student_level,
+             su.id student_id,su.name student_name,su.surname student_surname,(CASE WHEN (SELECT COUNT(DISTINCT spp.skill_key) FROM student_skill_progress spp WHERE spp.student_id=su.id AND spp.status='mastered' AND spp.skill_key IN ('l1_theory','l1_trim','l1_control','l1_quick_release','l1_power_strike','l1_bodydrag','l2_control','l2_water_relaunch','l2_bodydrag','l2_self_rescue','l3_control','l3_bodydrag_downwind','l3_bodydrag_upwind','l3_bodydrag_board','l4_bodydrag','l4_waterstart','l4_keep_going','l4_upwind')) = 18 THEN 'Kiter' ELSE 'Beginner' END) student_level,
              (SELECT COUNT(*) FROM booking_participants bp2 WHERE bp2.booking_id=b.id) participant_count,
              (SELECT GROUP_CONCAT(TRIM(pu.name || ' ' || COALESCE(pu.surname,'')), ' · ')
                 FROM booking_participants bp3 JOIN users pu ON pu.id=bp3.student_id
@@ -2424,6 +2490,36 @@ def admin():
           "times":[r["start_time"] for r in edit_times]
         }
 
+    # v75.1 visual dashboard: live metrics only, no fake weather/revenue data.
+    dashboard_total_students=con.execute("SELECT COUNT(*) n FROM students s JOIN users u ON u.id=s.user_id WHERE COALESCE(u.active,1)=1").fetchone()["n"]
+    dashboard_total_instructors=con.execute("SELECT COUNT(*) n FROM instructors i JOIN users u ON u.id=i.user_id WHERE COALESCE(u.active,1)=1").fetchone()["n"]
+    dashboard_pending_payments=con.execute("""SELECT COALESCE(SUM(MAX(0,COALESCE(sp.price,0)-COALESCE(sp.paid_amount,0))),0) amount FROM student_packages sp WHERE COALESCE(sp.payment_status,'unpaid')<>'paid'""").fetchone()["amount"]
+    dashboard_today_rows=con.execute("""
+      SELECT b.id,b.student_id,b.status,b.payment_status,b.duration,s.lesson_date,s.start_time,
+             su.name student_name,su.surname student_surname,iu.name instructor_name,iu.surname instructor_surname,
+             (SELECT COUNT(*) FROM booking_participants bp WHERE bp.booking_id=b.id) participant_count
+      FROM bookings b JOIN slots s ON s.id=b.slot_id JOIN users su ON su.id=b.student_id
+      JOIN users iu ON iu.id=s.instructor_id WHERE s.lesson_date=?
+      ORDER BY s.start_time,b.id LIMIT 12
+    """,(today_date,)).fetchall()
+    dashboard_trend=con.execute("""
+      SELECT s.lesson_date,COUNT(*) n FROM bookings b JOIN slots s ON s.id=b.slot_id
+      WHERE s.lesson_date BETWEEN ? AND ? AND b.status NOT LIKE 'cancelled%'
+      GROUP BY s.lesson_date
+    """,((datetime.now().date()-timedelta(days=6)).isoformat(),today_date)).fetchall()
+    trend_map={r['lesson_date']:int(r['n']) for r in dashboard_trend}
+    dashboard_week=[{'day':(datetime.now().date()-timedelta(days=6-i)).strftime('%d/%m'),
+                     'count':trend_map.get((datetime.now().date()-timedelta(days=6-i)).isoformat(),0)} for i in range(7)]
+    dashboard_week_max=max([x['count'] for x in dashboard_week] or [1]) or 1
+    dashboard_recent=con.execute("""
+      SELECT b.id,b.status,b.created_at,s.lesson_date,s.start_time,u.name student_name,u.surname student_surname
+      FROM bookings b JOIN slots s ON s.id=b.slot_id JOIN users u ON u.id=b.student_id
+      ORDER BY b.id DESC LIMIT 6
+    """).fetchall()
+    dashboard_level_counts={'Beginner':0,'Kiter':0}
+    for st in students:
+        lvl=st['level'] if isinstance(st,dict) else 'Beginner'
+        dashboard_level_counts[lvl]=dashboard_level_counts.get(lvl,0)+1
     con.close()
     slot_lookup={}
     for s in slots:
@@ -2440,7 +2536,10 @@ def admin():
       today_slot_lookup=today_slot_lookup,today_summary=today_summary,
       today_activation_states=today_activation_states,
       today_activation_by_column=today_activation_by_column,today_spot=today_spot,
-      edit_schedule_data=edit_schedule_data
+      edit_schedule_data=edit_schedule_data, dashboard_total_students=dashboard_total_students,
+      dashboard_total_instructors=dashboard_total_instructors,dashboard_pending_payments=dashboard_pending_payments,
+      dashboard_today_rows=dashboard_today_rows,dashboard_week=dashboard_week,dashboard_week_max=dashboard_week_max,
+      dashboard_recent=dashboard_recent,dashboard_level_counts=dashboard_level_counts
     )
 
 @app.post("/admin/payment/<int:booking_id>")
@@ -2457,6 +2556,7 @@ def payment_received(booking_id):
         con.execute("UPDATE bookings SET payment_status='paid',status='confirmed' WHERE id=?",(booking_id,))
         con.execute("UPDATE booking_participants SET payment_status='paid' WHERE booking_id=? AND payment_status='pending'",(booking_id,))
         participants=_booking_participants(con,booking_id)
+        log_booking_audit(con,booking_id,"payment_received","Επιβεβαιώθηκε η πληρωμή της κράτησης.",u["id"],u["role"],"")
         con.commit()
         for person in participants:
             if person["email"]:
@@ -2478,8 +2578,8 @@ def add_slot():
 def add_student():
     u=current_user()
     if not u or u["role"]!="admin": return redirect(url_for("login"))
-    if len(request.form.get("password", "")) < 12:
-        flash("Ο κωδικός νέου λογαριασμού πρέπει να έχει τουλάχιστον 12 χαρακτήρες.")
+    if not password_meets_policy(request.form.get("password", "")):
+        flash(password_policy_message())
         return redirect(url_for("admin"))
     con=db()
     try:
@@ -2517,8 +2617,8 @@ def adjust_credits(student_id):
 def add_instructor():
     u=current_user()
     if not u or u["role"]!="admin": return redirect(url_for("login"))
-    if len(request.form.get("password", "")) < 12:
-        flash("Ο κωδικός νέου λογαριασμού πρέπει να έχει τουλάχιστον 12 χαρακτήρες.")
+    if not password_meets_policy(request.form.get("password", "")):
+        flash(password_policy_message())
         return redirect(url_for("admin"))
     con=db()
     try:
@@ -2964,6 +3064,7 @@ def admin_book_student(slot_id):
     con.execute("INSERT OR IGNORE INTO booking_slots(booking_id,slot_id) VALUES(?,?)",(booking_id,slot_id))
     con.execute("UPDATE slots SET status='booked',manual_override=NULL WHERE id=?",(slot_id,))
     participants=_booking_participants(con,booking_id)
+    log_booking_audit(con,booking_id,"created",f"Κράτηση από Admin για {slot['lesson_date']} {slot['start_time']} ({duration:g}h).",u["id"],u["role"],f"participants={len(participant_ids)}; payment={payment_status}; amount={amount}")
     con.commit(); con.close()
 
     rebalance_instructors(slot["lesson_date"])
@@ -3112,6 +3213,7 @@ def admin_edit_booking(booking_id):
       UPDATE bookings SET slot_id=?,student_id=?,duration=?,status=?,payment_status=?,amount=? WHERE id=?
     """,(first["id"],student_id,duration,new_status,new_payment,new_amount,booking_id))
     participants=_booking_participants(con,booking_id)
+    log_booking_audit(con,booking_id,"edited",f"Ο Admin ενημέρωσε την κράτηση σε {start_time} ({duration:g}h).",u["id"],u["role"],f"student_id={student_id}; instructor_id={instructor_id}; status={new_status}; payment={new_payment}")
     con.commit(); con.close()
     rebalance_instructors(lesson_date)
 
@@ -3148,6 +3250,7 @@ def admin_cancel_booking(booking_id):
     con.execute("UPDATE bookings SET status='cancelled_admin' WHERE id=?",(booking_id,))
     for r in linked:
         con.execute("UPDATE slots SET status='open' WHERE id=?",(r["slot_id"],))
+    log_booking_audit(con,booking_id,"cancelled","Ακύρωση κράτησης από Admin.",u["id"],u["role"],f"refunded_hours={refunded}; participants={participant_count}")
     con.commit(); con.close()
     rebalance_instructors(lesson_date)
 
@@ -3193,6 +3296,9 @@ def admin_add_instructor():
 
     if not name or not email or not password:
         flash("Συμπλήρωσε όνομα, email και password.")
+        return redirect(url_for("admin")+"#instructors")
+    if not password_meets_policy(password):
+        flash(password_policy_message())
         return redirect(url_for("admin")+"#instructors")
 
     try:
@@ -3350,6 +3456,10 @@ def admin_instructor_profile(instructor_id):
         con.execute("UPDATE users SET name=?,surname=?,instagram=?,email=?,phone=?,profile_photo=? WHERE id=?",
                     (name,surname,instagram,email,phone,photo,instructor_id))
         if password:
+            if not password_meets_policy(password):
+                con.close()
+                flash(password_policy_message())
+                return redirect(url_for("admin_instructor_profile",instructor_id=instructor_id))
             con.execute("UPDATE users SET password_hash=? WHERE id=?",(generate_password_hash(password),instructor_id))
         con.execute("UPDATE instructors SET hourly_rate=?,activation_threshold=? WHERE user_id=?",
                     (hourly_rate,threshold,instructor_id))
@@ -3378,7 +3488,7 @@ def admin_instructor_profile(instructor_id):
 
     booking_report=con.execute("""
       SELECT b.id,b.status,b.duration,b.next_skill,sl.lesson_date,sl.start_time,sl.id slot_id,
-             su.name student,su.surname student_surname,st.level,
+             su.name student,su.surname student_surname,(CASE WHEN (SELECT COUNT(DISTINCT spp.skill_key) FROM student_skill_progress spp WHERE spp.student_id=su.id AND spp.status='mastered' AND spp.skill_key IN ('l1_theory','l1_trim','l1_control','l1_quick_release','l1_power_strike','l1_bodydrag','l2_control','l2_water_relaunch','l2_bodydrag','l2_self_rescue','l3_control','l3_bodydrag_downwind','l3_bodydrag_upwind','l3_bodydrag_board','l4_bodydrag','l4_waterstart','l4_keep_going','l4_upwind')) = 18 THEN 'Kiter' ELSE 'Beginner' END) AS level,
              COALESCE(day_sp.name,slot_sp.name) spot,
              (SELECT COUNT(*) FROM booking_participants bp WHERE bp.booking_id=b.id) participant_count,
              (SELECT GROUP_CONCAT(TRIM(pu.name || ' ' || COALESCE(pu.surname,'')), ' · ')
@@ -3575,6 +3685,10 @@ def admin_student_profile(student_id):
         """,(name,surname,instagram,email,phone,photo,student_id))
 
         if password:
+            if not password_meets_policy(password):
+                con.close()
+                flash(password_policy_message())
+                return redirect(url_for("admin_student_profile",student_id=student_id))
             con.execute("""
               UPDATE users SET password_hash=? WHERE id=?
             """,(generate_password_hash(password),student_id))
@@ -3916,7 +4030,7 @@ def admin_bookings():
       SELECT b.id,b.student_id,b.duration,b.status,b.payment_status,b.amount,b.created_at,b.completed_at,
              s.lesson_date,s.start_time,s.instructor_id,s.spot_id,
              su.name student_name,su.surname student_surname,su.email student_email,su.phone student_phone,
-             st.level student_level,st.student_code student_code,
+             (CASE WHEN (SELECT COUNT(DISTINCT spp.skill_key) FROM student_skill_progress spp WHERE spp.student_id=su.id AND spp.status='mastered' AND spp.skill_key IN ('l1_theory','l1_trim','l1_control','l1_quick_release','l1_power_strike','l1_bodydrag','l2_control','l2_water_relaunch','l2_bodydrag','l2_self_rescue','l3_control','l3_bodydrag_downwind','l3_bodydrag_upwind','l3_bodydrag_board','l4_bodydrag','l4_waterstart','l4_keep_going','l4_upwind')) = 18 THEN 'Kiter' ELSE 'Beginner' END) student_level,st.student_code student_code,
              (SELECT COUNT(*) FROM booking_participants bp2 WHERE bp2.booking_id=b.id) participant_count,
              (SELECT GROUP_CONCAT(TRIM(pu.name || ' ' || COALESCE(pu.surname,'')), ' · ')
                 FROM booking_participants bp3 JOIN users pu ON pu.id=bp3.student_id
@@ -3952,6 +4066,7 @@ def admin_bookings():
       WHERE COALESCE(u.active,1)=1
       ORDER BY u.name,u.surname
     """).fetchall()
+    students=students_with_progress_levels(con, students)
     instructors=con.execute("""
       SELECT u.id,u.name,u.surname,u.profile_photo
       FROM users u JOIN instructors i ON i.user_id=u.id
@@ -3997,6 +4112,39 @@ def admin_bookings():
       edit_schedule_data=edit_schedule_data,
       filters={"q":q,"date":date_filter,"instructor_id":instructor_filter,"spot_id":spot_filter,"status":status_filter}
     )
+
+
+@app.route("/admin/bookings/<int:booking_id>/history")
+def admin_booking_history(booking_id):
+    u=current_user()
+    if not u or u["role"]!="admin":
+        return redirect(url_for("login"))
+    con=db()
+    booking=con.execute(f"""
+      SELECT b.id,b.status,b.payment_status,b.duration,sl.lesson_date,sl.start_time,
+             su.id student_id,su.name student_name,su.surname student_surname,{live_level_case('su.id')} AS student_level,
+             st.student_code,iu.name instructor_name,iu.surname instructor_surname,COALESCE(day_sp.name,slot_sp.name) spot_name,
+             (SELECT COUNT(*) FROM booking_participants bp WHERE bp.booking_id=b.id) participant_count,
+             (SELECT GROUP_CONCAT(TRIM(pu.name || ' ' || COALESCE(pu.surname,'')), ' · ')
+                FROM booking_participants bp2 JOIN users pu ON pu.id=bp2.student_id
+               WHERE bp2.booking_id=b.id) participant_names
+      FROM bookings b
+      JOIN slots sl ON sl.id=b.slot_id
+      JOIN users su ON su.id=b.student_id
+      LEFT JOIN students st ON st.user_id=su.id
+      JOIN users iu ON iu.id=sl.instructor_id
+      JOIN spots slot_sp ON slot_sp.id=sl.spot_id
+      LEFT JOIN day_spots ds ON ds.lesson_date=sl.lesson_date
+      LEFT JOIN spots day_sp ON day_sp.id=ds.spot_id
+      WHERE b.id=?
+    """,(booking_id,)).fetchone()
+    if not booking:
+        con.close()
+        flash("Η κράτηση δεν βρέθηκε.")
+        return redirect(url_for("admin_bookings"))
+    history=get_booking_audit(con,booking_id)
+    con.close()
+    return render_template("booking_history.html",booking=booking,history=history,back_url=url_for("admin_bookings"),back_label="‹ Επιστροφή στις κρατήσεις",page_title="Ιστορικό κράτησης")
 
 
 @app.route("/admin/reports")
@@ -4404,7 +4552,7 @@ def instructor():
     # One row per booking, filtered to this instructor and selected day.
     booking_rows=con.execute("""
       SELECT b.*,su.name student,su.surname student_surname,su.phone student_phone,
-             su.profile_photo student_photo,st.level,s.start_time,s.lesson_date,
+             su.profile_photo student_photo,(CASE WHEN (SELECT COUNT(DISTINCT spp.skill_key) FROM student_skill_progress spp WHERE spp.student_id=su.id AND spp.status='mastered' AND spp.skill_key IN ('l1_theory','l1_trim','l1_control','l1_quick_release','l1_power_strike','l1_bodydrag','l2_control','l2_water_relaunch','l2_bodydrag','l2_self_rescue','l3_control','l3_bodydrag_downwind','l3_bodydrag_upwind','l3_bodydrag_board','l4_bodydrag','l4_waterstart','l4_keep_going','l4_upwind')) = 18 THEN 'Kiter' ELSE 'Beginner' END) AS level,s.start_time,s.lesson_date,
              COALESCE(day_sp.name,slot_sp.name) spot,s.instructor_id,
              (SELECT COUNT(*) FROM booking_participants bp2 WHERE bp2.booking_id=b.id) participant_count,
              (SELECT GROUP_CONCAT(TRIM(pu.name || ' ' || COALESCE(pu.surname,'')), ' · ')
@@ -4618,7 +4766,7 @@ def instructor_profile():
 
     rows=con.execute("""
       SELECT b.*,sl.lesson_date,sl.start_time,su.name student,su.surname student_surname,
-             su.profile_photo student_photo,st.level,
+             su.profile_photo student_photo,(CASE WHEN (SELECT COUNT(DISTINCT spp.skill_key) FROM student_skill_progress spp WHERE spp.student_id=su.id AND spp.status='mastered' AND spp.skill_key IN ('l1_theory','l1_trim','l1_control','l1_quick_release','l1_power_strike','l1_bodydrag','l2_control','l2_water_relaunch','l2_bodydrag','l2_self_rescue','l3_control','l3_bodydrag_downwind','l3_bodydrag_upwind','l3_bodydrag_board','l4_bodydrag','l4_waterstart','l4_keep_going','l4_upwind')) = 18 THEN 'Kiter' ELSE 'Beginner' END) AS level,
              COALESCE(day_sp.name,slot_sp.name) spot,
              (SELECT COUNT(*) FROM booking_participants bp2 WHERE bp2.booking_id=b.id) participant_count,
              (SELECT GROUP_CONCAT(TRIM(pu.name || ' ' || COALESCE(pu.surname,'')), ' · ')
@@ -4663,10 +4811,10 @@ def instructor_students():
     params=[u["id"]]
     where=""
     if q:
-        where=" AND (lower(su.name) LIKE lower(?) OR lower(COALESCE(su.surname,'')) LIKE lower(?) OR lower(su.email) LIKE lower(?))"
-        like=f"%{q}%"; params += [like,like,like]
+        where=" AND (lower(su.name) LIKE lower(?) OR lower(COALESCE(su.surname,'')) LIKE lower(?) OR lower(su.email) LIKE lower(?) OR lower(COALESCE(su.phone,'')) LIKE lower(?))"
+        like=f"%{q}%"; params += [like,like,like,like]
     rows=con.execute(f"""
-      SELECT su.id,su.name,su.surname,su.email,su.phone,su.profile_photo,st.level,st.credits,st.student_code,
+      SELECT su.id,su.name,su.surname,su.email,su.phone,su.profile_photo,(CASE WHEN (SELECT COUNT(DISTINCT spp.skill_key) FROM student_skill_progress spp WHERE spp.student_id=su.id AND spp.status='mastered' AND spp.skill_key IN ('l1_theory','l1_trim','l1_control','l1_quick_release','l1_power_strike','l1_bodydrag','l2_control','l2_water_relaunch','l2_bodydrag','l2_self_rescue','l3_control','l3_bodydrag_downwind','l3_bodydrag_upwind','l3_bodydrag_board','l4_bodydrag','l4_waterstart','l4_keep_going','l4_upwind')) = 18 THEN 'Kiter' ELSE 'Beginner' END) AS level,st.credits,st.student_code,
              COUNT(DISTINCT b.id) lessons,
              COALESCE(SUM(CASE WHEN COALESCE(bp.attendance_status,b.status)='completed' THEN b.duration ELSE 0 END),0) completed_hours,
              MAX(sl.lesson_date) last_lesson
@@ -4676,7 +4824,7 @@ def instructor_students():
       JOIN users su ON su.id=bp.student_id
       LEFT JOIN students st ON st.user_id=su.id
       WHERE sl.instructor_id=? AND b.status NOT LIKE 'cancelled%' {where}
-      GROUP BY su.id,su.name,su.surname,su.email,su.phone,su.profile_photo,st.level,st.credits,st.student_code
+      GROUP BY su.id,su.name,su.surname,su.email,su.phone,su.profile_photo,st.credits,st.student_code
       ORDER BY su.name,su.surname
     """,tuple(params)).fetchall()
     rows=students_with_progress_levels(con, rows)
@@ -4770,7 +4918,7 @@ def instructor_lesson(booking_id):
     lesson=con.execute("""
       SELECT b.*,sl.lesson_date,sl.start_time,sl.instructor_id,
              su.id student_id,su.name student,su.surname student_surname,su.phone student_phone,
-             su.profile_photo student_photo,st.level,
+             su.profile_photo student_photo,(CASE WHEN (SELECT COUNT(DISTINCT spp.skill_key) FROM student_skill_progress spp WHERE spp.student_id=su.id AND spp.status='mastered' AND spp.skill_key IN ('l1_theory','l1_trim','l1_control','l1_quick_release','l1_power_strike','l1_bodydrag','l2_control','l2_water_relaunch','l2_bodydrag','l2_self_rescue','l3_control','l3_bodydrag_downwind','l3_bodydrag_upwind','l3_bodydrag_board','l4_bodydrag','l4_waterstart','l4_keep_going','l4_upwind')) = 18 THEN 'Kiter' ELSE 'Beginner' END) AS level,
              COALESCE(day_sp.name,slot_sp.name) spot,
              (SELECT COUNT(*) FROM booking_participants bp2 WHERE bp2.booking_id=b.id) participant_count,
              (SELECT GROUP_CONCAT(TRIM(pu.name || ' ' || COALESCE(pu.surname,'')), ' · ')
@@ -4801,8 +4949,9 @@ def instructor_lesson(booking_id):
       ORDER BY sl.lesson_date DESC,sl.start_time DESC LIMIT 6
     """,(u["id"],lesson["student_id"],booking_id)).fetchall()
     participants=_booking_participants(con,booking_id)
+    audit_history=get_booking_audit(con,booking_id,20)
     con.close()
-    return render_template("instructor_lesson.html",lesson=item,previous=previous,participants=participants)
+    return render_template("instructor_lesson.html",lesson=item,previous=previous,participants=participants,audit_history=audit_history)
 
 
 @app.route("/instructor/lesson/<int:booking_id>/complete")
@@ -4813,7 +4962,7 @@ def instructor_complete_lesson(booking_id):
     con=db()
     lesson=con.execute("""
       SELECT b.*,sl.lesson_date,sl.start_time,sl.instructor_id,
-             su.name student,su.surname student_surname,su.profile_photo student_photo,st.level,
+             su.name student,su.surname student_surname,su.profile_photo student_photo,(CASE WHEN (SELECT COUNT(DISTINCT spp.skill_key) FROM student_skill_progress spp WHERE spp.student_id=su.id AND spp.status='mastered' AND spp.skill_key IN ('l1_theory','l1_trim','l1_control','l1_quick_release','l1_power_strike','l1_bodydrag','l2_control','l2_water_relaunch','l2_bodydrag','l2_self_rescue','l3_control','l3_bodydrag_downwind','l3_bodydrag_upwind','l3_bodydrag_board','l4_bodydrag','l4_waterstart','l4_keep_going','l4_upwind')) = 18 THEN 'Kiter' ELSE 'Beginner' END) AS level,
              (SELECT COUNT(*) FROM booking_participants bp2 WHERE bp2.booking_id=b.id) participant_count,
              (SELECT GROUP_CONCAT(TRIM(pu.name || ' ' || COALESCE(pu.surname,'')), ' · ')
                 FROM booking_participants bp3 JOIN users pu ON pu.id=bp3.student_id
@@ -4874,6 +5023,7 @@ def instructor_no_show(booking_id):
     for r in con.execute("SELECT slot_id FROM booking_slots WHERE booking_id=?",(booking_id,)).fetchall():
         con.execute("UPDATE slots SET status='booked' WHERE id=?",(r["slot_id"],))
     lesson_date=b["lesson_date"]
+    log_booking_audit(con,booking_id,"attendance","Ο instructor σημείωσε No-show.",u["id"],u["role"],"")
     con.commit(); con.close(); rebalance_instructors(lesson_date)
     flash("Το μάθημα σημειώθηκε ως No-show. Οι ώρες χρεώθηκαν κανονικά και δεν επιστράφηκαν στον μαθητή.")
     return redirect(url_for("instructor_lesson",booking_id=booking_id))
@@ -4954,6 +5104,8 @@ def complete_group(booking_id):
     for r in con.execute("SELECT slot_id FROM booking_slots WHERE booking_id=?",(booking_id,)).fetchall():
         con.execute("UPDATE slots SET status='booked' WHERE id=?",(r["slot_id"],))
     lesson_date=b["lesson_date"]
+    detail_items=[f"{sid}:{status}" for sid,status,_,_,_ in results]
+    log_booking_audit(con,booking_id,"attendance","Ο instructor ολοκλήρωσε την καταχώρηση παρουσίας group.",u["id"],u["role"],"; ".join(detail_items))
     con.commit(); con.close()
 
     for email,name,skill,skill_notes,video_url in mail_jobs:
@@ -5011,7 +5163,7 @@ def complete(booking_id):
         worked=_unlogged_instructor_hours_for_booking(con,u["id"],booking_id)
         if worked>0:
             con.execute("INSERT INTO instructor_hours(instructor_id,booking_id,hours,lesson_date,created_at) VALUES(?,?,?,?,?)",(u["id"],booking_id,worked,lesson_date,now))
-    sk=con.execute("SELECT * FROM skills WHERE name=?",(skill,)).fetchone(); participants=_booking_participants(con,booking_id); con.commit(); con.close()
+    sk=con.execute("SELECT * FROM skills WHERE name=?",(skill,)).fetchone(); participants=_booking_participants(con,booking_id); log_booking_audit(con,booking_id,"attendance","Ο instructor ολοκλήρωσε το μάθημα.",u["id"],u["role"],f"next_skill={skill}; worked={','.join(worked_keys)}"); con.commit(); con.close()
     if sk:
         for person in participants:
             if person["email"]:

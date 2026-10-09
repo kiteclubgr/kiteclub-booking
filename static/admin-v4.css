@@ -1,0 +1,57 @@
+
+/* KiteClub Admin v4: one shared, intentionally component-based design system. */
+.admin-shell{grid-template-columns:252px minmax(0,1fr)!important;background:#f5f8fc!important}
+.admin-sidebar.kc-sidebar{width:252px!important;min-height:100vh!important;height:100vh!important;position:sticky!important;top:0!important;display:flex!important;flex-direction:column!important;gap:15px!important;padding:20px 15px 18px!important;background:linear-gradient(180deg,#fff 0%,#fff 70%,#fffaf0 100%)!important;border-right:1px solid #e5ebf2!important;box-shadow:3px 0 18px rgba(17,39,62,.035)!important;color:#122a46!important;overflow-y:auto;overflow-x:hidden!important}
+.kc-sidebar .admin-brand{min-height:180px!important;display:flex!important;align-items:center!important;justify-content:center!important;padding:0 3px!important;background:none!important;border:0!important;box-shadow:none!important}
+.kc-sidebar .admin-brand img{width:188px!important;max-width:100%!important;height:173px!important;object-fit:contain!important;box-shadow:none!important;border-radius:0!important}
+.kc-sidebar .kc-search{position:relative!important;display:flex!important;align-items:center!important;margin:0 0 3px!important;background:#f7fafc!important;border:1px solid #e2e9f1!important;border-radius:12px!important;height:43px!important;padding:0 12px!important;gap:8px!important;flex:none!important}
+.kc-sidebar .kc-search .kc-icon{width:18px;height:18px;color:#8b9caf;flex:none}.kc-sidebar .kc-search input{background:transparent!important;color:#12314c!important;border:0!important;outline:0!important;box-shadow:none!important;width:100%!important;min-width:0!important;font-size:13px!important;padding:6px 0!important}
+.kc-sidebar .kc-side-nav{height:auto!important;position:static!important;display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:5px!important;padding:0!important;margin:0!important;white-space:normal!important;min-width:0!important;background:transparent!important;border:0!important}
+.kc-sidebar .kc-nav-item{font-family:inherit!important;display:flex!important;align-items:center!important;gap:13px!important;min-height:45px!important;width:100%!important;flex:none!important;padding:12px 14px!important;margin:0!important;border:0!important;border-radius:11px!important;text-align:left!important;text-decoration:none!important;box-shadow:none!important;background:transparent!important;color:#193450!important;font-size:14px!important;font-weight:750!important;line-height:1.25!important;cursor:pointer!important}
+.kc-sidebar .kc-nav-item .kc-icon{width:21px!important;height:21px!important;flex:none!important;stroke-width:1.9}.kc-sidebar .kc-nav-item:hover{background:#fff1ec!important;color:#d94822!important}.kc-sidebar .kc-nav-item.active{background:linear-gradient(108deg,#ff673e,#fa4927)!important;color:#fff!important;box-shadow:0 8px 16px rgba(246,84,42,.16)!important}
+.kc-sidebar .side-badge{margin-left:auto!important;float:none!important;border-radius:999px!important;padding:2px 6px!important;font-size:10px!important;background:#f8533e!important;color:#fff!important}
+.kc-sidebar .kc-sidebar-illustration{flex:none!important;width:100%!important;height:155px!important;display:flex!important;align-items:flex-end!important;justify-content:center!important;margin-top:13px!important;overflow:hidden!important;background:linear-gradient(180deg,#fffdfa,#fdf6e9)!important;border-radius:13px!important}
+.kc-sidebar .kc-sidebar-illustration svg{width:100%;height:100%;display:block}.kc-sidebar .admin-side-spacer{flex:1!important;min-height:10px!important}
+.kc-sidebar .admin-logout{margin:0!important;border:1px solid #e0e9f0!important;background:#fff!important;justify-content:flex-start!important;color:#1c3a58!important}
+.kc-sidebar .admin-logout:hover{background:#fff3ed!important;color:#dc532a!important}
+.admin-main{min-width:0!important;padding:25px 30px 42px!important;background:#f5f8fc!important}
+.admin-page-head h1{font-size:clamp(27px,2.2vw,36px)!important;line-height:1.16!important}
+.admin-main>.card{border-radius:16px;box-shadow:0 4px 16px rgba(12,42,73,.035)}
+/* Dashboard overrides intentionally sit after visual v3 styles. */
+#tab-today{padding:0 26px 30px!important}.admin-main:has(#tab-today){padding:0 0 42px!important}
+.kc-hero-banner{margin:0 -26px 15px!important;overflow:hidden}.kc-top-banner{height:145px!important;min-height:145px!important;background-position:50% 56%!important;box-shadow:inset 0 -22px 30px rgba(255,255,255,.62)!important}
+.kc-hero-top{right:25px!important;top:20px!important}.kc-user-card{min-width:236px!important;min-height:67px!important;padding:9px 12px!important;gap:12px!important}.kc-user-avatar{width:48px!important;height:48px!important}.kc-user-copy strong{font-size:14px!important}.kc-bell{width:54px!important;height:54px!important}.kc-bell .kc-icon{height:23px;width:23px;color:#183b62}.kc-user-logout{margin-left:auto;white-space:nowrap;font-size:11px;text-decoration:none;color:#0a78b1;font-weight:800}
+.kc-welcome{min-height:104px!important;align-items:center!important;margin-bottom:12px!important}.kc-welcome h1{font-size:clamp(29px,2.5vw,37px)!important}.kc-welcome p{font-size:15px!important}.kc-welcome-date{font-size:14px!important}.kc-weather{min-width:190px!important;min-height:69px!important;padding:11px 16px!important;border-radius:15px!important}.kc-weather-icon{font-size:38px!important}.kc-weather strong{font-size:25px!important}.kc-weather small{font-size:12px!important}.kc-weather-placeholder{font-size:10px!important}
+.kc-dash-stats{gap:17px!important;margin:16px 0 20px!important}.kc-dash-stat{min-height:139px!important;padding:22px 18px!important;gap:15px!important}.kc-stat-symbol{width:65px!important;height:65px!important;font-size:30px!important}.kc-dash-stat span{font-size:14px!important}.kc-dash-stat strong{font-size:35px!important}.kc-dash-stat small{font-size:12px!important}
+.kc-dash-columns{grid-template-columns:minmax(0,1.36fr) minmax(355px,.94fr)!important;gap:17px!important}.kc-left-stack,.kc-right-stack{gap:17px!important}.kc-dash-panel{padding:19px 20px!important;border-radius:17px!important}.kc-panel-head h2{font-size:20px!important}.kc-panel-head a{font-size:13px!important}.kc-booking-table td{font-size:13px!important}.kc-activity-row b{font-size:13px!important}.kc-activity-row small{font-size:12px!important}
+.kc-donut{width:182px!important}.kc-bars{min-height:205px!important}.kc-bar-track{height:140px!important}
+@media(max-width:1250px){.kc-dash-columns{grid-template-columns:1fr!important}.kc-dash-stats{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@media(max-width:900px){.admin-shell{grid-template-columns:minmax(0,1fr)!important}.admin-sidebar.kc-sidebar{width:100%!important;min-height:0!important;height:auto!important;max-height:none!important;position:sticky!important;top:0!important;display:block!important;overflow-x:auto!important;overflow-y:hidden!important;padding:8px 12px!important;white-space:nowrap!important}.kc-sidebar .admin-brand,.kc-sidebar .kc-search,.kc-sidebar .kc-sidebar-illustration,.kc-sidebar .admin-side-spacer,.kc-sidebar .admin-logout{display:none!important}.kc-sidebar .kc-side-nav{display:flex!important;flex-direction:row!important;min-width:max-content!important;gap:5px!important}.kc-sidebar .kc-nav-item{min-height:40px!important;width:auto!important;padding:9px 12px!important;font-size:12px!important}.kc-sidebar .kc-nav-item .kc-icon{height:17px!important;width:17px!important}.admin-main{padding:18px!important}#tab-today{padding:0 16px 26px!important}.kc-hero-banner{margin:0 -16px 12px!important}.kc-top-banner{height:112px!important;min-height:112px!important}.kc-hero-top{right:14px!important;top:14px!important}}
+@media(max-width:680px){.kc-hero-top{position:absolute!important;right:8px!important;top:8px!important}.kc-user-card{min-width:0!important;min-height:45px!important;padding:6px 8px!important}.kc-user-avatar{width:34px!important;height:34px!important}.kc-user-copy small{display:none!important}.kc-user-logout{display:none!important}.kc-bell{width:38px!important;height:38px!important}.kc-welcome{align-items:flex-start!important}.kc-dash-stats{gap:9px!important}.kc-dash-stat{min-height:113px!important;padding:14px 10px!important;gap:9px!important}.kc-stat-symbol{width:43px!important;height:43px!important}.kc-dash-stat span{font-size:11px!important}.kc-dash-stat strong{font-size:24px!important}.kc-dash-stat small{font-size:10px!important}.kc-weather{min-width:145px!important;padding:9px!important}}
+
+/* v4.1 - KiteClub logo panel. Shared by every Admin screen. */
+.kc-sidebar .admin-brand{
+  box-sizing:border-box!important;
+  flex:0 0 auto!important;
+  width:100%!important;
+  min-height:184px!important;
+  padding:15px 14px!important;
+  margin:0 0 2px!important;
+  background:linear-gradient(145deg,#fffdf9 0%,#fff9ef 58%,#f7f3ea 100%)!important;
+  border:1px solid #f0e7d8!important;
+  border-radius:20px!important;
+  box-shadow:0 8px 22px rgba(58,65,75,.055),inset 0 1px 0 rgba(255,255,255,.9)!important;
+  transition:box-shadow .2s ease,transform .2s ease!important;
+}
+.kc-sidebar .admin-brand:hover{box-shadow:0 11px 27px rgba(58,65,75,.09)!important;transform:translateY(-1px)}
+.kc-sidebar .admin-brand img{
+  width:min(100%,173px)!important;
+  height:151px!important;
+  max-width:100%!important;
+  object-fit:contain!important;
+  background:transparent!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+}
+.kc-sidebar .kc-search{margin-top:2px!important}
+@media(max-width:900px){.kc-sidebar .admin-brand{display:none!important}}

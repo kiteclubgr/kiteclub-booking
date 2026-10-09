@@ -180,28 +180,63 @@
 .shared-student-list{display:flex;flex-direction:column;gap:4px;margin:7px 0}.shared-student-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 7px;border-radius:8px;background:rgba(255,255,255,.5);font-size:12px}.mini-state{font-size:9px;font-weight:800;border-radius:999px;padding:2px 6px;white-space:nowrap}.mini-state.booked{background:#d9edff;color:#0064a8}.mini-state.pending{background:#fff0c9;color:#8a5b00}.mini-state.completed{background:#d9f7e4;color:#0a7c3a}.mini-state.noshow{background:#ffe0dd;color:#a62d24}.shared-booking-card{padding-top:10px;padding-bottom:9px}
 .admin-sidebar-search{margin:-4px 2px 0}.admin-sidebar-search input{width:100%;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.09);color:#fff;border-radius:10px;padding:10px 11px;font-size:12px}.admin-sidebar-search input::placeholder{color:#c7d6e2}.side-badge{float:right;background:#ff6b5c;color:#fff;border-radius:999px;padding:1px 6px;font-size:10px}
 </style>
+<link rel="stylesheet" href="{{url_for('static',filename='admin-dashboard-v75-1.css')}}">
+<link rel="stylesheet" href="{{url_for('static',filename='admin-v4.css')}}">
 
 <div class="admin-shell">
-  <aside class="admin-sidebar">
-    <div class="admin-brand"><img src="{{ url_for('static', filename='img/kiteclub-logo.png') }}" alt="KiteClub"></div>
-    <form class="admin-sidebar-search" action="{{url_for('admin_global_search')}}" method="get"><input type="search" name="q" placeholder="Αναζήτηση..."></form>
-    <nav class="admin-side-nav" aria-label="Admin sections">
-      <button class="admin-tab active" type="button" data-tab="today">▣ &nbsp; Σήμερα</button>
-      <button class="admin-tab" type="button" data-tab="day">▦ &nbsp; Ημερολόγιο</button>
-      <button class="admin-tab" type="button" data-tab="students">♙ &nbsp; Μαθητές</button>
-      <button class="admin-tab" type="button" data-tab="instructors">♟ &nbsp; Instructors</button>
-      <a class="admin-tab" href="{{url_for('admin_bookings')}}" style="text-decoration:none;display:block">▤ &nbsp; Κρατήσεις</a>
-      <a class="admin-tab" href="{{url_for('admin_packages')}}" style="text-decoration:none;display:block">▣ &nbsp; Πακέτα</a>
-      <a class="admin-tab" href="{{url_for('admin_reports')}}" style="text-decoration:none;display:block">▥ &nbsp; Αναφορές</a>
-      <a class="admin-tab" href="{{url_for('admin_finance')}}" style="text-decoration:none;display:block">€ &nbsp; Οικονομικά</a>
-      <a class="admin-tab" href="{{url_for('admin_messages')}}" style="text-decoration:none;display:block">✉ &nbsp; Μηνύματα{% if message_unread_count %} <span class="side-badge">{{message_unread_count}}</span>{% endif %}</a>
-    </nav>
-    <div class="admin-side-spacer"></div>
-    <a class="admin-logout" href="{{url_for('logout')}}">↪ &nbsp; Αποσύνδεση</a>
-  </aside>
+  {% set sidebar_dashboard=true %}{% include '_admin_sidebar_static.html' %}
 
   <main class="admin-main">
     <section class="tab-panel active" id="tab-today">
+      <div class="kc-hero-banner" aria-label="KiteClub Booking hero">
+        <div class="kc-top-banner"><span>ΚΙΤΕCLUB · BOOKING MANAGEMENT</span><span>🪁 &nbsp; Kitesurfing sessions</span></div>
+        <div class="kc-hero-top">
+          <div class="kc-user-chip">
+            <span class="kc-bell" aria-label="Εικονίδιο ειδοποιήσεων"><svg class="kc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 8-3 9h18c0-1-3-2-3-9M10 21h4"/></svg></span>
+            <div class="kc-user-card">
+              <div class="kc-user-avatar">{% if me.profile_photo %}<img src="{{url_for('static',filename=me.profile_photo)}}" alt="{{me.name}}">{% else %}{{ (me.name or 'A')[:1]|upper }}{% endif %}</div>
+              <div class="kc-user-copy"><strong>{{me.name}}{% if me.surname %} {{me.surname}}{% endif %}</strong><small>Administrator</small></div>
+              <a class="kc-user-logout" title="Αποσύνδεση" href="{{url_for('logout')}}">Έξοδος</a>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="kc-welcome">
+        <div><h1>Καλώς ήρθες, {{me.name}}!</h1><p>Εδώ είναι η επισκόπηση της σχολής σήμερα.</p></div>
+        <div class="kc-top-side"><div class="kc-welcome-date">{{today_date|gr_long_date}}</div><div class="kc-weather" title="Ενδεικτική εμφάνιση — δεν υπάρχουν δεδομένα καιρού"><span class="kc-weather-icon">☀</span><span><strong>—°C</strong><small>Άνεμος: — kts</small><small class="kc-weather-placeholder">Weather preview</small></span></div></div>
+      </div>
+      <div class="kc-dash-stats">
+        <a class="kc-dash-stat cyan" href="{{url_for('admin',date=today_date|gr_date)}}#day"><div class="kc-stat-symbol">♟</div><div><span>Σημερινά μαθήματα</span><strong>{{today_summary.lessons}}</strong><small>{{today_summary.students}} μαθητές</small></div></a>
+        <a class="kc-dash-stat coral" href="{{url_for('admin')}}#students"><div class="kc-stat-symbol">●</div><div><span>Ενεργοί μαθητές</span><strong>{{dashboard_total_students}}</strong><small>Συνολικά στη σχολή</small></div></a>
+        <a class="kc-dash-stat yellow" href="{{url_for('admin')}}#instructors"><div class="kc-stat-symbol">🎓</div><div><span>Instructors</span><strong>{{dashboard_total_instructors}}</strong><small>{{today_columns|length}} ορισμένοι σήμερα</small></div></a>
+        <a class="kc-dash-stat aqua" href="{{url_for('admin_finance')}}"><div class="kc-stat-symbol">▣</div><div><span>Ανεξόφλητα πακέτα</span><strong>{{'%.0f'|format(dashboard_pending_payments)}}€</strong><small>Ποσό υπόλοιπου πληρωμών</small></div></a>
+      </div>
+      <div class="kc-dash-columns">
+        <div class="kc-left-stack">
+          <section class="kc-dash-panel">
+            <div class="kc-panel-head"><h2>▦ Σημερινό πρόγραμμα</h2><a href="{{url_for('admin',date=today_date|gr_date)}}#day">Προβολή όλων →</a></div>
+            <div class="kc-booking-table-wrap"><table class="kc-booking-table"><thead><tr><th>Ώρα</th><th>Μαθητής</th><th>Instructor</th><th>Κατάσταση</th></tr></thead><tbody>
+              {% for b in dashboard_today_rows %}{% set state=booking_state_meta(b.status,b.payment_status) %}
+              <tr><td class="kc-time">{{b.start_time|hm24}}</td><td><b>{{b.student_name}}{% if b.student_surname %} {{b.student_surname}}{% endif %}</b><small>{{b.duration|round(1)}}h {% if b.participant_count>1 %}· Group{% endif %}</small></td><td>{{b.instructor_name}}{% if b.instructor_surname %} {{b.instructor_surname}}{% endif %}</td><td><span class="kc-status {{state.class}}">{{state.label}}</span></td></tr>
+              {% else %}<tr><td colspan="4" class="kc-empty">Δεν υπάρχουν μαθήματα σήμερα. <a href="{{url_for('admin',date=today_date|gr_date)}}#day">Δημιουργία προγράμματος →</a></td></tr>{% endfor %}
+            </tbody></table></div>
+          </section>
+          <section class="kc-dash-panel"><div class="kc-panel-head"><h2>▥ Κρατήσεις τελευταίων 7 ημερών</h2><a href="{{url_for('admin_reports')}}">Αναφορές →</a></div>
+            <div class="kc-bars">{% for x in dashboard_week %}<div class="kc-bar-unit"><b>{{x.count}}</b><div class="kc-bar-track"><div style="height:{{((x.count / dashboard_week_max)*100)|round|int}}%"></div></div><small>{{x.day}}</small></div>{% endfor %}</div>
+          </section>
+        </div>
+        <div class="kc-right-stack">
+          <section class="kc-dash-panel"><div class="kc-panel-head"><h2>◉ Πρόοδος μαθητών</h2><a href="{{url_for('admin')}}#students">Μαθητές →</a></div>
+            {% set beginner=dashboard_level_counts.get('Beginner',0) %}{% set kiter=dashboard_level_counts.get('Kiter',0) %}
+            <div class="kc-progress-visual"><div class="kc-donut" style="--kiter:{{((kiter / dashboard_total_students)*100) if dashboard_total_students else 0}}"><strong>{{dashboard_total_students}}</strong><span>Μαθητές</span></div><div class="kc-level-key"><div><span class="kc-dot beginner"></span><b>Beginner</b><strong>{{beginner}}</strong></div><div><span class="kc-dot kiter"></span><b>Kiter</b><strong>{{kiter}}</strong></div></div></div>
+            <p class="kc-info-line">Τα επίπεδα υπολογίζονται από τις 18 τεχνικές προόδου.</p>
+          </section>
+          <section class="kc-dash-panel"><div class="kc-panel-head"><h2>◷ Πρόσφατες κρατήσεις</h2><a href="{{url_for('admin_bookings')}}">Όλες →</a></div>
+            {% for b in dashboard_recent %}{% set state=booking_state_meta(b.status,b.payment_status) %}<a class="kc-activity-row" href="{{url_for('admin_booking_history',booking_id=b.id)}}"><span class="kc-activity-icon">▣</span><span><b>{{b.student_name}}{% if b.student_surname %} {{b.student_surname}}{% endif %}</b><small>{{b.lesson_date|gr_date}} · {{b.start_time|hm24}}</small></span><span class="kc-status {{state.class}}">{{state.label}}</span></a>{% else %}<p class="kc-empty">Δεν έχουν καταχωρηθεί κρατήσεις ακόμα.</p>{% endfor %}
+          </section>
+        </div>
+      </div>
+      <details class="kc-operations"><summary>▸ Λεπτομερής διαχείριση σημερινής ημέρας (παλιό πρόγραμμα)</summary>
       <div class="dashboard-top">
         <div>
           <h1>Σήμερα</h1>
@@ -346,6 +381,7 @@
           <div class="muted">Δεν υπάρχει πρόγραμμα για σήμερα. <a href="{{url_for('admin',date=today_date|gr_date)}}#day"><b>Δημιούργησε το πρόγραμμα της ημέρας →</b></a></div>
         {% endif %}
       </div>
+      </details>
     </section>
 
     <section class="tab-panel" id="tab-day">
@@ -796,7 +832,7 @@
       </div>
       <div>
         <label>Password</label>
-        <input name="password" type="password" placeholder="12+ χαρακτήρες" minlength="12" required>
+        <input name="password" type="password" placeholder="8+ χαρακτήρες με γράμματα και αριθμούς" minlength="8" pattern="(?=.*[A-Za-zΑ-Ωα-ω])(?=.*\d).{8,}" title="Τουλάχιστον 8 χαρακτήρες, με γράμματα και αριθμούς" required>
       </div>
       <div>
         <label>€/ώρα</label>
@@ -897,7 +933,7 @@
       <option value="8h">Πακέτο 8 ωρών · 360€</option>
     </select>
     <input type="number" step="0.5" name="credits" value="0" style="width:90px" title="Χειροκίνητα αρχικά credits">
-    <input name="password" type="password" placeholder="12+ χαρακτήρες" minlength="12" required style="width:160px">
+    <input name="password" type="password" placeholder="8+ χαρακτήρες με γράμματα και αριθμούς" minlength="8" pattern="(?=.*[A-Za-zΑ-Ωα-ω])(?=.*\d).{8,}" title="Τουλάχιστον 8 χαρακτήρες, με γράμματα και αριθμούς" required style="width:160px">
     <button class="btn">+ Νέος μαθητής</button>
   </form>
   <div id="adminStudentList">

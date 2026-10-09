@@ -1,5 +1,6 @@
 {% extends "base.html" %}{% block content %}
 <link rel="stylesheet" href="{{ url_for('static', filename='student-portal.css') }}">
+<link rel="stylesheet" href="{{url_for('static',filename='role-sidebar-v3.css')}}?v=3">
 <script>document.body.classList.add('student-portal-body')</script>
 <div class="student-portal-shell">
   {% set student_nav='home' %}{% include '_student_portal_sidebar.html' %}

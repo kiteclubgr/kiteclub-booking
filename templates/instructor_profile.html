@@ -1,15 +1,68 @@
 {% extends "base.html" %}{% block content %}
-<link rel="stylesheet" href="{{url_for('static',filename='instructor-v39.css')}}">
+<link rel="stylesheet" href="{{url_for('static',filename='instructor-v39.css',v='75-2-hotfix-v2')}}">
+<link rel="stylesheet" href="{{url_for('static',filename='role-sidebar-v3.css')}}?v=3">
+<script>document.body.classList.add("instructor-portal-body")</script>
 {% include '_instructor_mobile_chrome.html' %}
-<div class="im-shell">
-  <div class="card"><h1>Το προφίλ μου</h1><br><div class="im-hero"><div class="im-avatar">{% if instructor.profile_photo %}<img src="{{url_for('static',filename=instructor.profile_photo)}}" alt="">{% else %}{{instructor.name[:1]}}{% endif %}</div><div><h2>{{instructor.name}}{% if instructor.surname %} {{instructor.surname}}{% endif %}</h2><div class="muted">KiteClub Instructor</div><div class="muted">{{instructor.email}}</div></div></div></div>
-  <div class="im-profile-grid">
-    <div class="im-profile-stat"><div class="label">Σήμερα</div><b>{{day_lessons}} completed · {{day_hours}}h</b><div class="money">{{"%.2f"|format(day_pay)}}€</div><div class="muted">No-show: {{day_no_show}}</div></div>
-    <div class="im-profile-stat"><div class="label">Αυτή την εβδομάδα</div><b>{{week_lessons}} completed · {{week_hours}}h</b><div class="money">{{"%.2f"|format(week_pay)}}€</div><div class="muted">No-show: {{week_no_show}}</div></div>
-    <div class="im-profile-stat"><div class="label">Αυτόν τον μήνα</div><b>{{month_lessons}} completed · {{month_hours}}h</b><div class="money">{{"%.2f"|format(month_pay)}}€</div><div class="muted">No-show: {{month_no_show}}</div></div>
-  </div><br>
-  <div class="card"><div class="im-menu-list"><a class="im-menu-item" href="{{url_for('instructor_students')}}"><span>👥 Οι μαθητές μου</span><span>›</span></a><div class="im-menu-item"><span>💶 Αμοιβή / ώρα</span><b>{{instructor.hourly_rate}}€</b></div><a class="im-menu-item" href="{{url_for('logout')}}"><span>↪ Αποσύνδεση</span><span>›</span></a></div></div>
-  <div class="card"><h2>Επόμενα μαθήματα</h2>{% for b in upcoming[:5] %}<div class="item"><b>{{b.lesson_date|gr_date}} · {{b.start_time|hm24}} · {{b.participant_names or b.student}}</b><div class="muted">{% if b.participant_count and b.participant_count>1 %}{{b.participant_count}}P Group · {% else %}{{b.level}} · {% endif %}{{b.spot}} · {{b.duration}}h</div></div>{% else %}<p class="muted">Δεν υπάρχουν επόμενα μαθήματα.</p>{% endfor %}</div>
+<div class="instructor-portal-shell">
+  {% set instructor_nav='profile' %}{% include '_instructor_sidebar.html' %}
+  <main class="instructor-main">
+    <div class="instructor-top"><strong>{{instructor.name}}{% if instructor.surname %} {{instructor.surname}}{% endif %}</strong> · <a href="{{url_for('instructor')}}">Πρόγραμμα</a> · <a href="{{url_for('logout')}}">Logout</a></div>
+    <div class="instructor-content"><div class="ip-build-tag">Instructor layout v2</div>
+      <div class="ip-hero-banner"></div>
+      <div class="ip-header">
+        <div>
+          <h1>Το προφίλ μου</h1>
+          <p>Επισκόπηση εκπαιδευτή, αποδοχών και επόμενων μαθημάτων.</p>
+        </div>
+        <div class="ip-profile-chip">
+          <div class="im-avatar">{% if instructor.profile_photo %}<img src="{{url_for('static',filename=instructor.profile_photo)}}" alt="">{% else %}{{instructor.name[:1]}}{% endif %}</div>
+          <div><strong>{{instructor.name}}{% if instructor.surname %} {{instructor.surname}}{% endif %}</strong><small>KiteClub Instructor</small></div>
+        </div>
+      </div>
+
+      <div class="ip-stats">
+        <div class="ip-stat"><div class="label">Σήμερα</div><b>{{day_lessons}} completed · {{day_hours}}h</b><div class="money">{{"%.2f"|format(day_pay)}}€</div><div class="muted">No-show: {{day_no_show}}</div></div>
+        <div class="ip-stat"><div class="label">Αυτή την εβδομάδα</div><b>{{week_lessons}} completed · {{week_hours}}h</b><div class="money">{{"%.2f"|format(week_pay)}}€</div><div class="muted">No-show: {{week_no_show}}</div></div>
+        <div class="ip-stat"><div class="label">Αυτόν τον μήνα</div><b>{{month_lessons}} completed · {{month_hours}}h</b><div class="money">{{"%.2f"|format(month_pay)}}€</div><div class="muted">No-show: {{month_no_show}}</div></div>
+      </div>
+
+      <div class="ip-grid">
+        <section class="ip-panel">
+          <div class="head"><h2>Γρήγορες ενέργειες</h2></div>
+          <div class="im-menu-list">
+            <a class="im-menu-item" href="{{url_for('instructor_students')}}"><span>👥 Οι μαθητές μου</span><span>›</span></a>
+            <div class="im-menu-item"><span>💶 Αμοιβή / ώρα</span><b>{{instructor.hourly_rate}}€</b></div>
+            <a class="im-menu-item" href="{{url_for('instructor')}}"><span>📅 Πρόγραμμα</span><span>›</span></a>
+            <a class="im-menu-item" href="{{url_for('logout')}}"><span>↪ Αποσύνδεση</span><span>›</span></a>
+          </div>
+        </section>
+        <section class="ip-panel">
+          <div class="head"><h2>Στοιχεία λογαριασμού</h2></div>
+          <div class="im-menu-list">
+            <div class="im-menu-item"><span>Email</span><b>{{instructor.email}}</b></div>
+            <div class="im-menu-item"><span>Ρόλος</span><b>Instructor</b></div>
+            <div class="im-menu-item"><span>Κατάσταση</span><b>Ενεργός</b></div>
+          </div>
+        </section>
+      </div>
+
+      <section class="ip-panel" style="margin-top:14px">
+        <div class="head"><h2>Επόμενα μαθήματα</h2></div>
+        <div class="im-lessons">
+          {% for b in upcoming[:6] %}
+          <a class="im-lesson" href="{{url_for('instructor_lesson',booking_id=b.id)}}">
+            <div class="im-time">{{b.lesson_date|gr_date}}<br>{{b.start_time|hm24}}</div>
+            <div class="im-avatar">{% if b.student_photo %}<img src="{{url_for('static',filename=b.student_photo)}}" alt="">{% else %}{{(b.student or 'S')[:1]}}{% endif %}</div>
+            <div><div class="im-name">{{b.participant_names or b.student}}</div><div class="im-meta">{% if b.participant_count and b.participant_count>1 %}{{b.participant_count}}P Group · {% else %}{{b.level or '—'}} · {% endif %}{{b.spot}} · {{b.duration}}h</div></div>
+            <div class="im-status {% if b.status=='completed' %}done{% elif b.status=='no_show' %}noshow{% else %}next{% endif %}">{{ 'Completed' if b.status=='completed' else ('No-show' if b.status=='no_show' else 'Επόμενο') }}</div>
+          </a>
+          {% else %}
+          <div class="ip-empty">Δεν υπάρχουν επόμενα μαθήματα.</div>
+          {% endfor %}
+        </div>
+      </section>
+    </div>
+  </main>
 </div>
 {% set active_tab='profile' %}{% include '_instructor_bottom_nav.html' %}
 {% endblock %}

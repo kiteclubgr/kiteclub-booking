@@ -47,7 +47,7 @@
               <div><label>Τηλέφωνο</label><input name="phone" value="{{student.phone or ''}}"></div>
               <div><label>Επίπεδο</label><input value="{{progress.current_level}}" readonly><div class="group-help">Beginner → Kiter αλλάζει αυτόματα από την Πρόοδο.</div></div>
               <div><label>Τύπος μαθήματος</label><select name="lesson_type" id="lessonTypeSelect"><option value="private" {% if student.lesson_type=='private' %}selected{% endif %}>Private</option><option value="2p" {% if student.lesson_type=='2p' %}selected{% endif %}>2P Group</option><option value="3p" {% if student.lesson_type=='3p' %}selected{% endif %}>3P Group</option></select></div>
-              <div><label>Νέο password</label><input name="password" placeholder="Άφησέ το κενό αν δεν αλλάζει"></div>
+              <div><label>Νέο password</label><input name="password" placeholder="Άφησέ το κενό ή βάλε 8+ χαρακτήρες με γράμματα και αριθμούς"></div>
               <div><label>IG account</label><input name="instagram" value="{{student.instagram or ''}}" placeholder="@username"></div>
               <div><label>Φωτογραφία προφίλ</label><input type="file" name="profile_photo" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"></div>
               <div class="full group-settings" id="groupSettings"><b>Σταθερά μέλη group</b><div class="group-help">Η σύνδεση συγχρονίζεται αυτόματα στα profiles όλων των μελών.</div><div class="edit-grid" style="margin-top:10px"><div id="groupMember1Wrap"><label>2ο άτομο</label><select name="group_member_id" id="groupMember1"><option value="">— Επιλογή μαθητή —</option>{% for s in all_students %}<option value="{{s.id}}" {% if group_partner_ids|length>0 and group_partner_ids[0]==s.id %}selected{% endif %}>{{s.student_code}} · {{s.name}}{% if s.surname %} {{s.surname}}{% endif %}</option>{% endfor %}</select></div><div id="groupMember2Wrap"><label>3ο άτομο</label><select name="group_member_id" id="groupMember2"><option value="">— Επιλογή μαθητή —</option>{% for s in all_students %}<option value="{{s.id}}" {% if group_partner_ids|length>1 and group_partner_ids[1]==s.id %}selected{% endif %}>{{s.student_code}} · {{s.name}}{% if s.surname %} {{s.surname}}{% endif %}</option>{% endfor %}</select></div></div>{% if group_members|length > 1 %}<div class="group-members">{% for m in group_members %}<span class="group-member">{{m.student_code}} · {{m.name}}{% if m.surname %} {{m.surname}}{% endif %}</span>{% endfor %}</div>{% endif %}</div>
@@ -189,4 +189,5 @@
   if(lbc)lbc.addEventListener('click',closeLb);if(lb)lb.addEventListener('click',e=>{if(e.target===lb)closeLb()});
 })();
 </script>
+<link rel="stylesheet" href="{{url_for('static',filename='admin-v4.css')}}">
 {% endblock %}

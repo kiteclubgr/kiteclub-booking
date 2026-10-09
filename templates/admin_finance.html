@@ -44,4 +44,5 @@
     <div class="card" style="margin-top:14px"><h2>Κινήσεις πακέτων / Crew</h2><div style="overflow:auto"><table class="finance-table"><thead><tr><th>Ημερομηνία</th><th>Μαθητής</th><th>Πακέτο</th><th>Status</th><th>Ποσό</th></tr></thead><tbody>{% for r in recent_sales %}<tr><td>{{r.sale_date|gr_date}}</td><td><b>{{r.name}}{% if r.surname %} {{r.surname}}{% endif %}</b><div class="muted">{{r.student_code or ''}}</div></td><td>{{r.package_name}} <span class="type-pill {{'crew' if r.package_type=='crew' else ''}}">{{'Crew' if r.package_type=='crew' else 'Lessons'}}</span></td><td><span class="{{'status-paid' if r.payment_status=='paid' else 'status-pending'}}">{{'Paid' if r.payment_status=='paid' else 'Pending'}}</span></td><td><b>{{'%.2f'|format(r.price)}}€</b></td></tr>{% else %}<tr><td colspan="5" class="muted">Δεν υπάρχουν κινήσεις για τον επιλεγμένο μήνα.</td></tr>{% endfor %}</tbody></table></div></div>
   </main>
 </div>
+<link rel="stylesheet" href="{{url_for('static',filename='admin-v4.css')}}">
 {% endblock %}
