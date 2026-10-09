@@ -1,6 +1,6 @@
 
 from flask import Flask, render_template, request, redirect, url_for, flash, session, abort
-import sqlite3, os, smtplib, secrets, hmac, time, logging
+import sqlite3, os, smtplib, secrets, hmac, time, logging, re
 from email.message import EmailMessage
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -9,7 +9,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from pathlib import Path
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "KiteClub v75.2 · Sidebar Fix v5"
+APP_VERSION = "KiteClub v75.2 · Payment Safety v6"
 
 # v70: production-ready storage. Locally everything stays inside the project.
 # On Railway mount a persistent volume at /data and set DATA_DIR=/data.
@@ -85,6 +85,7 @@ def csrf_token():
     return session["_csrf_token"]
 
 app.jinja_env.globals["csrf_token"] = csrf_token
+app.jinja_env.globals["payment_request_id"] = lambda: secrets.token_urlsafe(24)
 
 @app.before_request
 def enforce_csrf():
@@ -2551,6 +2552,8 @@ def payment_received(booking_id):
     if not u or u["role"]!="admin": return redirect(url_for("login"))
     con=db()
     try:
+        # Serialize check-and-update with all other booking writers.
+        con.execute("BEGIN IMMEDIATE")
         # A cancelled, completed or no-show booking must never be reopened by payment.
         # Require pending payment and an active booking; the conditional UPDATE also
         # prevents a repeated POST from producing a second audit entry or email.
@@ -4537,6 +4540,11 @@ def admin_student_package_purchase(student_id):
 def admin_package_purchase_add_payment(purchase_id):
     u=current_user()
     if not u or u["role"]!="admin": return redirect(url_for("login"))
+    # Each displayed form gets its own one-use ID. A browser retry of the
+    # same POST cannot charge the package twice, even if balance remains.
+    request_id=(request.form.get("payment_request_id") or "").strip()
+    if not (24 <= len(request_id) <= 128 and re.fullmatch(r"[A-Za-z0-9_-]+", request_id)):
+        abort(400, description="Missing or invalid payment request ID. Refresh the page.")
     con=db(); con.execute("BEGIN IMMEDIATE"); purchase=con.execute("SELECT * FROM student_packages WHERE id=?",(purchase_id,)).fetchone()
     if not purchase:
         con.rollback(); con.close(); flash("Η αγορά δεν βρέθηκε."); return redirect(url_for("admin_packages"))
@@ -4549,6 +4557,18 @@ def admin_package_purchase_add_payment(purchase_id):
             con.rollback(); con.close(); flash("Για το πακέτο 8 ωρών επίλεξε 180€ ή το πλήρες υπόλοιπο."); return redirect(url_for("admin_student_profile",student_id=purchase["student_id"]))
     if amount<=0 or amount>balance+0.01:
         con.rollback(); con.close(); flash("Το ποσό πληρωμής δεν είναι έγκυρο."); return redirect(url_for("admin_student_profile",student_id=purchase["student_id"]))
+    # Durable idempotency ledger: the key is committed atomically alongside
+    # the payment and credit activation. Rolled-back attempts do not consume it.
+    con.execute("""CREATE TABLE IF NOT EXISTS package_payment_requests (
+        request_id TEXT PRIMARY KEY,
+        purchase_id INTEGER NOT NULL,
+        created_at TEXT NOT NULL
+    )""")
+    inserted=con.execute("INSERT OR IGNORE INTO package_payment_requests(request_id,purchase_id,created_at) VALUES(?,?,?)",(request_id,purchase_id,datetime.now().isoformat()))
+    if inserted.rowcount != 1:
+        con.rollback(); con.close()
+        flash("Αυτή η πληρωμή έχει ήδη υποβληθεί. Δεν καταχωρήθηκε δεύτερη φορά.")
+        return redirect(url_for("admin_student_profile",student_id=purchase["student_id"]))
     method=(request.form.get("method") or "manual").strip(); note=(request.form.get("note") or "").strip(); now=datetime.now().isoformat(); new_paid=min(price,already+amount); new_status=_purchase_payment_status(price,new_paid)
     con.execute("UPDATE student_packages SET paid_amount=?,payment_status=?,paid_at=CASE WHEN ?='paid' THEN ? ELSE paid_at END WHERE id=?",(new_paid,new_status,new_status,now,purchase_id))
     con.execute("INSERT INTO student_payments(student_id,purchase_id,amount,payment_date,method,note,created_at) VALUES(?,?,?,?,?,?,?)",(purchase["student_id"],purchase_id,amount,datetime.now().date().isoformat(),method,note,now))
