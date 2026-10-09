@@ -9,7 +9,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from pathlib import Path
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "KiteClub v75.2 · Payment Safety v6"
+APP_VERSION = "KiteClub v75.2 · Payment & Sidebar Fix v7"
 
 # v70: production-ready storage. Locally everything stays inside the project.
 # On Railway mount a persistent volume at /data and set DATA_DIR=/data.
@@ -514,6 +514,15 @@ def init_db():
       CREATE TABLE IF NOT EXISTS student_payments(
         id INTEGER PRIMARY KEY, student_id INTEGER NOT NULL, purchase_id INTEGER NOT NULL,
         amount REAL NOT NULL, payment_date TEXT NOT NULL, method TEXT, note TEXT, created_at TEXT NOT NULL
+      )
+    """)
+    # v7: create the idempotency ledger during startup/migration, not during
+    # a payment POST, so no schema DDL runs in the payment transaction.
+    con.execute("""
+      CREATE TABLE IF NOT EXISTS package_payment_requests (
+        request_id TEXT PRIMARY KEY,
+        purchase_id INTEGER NOT NULL,
+        created_at TEXT NOT NULL
       )
     """)
     con.execute("""
@@ -4559,11 +4568,6 @@ def admin_package_purchase_add_payment(purchase_id):
         con.rollback(); con.close(); flash("Το ποσό πληρωμής δεν είναι έγκυρο."); return redirect(url_for("admin_student_profile",student_id=purchase["student_id"]))
     # Durable idempotency ledger: the key is committed atomically alongside
     # the payment and credit activation. Rolled-back attempts do not consume it.
-    con.execute("""CREATE TABLE IF NOT EXISTS package_payment_requests (
-        request_id TEXT PRIMARY KEY,
-        purchase_id INTEGER NOT NULL,
-        created_at TEXT NOT NULL
-    )""")
     inserted=con.execute("INSERT OR IGNORE INTO package_payment_requests(request_id,purchase_id,created_at) VALUES(?,?,?)",(request_id,purchase_id,datetime.now().isoformat()))
     if inserted.rowcount != 1:
         con.rollback(); con.close()

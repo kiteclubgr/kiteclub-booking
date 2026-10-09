@@ -46,5 +46,20 @@ input,select{padding:10px;border:1px solid var(--l);border-radius:10px;backgroun
  .admin-sidebar.kc-sidebar .kc-admin-version {flex:0 0 auto!important;margin-top:auto!important;padding:5px 0!important;line-height:1.3!important}
  .admin-sidebar.kc-sidebar .admin-logout {flex:0 0 40px!important;min-height:40px!important;margin:0!important}
 }
+/* v7: identical Admin navigation dimensions on all routes.
+   These last-loaded, specific rules override page-only stylesheet ordering. */
+@media (min-width:901px) {
+ .admin-sidebar.kc-sidebar{width:220px!important;min-width:220px!important;max-width:220px!important;gap:6px!important;padding:12px 10px!important}
+ .admin-shell{grid-template-columns:220px minmax(0,1fr)!important}
+ .admin-sidebar.kc-sidebar .admin-brand{height:112px!important;flex:0 0 112px!important;min-height:112px!important;padding:6px!important;margin:0!important;border-radius:16px!important}
+ .admin-sidebar.kc-sidebar .admin-brand img{width:104px!important;height:100px!important;max-width:100%!important}
+ .admin-sidebar.kc-sidebar .kc-search{height:35px!important;flex:0 0 35px!important;margin:0!important}
+ .admin-sidebar.kc-sidebar .kc-side-nav{display:flex!important;flex:1 1 auto!important;flex-direction:column!important;justify-content:flex-start!important;align-items:stretch!important;gap:3px!important;margin:0!important;padding:0!important;min-height:0!important;overflow-y:auto!important}
+ .admin-sidebar.kc-sidebar .kc-side-nav .kc-nav-item{display:flex!important;align-items:center!important;flex:0 0 38px!important;min-height:38px!important;height:38px!important;width:100%!important;padding:7px 10px!important;margin:0!important;gap:10px!important;font-size:12px!important;line-height:1.2!important}
+ .admin-sidebar.kc-sidebar .kc-side-nav .kc-icon{width:18px!important;height:18px!important;flex:none!important}
+ .admin-sidebar.kc-sidebar .kc-sidebar-illustration,.admin-sidebar.kc-sidebar .admin-side-spacer{display:none!important}
+ .admin-sidebar.kc-sidebar .kc-admin-version{margin-top:auto!important;flex:0 0 auto!important;padding:4px 0!important;font-size:10px!important}
+ .admin-sidebar.kc-sidebar .admin-logout{height:39px!important;min-height:39px!important;flex:0 0 39px!important;padding:7px 10px!important;font-size:12px!important}
+}
 </style>
 </body></html>

@@ -1,4 +1,5 @@
-KiteClub v75.2 Sidebar Fix v5 PATCH on top of QA Fixes v4.
-Copy the four paths into the root of the existing project (same level as app.py).
-Do not delete or overwrite your database. This is NOT a standalone project.
-Files: app.py, templates/base.html, templates/instructor_student_detail.html, templates/instructor_lesson.html.
+KiteClub v75.2 - Payment & Sidebar Fix v7
+Apply over Payment Safety v6 (which includes Sidebar Fix v5).
+Replace app.py and templates/base.html only. Do not replace database or other files.
+After deployment confirm version in Admin, Student, Instructor.
+QA: demo package partial payment 180 EUR, exact POST replay, and sidebar Dashboard/Reports at same viewport.
