@@ -131,10 +131,10 @@
               <div class="pay-actions">
                 {% if due > 0 %}
                   {% if (p.hours_total|float)==8 and (p.price|float)==360 %}
-                    {% if paid < 180 %}<form method="post" action="{{url_for('admin_package_purchase_add_payment',purchase_id=p.id)}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="amount" value="180"><input type="hidden" name="method" value="manual"><button class="btn alt" type="submit">+ 180€</button></form>{% endif %}
-                    <form method="post" action="{{url_for('admin_package_purchase_add_payment',purchase_id=p.id)}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="amount" value="{{due}}"><input type="hidden" name="method" value="manual"><button class="btn" type="submit">+ {{'%.0f'|format(due)}}€</button></form>
+                    {% if paid < 180 %}<form method="post" action="{{url_for('admin_package_purchase_add_payment',purchase_id=p.id)}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="payment_request_id" value="{{ payment_request_id() }}"><input type="hidden" name="amount" value="180"><input type="hidden" name="method" value="manual"><button class="btn alt" type="submit">+ 180€</button></form>{% endif %}
+                    <form method="post" action="{{url_for('admin_package_purchase_add_payment',purchase_id=p.id)}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="payment_request_id" value="{{ payment_request_id() }}"><input type="hidden" name="amount" value="{{due}}"><input type="hidden" name="method" value="manual"><button class="btn" type="submit">+ {{'%.0f'|format(due)}}€</button></form>
                   {% else %}
-                    <form method="post" action="{{url_for('admin_package_purchase_add_payment',purchase_id=p.id)}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="amount" value="{{due}}"><input type="hidden" name="method" value="manual"><button class="btn" type="submit">Εξόφληση {{'%.0f'|format(due)}}€</button></form>
+                    <form method="post" action="{{url_for('admin_package_purchase_add_payment',purchase_id=p.id)}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="payment_request_id" value="{{ payment_request_id() }}"><input type="hidden" name="amount" value="{{due}}"><input type="hidden" name="method" value="manual"><button class="btn" type="submit">Εξόφληση {{'%.0f'|format(due)}}€</button></form>
                   {% endif %}
                 {% else %}<span class="badge ok">Εξοφλημένο</span>{% endif %}
               </div>

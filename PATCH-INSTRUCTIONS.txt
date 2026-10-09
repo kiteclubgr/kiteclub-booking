@@ -1,5 +1,14 @@
-KiteClub v75.2 - Payment & Sidebar Fix v7
-Apply over Payment Safety v6 (which includes Sidebar Fix v5).
-Replace app.py and templates/base.html only. Do not replace database or other files.
-After deployment confirm version in Admin, Student, Instructor.
-QA: demo package partial payment 180 EUR, exact POST replay, and sidebar Dashboard/Reports at same viewport.
+KiteClub v75.2 - Payment Form Fix v8
+
+Apply this patch ON TOP OF v7 (Payment & Sidebar Fix v7).
+Replace exactly:
+  app.py
+  templates/admin_student_profile.html
+
+Why: v7 delivered the server-side payment_request_id validation but did not include the template that generates it. This template provides a unique hidden payment_request_id for every package-payment form (+180, remaining balance, other package payment). Keep the server validation; do not remove it.
+
+NO database files, secrets, screenshots, or cache included. The v7 templates/base.html stays in place unchanged (retains Admin sidebar styling).
+
+Verify as demo Admin: open /admin/students/10#payments, refresh page, inspect the +180 form DOM for payment_request_id, then attempt the payment once. Check one student_payments entry, paid_amount=180, balance=180, credits activated per activation rule. For replay test use a safe demo environment and same exact POST including CSRF.
+
+Note: This patch has static checks only. Requires real browser QA.
