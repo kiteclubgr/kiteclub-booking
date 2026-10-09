@@ -1,6 +1,6 @@
 
 from flask import Flask, render_template, request, redirect, url_for, flash, session, abort
-import sqlite3, os, smtplib, secrets, hmac, time, logging, re
+import sqlite3, os, smtplib, secrets, hmac, time, logging, re, math
 from email.message import EmailMessage
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -9,7 +9,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from pathlib import Path
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "KiteClub v75.2 · Payment Form Fix v8"
+APP_VERSION = "KiteClub v75.2 · Settlement Price v11"
 
 # v70: production-ready storage. Locally everything stays inside the project.
 # On Railway mount a persistent volume at /data and set DATA_DIR=/data.
@@ -2613,10 +2613,15 @@ def add_student():
     if not password_meets_policy(request.form.get("password", "")):
         flash(password_policy_message())
         return redirect(url_for("admin"))
+    first_name=(request.form.get("name") or "").strip()
+    surname=(request.form.get("surname") or "").strip()
+    if not first_name or not surname:
+        flash("Συμπλήρωσε όνομα και επώνυμο.")
+        return redirect(url_for("admin"))
     con=db()
     try:
-        cur=con.execute("INSERT INTO users(name,email,phone,role,password_hash) VALUES(?,?,?,?,?)",(request.form["name"].strip(),request.form["email"].strip().lower(),request.form.get("phone","").strip(),"student",generate_password_hash(request.form.get("password") or secrets.token_urlsafe(18))))
-        uid=cur.lastrowid; credits=float(request.form.get("credits","0") or 0); student_code=_next_student_code(con)
+        cur=con.execute("INSERT INTO users(name,surname,email,phone,role,password_hash) VALUES(?,?,?,?,?,?)",(first_name,surname,request.form["email"].strip().lower(),request.form.get("phone","").strip(),"student",generate_password_hash(request.form.get("password") or secrets.token_urlsafe(18))))
+        uid=cur.lastrowid; credits=0.0; student_code=_next_student_code(con)
         con.execute("INSERT INTO students(user_id,credits,level,student_code,lesson_type) VALUES(?,?,?,?,?)",(uid,credits,"Beginner",student_code,"private"))
         if credits:
             con.execute("INSERT INTO credit_ledger(student_id,amount,kind,note,created_at) VALUES(?,?,?,?,?)",(uid,credits,"manual_adjustment","Initial credits",datetime.now().isoformat()))
@@ -4560,11 +4565,15 @@ def admin_package_purchase_add_payment(purchase_id):
     price=float(purchase["price"] or 0); already=float(purchase["paid_amount"] or 0); balance=max(0.0,price-already)
     try: amount=float(request.form.get("amount") or 0)
     except (TypeError,ValueError): amount=0
-    if abs(float(purchase["hours_total"] or 0)-8.0)<0.01 and abs(price-360.0)<0.01:
-        allowed={round(min(180.0,balance),2),round(balance,2)}
-        if round(amount,2) not in allowed:
-            con.rollback(); con.close(); flash("Για το πακέτο 8 ωρών επίλεξε 180€ ή το πλήρες υπόλοιπο."); return redirect(url_for("admin_student_profile",student_id=purchase["student_id"]))
-    if amount<=0 or amount>balance+0.01:
+    # An installment reduces the outstanding balance. A final settlement can be
+    # less than the advertised price: the admin explicitly agrees to a reduced
+    # FINAL purchase price (not a phantom payment or debt write-off).
+    action=(request.form.get("payment_action") or "installment").strip()
+    if action not in {"installment", "settle"}:
+        con.rollback(); con.close(); abort(400, description="Invalid payment action")
+    if not math.isfinite(amount) or round(amount,2)!=amount:
+        con.rollback(); con.close(); flash("Βάλε έγκυρο ποσό με έως 2 δεκαδικά."); return redirect(url_for("admin_student_profile",student_id=purchase["student_id"]))
+    if amount<=0 or amount>balance+0.001:
         con.rollback(); con.close(); flash("Το ποσό πληρωμής δεν είναι έγκυρο."); return redirect(url_for("admin_student_profile",student_id=purchase["student_id"]))
     # Durable idempotency ledger: the key is committed atomically alongside
     # the payment and credit activation. Rolled-back attempts do not consume it.
@@ -4573,8 +4582,22 @@ def admin_package_purchase_add_payment(purchase_id):
         con.rollback(); con.close()
         flash("Αυτή η πληρωμή έχει ήδη υποβληθεί. Δεν καταχωρήθηκε δεύτερη φορά.")
         return redirect(url_for("admin_student_profile",student_id=purchase["student_id"]))
-    method=(request.form.get("method") or "manual").strip(); note=(request.form.get("note") or "").strip(); now=datetime.now().isoformat(); new_paid=min(price,already+amount); new_status=_purchase_payment_status(price,new_paid)
-    con.execute("UPDATE student_packages SET paid_amount=?,payment_status=?,paid_at=CASE WHEN ?='paid' THEN ? ELSE paid_at END WHERE id=?",(new_paid,new_status,new_status,now,purchase_id))
+    method=(request.form.get("method") or "manual").strip(); note=(request.form.get("note") or ("Εξόφληση" if action=="settle" else "Δόση")).strip(); now=datetime.now().isoformat()
+    new_paid=round(already+amount,2)
+    # For final settlement, the recorded sale price becomes the negotiated total.
+    # The difference is NOT recorded as cash received. Both original price and
+    # discount remain in the purchase/payment notes for auditability.
+    discount=round(max(0.0,price-new_paid),2) if action=="settle" else 0.0
+    final_price=new_paid if action=="settle" else price
+    new_status=_purchase_payment_status(final_price,new_paid)
+    if action=="settle" and discount>0:
+        discount_note=f"Συμφωνημένη τελική τιμή {final_price:.2f}€ (αρχική {price:.2f}€, έκπτωση {discount:.2f}€)"
+        note=(note+" · "+discount_note) if note else discount_note
+        previous_note=(purchase["note"] or "").strip()
+        updated_note=(previous_note+" | "+discount_note) if previous_note else discount_note
+        con.execute("UPDATE student_packages SET price=?, paid_amount=?, payment_status=?, paid_at=?, note=? WHERE id=?",(final_price,new_paid,"paid",now,updated_note,purchase_id))
+    else:
+        con.execute("UPDATE student_packages SET paid_amount=?,payment_status=?,paid_at=CASE WHEN ?='paid' THEN ? ELSE paid_at END WHERE id=?",(new_paid,new_status,new_status,now,purchase_id))
     con.execute("INSERT INTO student_payments(student_id,purchase_id,amount,payment_date,method,note,created_at) VALUES(?,?,?,?,?,?,?)",(purchase["student_id"],purchase_id,amount,datetime.now().date().isoformat(),method,note,now))
     purchase=con.execute("SELECT * FROM student_packages WHERE id=?",(purchase_id,)).fetchone(); rule=(purchase["activation_rule"] or "paid_only")
     if (purchase["package_type"] or "lesson")=="lesson" and int(purchase["credits_activated"] or 0)==0:
@@ -4584,8 +4607,8 @@ def admin_package_purchase_add_payment(purchase_id):
         vf=purchase["valid_from"]; vu=purchase["valid_until"]
         if not vf or not vu:
             vf,vu=crew_season_for_date(datetime.now().date()); con.execute("UPDATE student_packages SET valid_from=?,valid_until=? WHERE id=?",(vf,vu,purchase_id))
-        con.execute("UPDATE students SET crew_member=1,crew_start_date=?,crew_end_date=?,crew_fee=? WHERE user_id=?",(vf,vu,price,purchase["student_id"]))
-    con.commit(); con.close(); flash(f"Καταχωρήθηκε πληρωμή {amount:.2f}€. Υπόλοιπο {max(0,price-new_paid):.2f}€.")
+        con.execute("UPDATE students SET crew_member=1,crew_start_date=?,crew_end_date=?,crew_fee=? WHERE user_id=?",(vf,vu,final_price,purchase["student_id"]))
+    con.commit(); con.close(); flash(f"Καταχωρήθηκε πληρωμή {amount:.2f}€. Υπόλοιπο {max(0,final_price-new_paid):.2f}€." + (f" Τελική συμφωνημένη τιμή {final_price:.2f}€ (έκπτωση {discount:.2f}€)." if discount>0 else ""))
     return redirect(url_for("admin_student_profile",student_id=purchase["student_id"]))
 
 @app.post("/admin/package-purchases/<int:purchase_id>/mark-paid")

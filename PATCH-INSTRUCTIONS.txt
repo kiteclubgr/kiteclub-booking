@@ -1,14 +1,13 @@
-KiteClub v75.2 - Payment Form Fix v8
-
-Apply this patch ON TOP OF v7 (Payment & Sidebar Fix v7).
-Replace exactly:
+KiteClub v75.2 — Settlement Price v11
+PATCH on top of Flexible Payments v10.
+Replace only:
   app.py
   templates/admin_student_profile.html
+Do NOT replace kiteclub.db, /data, or other project files.
 
-Why: v7 delivered the server-side payment_request_id validation but did not include the template that generates it. This template provides a unique hidden payment_request_id for every package-payment form (+180, remaining balance, other package payment). Keep the server validation; do not remove it.
-
-NO database files, secrets, screenshots, or cache included. The v7 templates/base.html stays in place unchanged (retains Admin sidebar styling).
-
-Verify as demo Admin: open /admin/students/10#payments, refresh page, inspect the +180 form DOM for payment_request_id, then attempt the payment once. Check one student_payments entry, paid_amount=180, balance=180, credits activated per activation rule. For replay test use a safe demo environment and same exact POST including CSRF.
-
-Note: This patch has static checks only. Requires real browser QA.
+Behavior: "Δόση" reduces balance. "Εξόφληση" accepts any positive amount up to balance;
+sets final sale price to previously paid + current amount, marks PAID, balance 0,
+and records original price / agreed discount in notes.
+Example: 2h at 110€, settle 100€ => price 100€, paid 100€, due 0€, 2h unchanged.
+The existing request-ID idempotency and transaction remain in place.
+Test on demo data before Railway production use.
