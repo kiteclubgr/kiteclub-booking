@@ -1,0 +1,4 @@
+KiteClub v75.2 Sidebar Fix v5 PATCH on top of QA Fixes v4.
+Copy the four paths into the root of the existing project (same level as app.py).
+Do not delete or overwrite your database. This is NOT a standalone project.
+Files: app.py, templates/base.html, templates/instructor_student_detail.html, templates/instructor_lesson.html.
