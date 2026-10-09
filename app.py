@@ -4168,32 +4168,65 @@ def admin_reports():
         date_from,date_to=dfrom.isoformat(),dto.isoformat()
 
     con=db()
-    # Physical instructor-hours: one instructor + date + time counts once even with shared/group students.
-    physical=con.execute("""
-      SELECT s.id slot_id,s.lesson_date,s.start_time,s.instructor_id,
-             COUNT(DISTINCT bp.student_id) student_count,
-             MAX(CASE WHEN COALESCE(st.lesson_type,'private')='2p' THEN 1 ELSE 0 END) has_2p,
-             MAX(CASE WHEN COALESCE(st.lesson_type,'private')='3p' THEN 1 ELSE 0 END) has_3p,
-             MAX(CASE WHEN COALESCE(bp.attendance_status,b.status)='completed' THEN 1 ELSE 0 END) any_completed,
-             MAX(CASE WHEN COALESCE(bp.attendance_status,b.status)='no_show' THEN 1 ELSE 0 END) any_no_show,
-             MAX(CASE WHEN b.status NOT LIKE 'cancelled%' THEN 1 ELSE 0 END) active_booking
-      FROM slots s
-      JOIN bookings b ON b.slot_id=s.id
+    # Count occupied instructor time, not booking rows. Two students sharing an hour
+    # are two student-hours but only one instructor-hour. Multi-hour bookings use
+    # booking_slots (the authoritative occupied slots), including their second hour.
+    occupied=con.execute("""
+      SELECT DISTINCT b.id booking_id,b.status booking_status,b.duration booking_duration,
+             occ.id slot_id,occ.lesson_date,occ.start_time,occ.duration slot_duration,
+             occ.instructor_id,bp.student_id,
+             COALESCE(bp.attendance_status,b.status) attendance_status,
+             COALESCE(st.lesson_type,'private') lesson_type
+      FROM bookings b
       JOIN booking_participants bp ON bp.booking_id=b.id
+      JOIN booking_slots bs ON bs.booking_id=b.id
+      JOIN slots occ ON occ.id=bs.slot_id
       LEFT JOIN students st ON st.user_id=bp.student_id
-      WHERE s.lesson_date BETWEEN ? AND ? AND b.status NOT LIKE 'cancelled%'
-      GROUP BY s.lesson_date,s.start_time,s.instructor_id
-      ORDER BY s.lesson_date,s.start_time
+      WHERE occ.lesson_date BETWEEN ? AND ? AND b.status NOT LIKE 'cancelled%'
     """,(date_from,date_to)).fetchall()
-    booked_hours=float(sum(1 for r in physical if r["active_booking"]))
-    completed_hours=float(sum(1 for r in physical if r["any_completed"]))
-    shared_hours=float(sum(1 for r in physical if int(r["student_count"] or 0)>1))
-    lesson_mix={"private":0,"2p":0,"3p":0,"shared":0}
-    for r in physical:
-        if int(r["has_3p"] or 0): lesson_mix["3p"]+=1
-        elif int(r["has_2p"] or 0): lesson_mix["2p"]+=1
-        elif int(r["student_count"] or 0)>1: lesson_mix["shared"]+=1
-        else: lesson_mix["private"]+=1
+
+    # Work at minute precision, which handles overlapping slots and fractional
+    # durations without double-counting shared students/lessons.
+    def time_minutes(value):
+        hh,mm=map(int,str(value)[:5].split(':'))
+        return hh*60+mm
+
+    def merged_minutes(intervals):
+        total=0; last_end=None
+        for start,end in sorted(intervals):
+            if last_end is None or start>last_end:
+                total+=end-start; last_end=end
+            elif end>last_end:
+                total+=end-last_end; last_end=end
+        return total
+
+    physical_slots={}
+    instructor_intervals={}
+    completed_intervals={}
+    for r in occupied:
+        start_min=time_minutes(r['start_time'])
+        end_min=start_min+int(round(float(r['slot_duration'] or 1)*60))
+        key=(r['instructor_id'],r['lesson_date'])
+        interval=(start_min,end_min)
+        instructor_intervals.setdefault(key,set()).add(interval)
+        completed=(r['attendance_status']=='completed')
+        if completed:
+            completed_intervals.setdefault(key,set()).add(interval)
+        slot=physical_slots.setdefault((key,r['slot_id']),{
+            'lesson_date':r['lesson_date'],'duration':float(r['slot_duration'] or 1),
+            'students':set(),'types':set(),'completed':False})
+        slot['students'].add(r['student_id'])
+        slot['types'].add(r['lesson_type'])
+        slot['completed'] |= completed
+
+    booked_hours=sum(merged_minutes(v) for v in instructor_intervals.values())/60.0
+    completed_hours=sum(merged_minutes(v) for v in completed_intervals.values())/60.0
+    shared_hours=sum(r['duration'] for r in physical_slots.values() if len(r['students'])>1)
+    lesson_mix={'private':0.0,'2p':0.0,'3p':0.0,'shared':0.0}
+    for r in physical_slots.values():
+        kind=('3p' if '3p' in r['types'] else '2p' if '2p' in r['types']
+              else 'shared' if len(r['students'])>1 else 'private')
+        lesson_mix[kind]+=r['duration']
 
     attendance=con.execute("""
       SELECT COALESCE(bp.attendance_status,b.status) st, COUNT(*) n,
@@ -4204,29 +4237,29 @@ def admin_reports():
       WHERE s.lesson_date BETWEEN ? AND ?
       GROUP BY COALESCE(bp.attendance_status,b.status)
     """,(date_from,date_to)).fetchall()
-    att={r["st"]:{"count":int(r["n"] or 0),"hours":float(r["h"] or 0)} for r in attendance}
+    att={r['st']:{'count':int(r['n'] or 0),'hours':float(r['h'] or 0)} for r in attendance}
 
     instructor_rows=con.execute("""
-      SELECT u.id,u.name,u.surname,u.profile_photo,i.hourly_rate,
-             COUNT(DISTINCT CASE WHEN b.status NOT LIKE 'cancelled%' THEN s.lesson_date||'|'||s.start_time END) booked_hours,
-             COUNT(DISTINCT CASE WHEN COALESCE(bp.attendance_status,b.status)='completed' THEN s.lesson_date||'|'||s.start_time END) completed_hours
+      SELECT u.id,u.name,u.surname,u.profile_photo,i.hourly_rate
       FROM users u JOIN instructors i ON i.user_id=u.id
-      LEFT JOIN slots s ON s.instructor_id=u.id AND s.lesson_date BETWEEN ? AND ?
-      LEFT JOIN bookings b ON b.slot_id=s.id
-      LEFT JOIN booking_participants bp ON bp.booking_id=b.id
       WHERE COALESCE(u.active,1)=1
-      GROUP BY u.id
-      ORDER BY completed_hours DESC,u.name,u.surname
-    """,(date_from,date_to)).fetchall()
-    instructors=[]
-    estimated_pay=0.0
+      ORDER BY u.name,u.surname
+    """).fetchall()
+    instructors=[]; estimated_pay=0.0
     for r in instructor_rows:
-        x=dict(r); x["estimated_pay"]=float(r["completed_hours"] or 0)*float(r["hourly_rate"] or 0); estimated_pay+=x["estimated_pay"]; instructors.append(x)
+        x=dict(r); iid=x['id']
+        x['booked_hours']=sum(merged_minutes(v) for (inst,_),v in instructor_intervals.items() if inst==iid)/60.0
+        x['completed_hours']=sum(merged_minutes(v) for (inst,_),v in completed_intervals.items() if inst==iid)/60.0
+        x['estimated_pay']=x['completed_hours']*float(x['hourly_rate'] or 0)
+        estimated_pay+=x['estimated_pay']; instructors.append(x)
+    instructors.sort(key=lambda r:(-r['completed_hours'],r['name'] or '',r['surname'] or ''))
 
+    # These are *student-hours*, not count of booking records.
     top_students=con.execute("""
       SELECT u.id,u.name,u.surname,s.student_code,
-             COUNT(*) lesson_hours,
-             SUM(CASE WHEN COALESCE(bp.attendance_status,b.status)='completed' THEN 1 ELSE 0 END) completed_hours
+             COALESCE(SUM(b.duration),0) lesson_hours,
+             COALESCE(SUM(CASE WHEN COALESCE(bp.attendance_status,b.status)='completed'
+                       THEN b.duration ELSE 0 END),0) completed_hours
       FROM booking_participants bp
       JOIN bookings b ON b.id=bp.booking_id JOIN slots sl ON sl.id=b.slot_id
       JOIN users u ON u.id=bp.student_id JOIN students s ON s.user_id=u.id
@@ -4255,7 +4288,8 @@ def admin_reports():
     weeks=[]; cur=dfrom-timedelta(days=dfrom.weekday())
     while cur<=dto:
         end=min(cur+timedelta(days=6),dto)
-        val=sum(1 for r in physical if r["any_completed"] and cur.isoformat()<=r["lesson_date"]<=end.isoformat())
+        val=sum(merged_minutes(intervals) for (iid,day),intervals in completed_intervals.items()
+                if cur.isoformat()<=day<=end.isoformat())/60.0
         weeks.append({"label":cur.strftime("%d/%m"),"value":val})
         cur+=timedelta(days=7)
     max_week=max([w["value"] for w in weeks],default=0) or 1
