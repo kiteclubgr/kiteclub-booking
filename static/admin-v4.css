@@ -59,3 +59,18 @@
 /* Shared build version directly above Admin logout. */
 .kc-sidebar .kc-admin-version{display:block;text-align:center;font-size:11px;font-weight:750;color:#78899b;padding:3px 0 9px}
 @media(max-width:900px){.kc-sidebar .kc-admin-version{display:none!important}}
+
+/* QA Fixes v4: keep build/version and logout in the visible sidebar at 1363x936.
+   Compact desktop sidebar at modest viewport heights without shrinking the content. */
+@media (min-width:901px) and (max-height:1000px){
+ .admin-sidebar.kc-sidebar{gap:7px!important;padding:11px 15px 11px!important;}
+ .kc-sidebar .admin-brand{min-height:122px!important;height:122px!important;padding:5px!important;margin-bottom:0!important;}
+ .kc-sidebar .admin-brand img{height:108px!important;width:min(100%,155px)!important;}
+ .kc-sidebar .kc-search{height:37px!important;margin:0!important;}
+ .kc-sidebar .kc-side-nav{gap:2px!important;}
+ .kc-sidebar .kc-nav-item{min-height:39px!important;padding:8px 11px!important;font-size:13px!important;}
+ .kc-sidebar .kc-sidebar-illustration{height:82px!important;margin-top:1px!important;}
+ .kc-sidebar .admin-side-spacer{min-height:0!important;}
+ .kc-sidebar .kc-admin-version{flex:none!important;padding:2px 0!important;}
+ .kc-sidebar .admin-logout{min-height:39px!important;}
+}

@@ -61,6 +61,7 @@
             <td><div class="row-actions">
               <a class="small-btn" href="{{url_for('admin',date=b.lesson_date)}}#day">Ημέρα</a>
               <a class="small-btn" href="{{url_for('admin_booking_history',booking_id=b.id)}}">History</a>
+            {% if b.payment_status=='pending' or b.status=='completed' %}<a class="small-btn" href="{{url_for('admin_student_profile',student_id=b.student_id)}}#payments">Πληρωμή</a>{% endif %}
               {% if b.status in ('confirmed','pending_payment') %}
                 <button type="button" class="small-btn primary edit-booking" data-id="{{b.id}}" data-student="{{b.student_id}}" data-date="{{b.lesson_date}}" data-time="{{b.start_time}}" data-instructor="{{b.instructor_id}}" data-duration="{{b.duration}}" data-state="{{'pending' if b.status=='pending_payment' or b.payment_status=='pending' else 'booked'}}">Επεξεργασία</button>
               {% else %}<span class="sub">Κλειδωμένη</span>{% endif %}

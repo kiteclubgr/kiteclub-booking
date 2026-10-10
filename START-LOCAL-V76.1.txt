@@ -1,0 +1,33 @@
+KITECLUB v76.1 — CLEAN LOCAL INSTALLATION
+=======================================
+This is a standalone build; DO NOT apply any earlier patch.
+
+1. Extract to a NEW folder, separate from the previous kiteclub project.
+2. Open a terminal in the folder containing app.py.
+3. (Recommended) Create a Python virtual environment:
+     Windows: py -m venv .venv
+              .venv\Scripts\activate
+     macOS/Linux: python3 -m venv .venv
+                  source .venv/bin/activate
+4. Install dependencies: pip install -r requirements.txt
+5. Make sure there is NO kiteclub.db file in this folder, and no DATA_DIR
+   environment variable pointing to an existing database.
+6. Start: python app.py (or Windows: py app.py)
+7. Open http://127.0.0.1:5000
+
+On the FIRST start with a NEW EMPTY DB and ENABLE_DEMO_DATA=1 (default),
+this application initializes the seven original demo students, admin,
+and instructors. Students start with 0 credits, 0/18 progress and no
+bookings, packages purchased, or payments. The package CATALOG remains.
+
+All payments created in this new instance are TEST payments only.
+Version label: KiteClub v76.1 · Lesson Payments.
+
+IMPORTANT:
+- No SQLite database is included. NEVER COPY the old kiteclub.db into this directory.
+- Do NOT unzip on top of the previous project folder.
+- If you have DATA_DIR set globally, clear it or explicitly set it to
+  a NEW empty folder, or the app can connect to existing data.
+- Don't delete an existing database without first making a backup.
+- This archive does NOT change your Railway or GitHub installations.
+- Full end-to-end browser testing of Lesson Payments is still needed.

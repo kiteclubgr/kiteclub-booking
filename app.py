@@ -9,7 +9,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from pathlib import Path
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "KiteClub v75.2 · Credits Fix v13"
+APP_VERSION = "KiteClub v76.1 · Lesson Payments"
 
 # v70: production-ready storage. Locally everything stays inside the project.
 # On Railway mount a persistent volume at /data and set DATA_DIR=/data.
@@ -516,6 +516,21 @@ def init_db():
         amount REAL NOT NULL, payment_date TEXT NOT NULL, method TEXT, note TEXT, created_at TEXT NOT NULL
       )
     """)
+    # v76.1: independent lesson debts, one per booking participant; no lesson credits.
+    con.executescript("""
+      CREATE TABLE IF NOT EXISTS lesson_debts (
+        id INTEGER PRIMARY KEY, booking_id INTEGER NOT NULL, student_id INTEGER NOT NULL,
+        original_price REAL NOT NULL, price REAL NOT NULL, paid_amount REAL NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL, note TEXT,
+        UNIQUE(booking_id,student_id)
+      );
+      CREATE TABLE IF NOT EXISTS lesson_payments (
+        id INTEGER PRIMARY KEY, debt_id INTEGER NOT NULL, student_id INTEGER NOT NULL,
+        amount REAL NOT NULL, payment_date TEXT NOT NULL, method TEXT, note TEXT,
+        request_id TEXT NOT NULL UNIQUE, created_at TEXT NOT NULL
+      );
+    """)
+    # Existing unpaid bookings are included without charging any credits.
     # v7: create the idempotency ledger during startup/migration, not during
     # a payment POST, so no schema DDL runs in the payment transaction.
     con.execute("""
@@ -634,6 +649,14 @@ def init_db():
              CASE WHEN b.payment_status='credit' AND b.status IN ('confirmed','completed','no_show') THEN COALESCE(b.duration,1) ELSE 0 END,
              COALESCE(b.created_at,?)
       FROM bookings b
+    """,(datetime.now().isoformat(),))
+    # Import debts after booking_participants exists and its legacy backfill completes.
+    con.execute("""
+      INSERT OR IGNORE INTO lesson_debts(booking_id,student_id,original_price,price,created_at)
+      SELECT bp.booking_id,bp.student_id,bp.amount,bp.amount,COALESCE(b.created_at,?)
+      FROM booking_participants bp JOIN bookings b ON b.id=bp.booking_id
+      WHERE bp.payment_status='pending' AND bp.amount>0
+        AND b.status NOT LIKE 'cancelled%'
     """,(datetime.now().isoformat(),))
     # Existing terminal lessons keep their historical result after the v51 migration.
     con.execute("""
@@ -933,6 +956,10 @@ def _charge_booking_participants(con, booking_id, participant_ids, duration, for
           INSERT OR REPLACE INTO booking_participants(booking_id,student_id,payment_status,amount,credit_charged,created_at)
           VALUES(?,?,?,?,?,?)
         """,(booking_id,sid,pay,amount,charged,now))
+        if pay=="pending" and amount>0:
+            con.execute("""INSERT OR IGNORE INTO lesson_debts
+                (booking_id,student_id,original_price,price,created_at)
+                VALUES(?,?,?,?,?)""",(booking_id,sid,amount,amount,now))
     status="pending_payment" if any_pending else "confirmed"
     payment="pending" if any_pending else "credit"
     return status,payment,total_pending
@@ -1086,8 +1113,10 @@ def _activate_student_purchase(con, purchase, reason="purchase activation"):
         return 0.0
     hours=float(purchase["hours_total"] or 0)
     if hours<=0: return 0.0
+    # Atomic compare-and-set: a purchase can credit the student only once.
+    claimed=con.execute("UPDATE student_packages SET hours_remaining=?,credits_activated=1 WHERE id=? AND COALESCE(credits_activated,0)=0",(hours,purchase["id"]))
+    if claimed.rowcount!=1: return 0.0
     con.execute("UPDATE students SET credits=credits+? WHERE user_id=?",(hours,purchase["student_id"]))
-    con.execute("UPDATE student_packages SET hours_remaining=?,credits_activated=1 WHERE id=?",(hours,purchase["id"]))
     con.execute("INSERT INTO credit_ledger(student_id,amount,kind,note,created_at) VALUES(?,?,?,?,?)",(purchase["student_id"],hours,"package_activation",f"{reason}: {purchase['package_name']} (purchase #{purchase['id']})",datetime.now().isoformat()))
     return hours
 
@@ -2633,7 +2662,7 @@ def add_student():
                 now=datetime.now().isoformat(); rule=(pkg["activation_rule"] or "paid_only")
                 curp=con.execute("""INSERT INTO student_packages(student_id,package_id,package_name,hours_total,hours_remaining,price,payment_status,purchased_at,paid_at,note,package_type,valid_from,valid_until,activation_rule,paid_amount,credits_activated) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",(uid,pkg["id"],pkg["name"],hours,0.0,price,"unpaid",now,None,"Αρχική υπηρεσία","lesson",None,None,rule,0.0,0))
                 purchase=con.execute("SELECT * FROM student_packages WHERE id=?",(curp.lastrowid,)).fetchone()
-                _activate_student_purchase(con,purchase,"Initial service - credits on purchase")
+                _activate_student_purchase(con,purchase,"Initial service (payment independent)")
         con.commit(); flash("Ο μαθητής δημιουργήθηκε.")
     except sqlite3.IntegrityError:
         con.rollback(); flash("Υπάρχει ήδη χρήστης με αυτό το email.")
@@ -3846,6 +3875,16 @@ def admin_student_profile(student_id):
       ORDER BY sp.purchased_at DESC,sp.id DESC
     """,(student_id,)).fetchall()
     package_payments=con.execute("SELECT * FROM student_payments WHERE student_id=? ORDER BY payment_date DESC,id DESC",(student_id,)).fetchall()
+    lesson_debts=con.execute("""
+      SELECT d.*,b.duration,b.status booking_status,sl.lesson_date,sl.start_time,
+        iu.name instructor_name,iu.surname instructor_surname
+      FROM lesson_debts d JOIN bookings b ON b.id=d.booking_id
+      JOIN slots sl ON sl.id=b.slot_id JOIN users iu ON iu.id=sl.instructor_id
+      WHERE d.student_id=? ORDER BY sl.lesson_date DESC,sl.start_time DESC,d.id DESC
+    """,(student_id,)).fetchall()
+    lesson_payments=con.execute("""SELECT lp.*,d.booking_id FROM lesson_payments lp
+      JOIN lesson_debts d ON d.id=lp.debt_id WHERE lp.student_id=?
+      ORDER BY lp.payment_date DESC,lp.id DESC""",(student_id,)).fetchall()
     group_members=_group_members(con,student_id)
     group_partner_ids=[r["id"] for r in group_members if r["id"]!=student_id]
     all_students=con.execute("""
@@ -3888,7 +3927,7 @@ def admin_student_profile(student_id):
       total_credit_out=total_credit_out,
       available_packages=available_packages,
       package_history=package_history,
-      package_payments=package_payments,
+      package_payments=package_payments,lesson_debts=lesson_debts,lesson_payments=lesson_payments,
       group_members=group_members,
       group_partner_ids=group_partner_ids,
       all_students=all_students,
@@ -4336,6 +4375,8 @@ def admin_reports():
     """,(date_from,date_to)).fetchall()
     for r in legacy_receipts:
         sales_map.setdefault(r["package_type"],{"count":0,"revenue":0.0})["revenue"]+=float(r["revenue"] or 0)
+    lesson_cash=float(con.execute("SELECT COALESCE(SUM(amount),0) v FROM lesson_payments WHERE payment_date BETWEEN ? AND ?",(date_from,date_to)).fetchone()["v"] or 0)
+    sales_map.setdefault("lesson",{"count":0,"revenue":0.0})["revenue"]+=lesson_cash
     total_revenue=sum(v["revenue"] for v in sales_map.values())
     instructor_paid=float(con.execute("""SELECT COALESCE(SUM(amount),0) v FROM instructor_payments WHERE payment_date BETWEEN ? AND ?""",(date_from,date_to)).fetchone()["v"] or 0)
     active_students=int(con.execute("""
@@ -4403,7 +4444,10 @@ def admin_finance():
         legacy_sql="""SELECT COALESCE(SUM(sp.price),0) v FROM student_packages sp WHERE sp.payment_status='paid' AND substr(COALESCE(sp.paid_at,sp.purchased_at),1,10) BETWEEN ? AND ? AND NOT EXISTS(SELECT 1 FROM student_payments py WHERE py.purchase_id=sp.id)"""
         legacy_params=[d1,d2]
         if ptype: legacy_sql += " AND COALESCE(sp.package_type,'lesson')=?"; legacy_params.append(ptype)
-        return cash+float(con.execute(legacy_sql,legacy_params).fetchone()["v"] or 0)
+        cash+=float(con.execute(legacy_sql,legacy_params).fetchone()["v"] or 0)
+        if ptype in (None,"lesson"):
+            cash+=float(con.execute("SELECT COALESCE(SUM(amount),0) v FROM lesson_payments WHERE payment_date BETWEEN ? AND ?",(d1,d2)).fetchone()["v"] or 0)
+        return cash
 
     lesson_revenue=paid_revenue(date_from,date_to,"lesson")
     crew_revenue=paid_revenue(date_from,date_to,"crew")
@@ -4568,12 +4612,64 @@ def admin_student_package_purchase(student_id):
     paid_amount=float(package["price"] or 0) if payment_status=="paid" else 0.0
     cur=con.execute("""INSERT INTO student_packages(student_id,package_id,package_name,hours_total,hours_remaining,price,payment_status,purchased_at,paid_at,note,package_type,valid_from,valid_until,activation_rule,paid_amount,credits_activated) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",(student_id,package["id"],package["name"],float(package["hours"] or 0),0.0,float(package["price"] or 0),payment_status,now,now if payment_status=="paid" else None,note,package_type,valid_from,valid_until,rule,paid_amount,0))
     purchase=con.execute("SELECT * FROM student_packages WHERE id=?",(cur.lastrowid,)).fetchone()
-    if package_type=="lesson": _activate_student_purchase(con,purchase,"Package purchase - credits on purchase")
+    if package_type=="lesson": _activate_student_purchase(con,purchase,"Package purchase (payment independent)")
     if payment_status=="paid" and float(package["price"] or 0)>0:
         con.execute("INSERT INTO student_payments(student_id,purchase_id,amount,payment_date,method,note,created_at) VALUES(?,?,?,?,?,?,?)",(student_id,purchase["id"],float(package["price"] or 0),datetime.now().date().isoformat(),"manual",note,now))
     if payment_status=="paid" and package_type=="crew": con.execute("UPDATE students SET crew_member=1,crew_start_date=?,crew_end_date=?,crew_fee=? WHERE user_id=?",(valid_from,valid_until,float(package["price"] or 0),student_id))
     con.commit(); con.close(); flash(f"Το {package['name']} καταχωρήθηκε ως {'Paid' if payment_status=='paid' else 'Unpaid'}.")
     return redirect(url_for("admin_student_profile",student_id=student_id))
+
+@app.post("/admin/lesson-debts/<int:debt_id>/payments/add")
+def admin_lesson_debt_payment(debt_id):
+    u=current_user()
+    if not u or u["role"]!="admin": return redirect(url_for("login"))
+    request_id=(request.form.get("payment_request_id") or "").strip()
+    if not (24<=len(request_id)<=128 and re.fullmatch(r"[A-Za-z0-9_-]+",request_id)):
+        abort(400,description="Missing or invalid payment request ID")
+    action=(request.form.get("payment_action") or "").strip()
+    if action not in ("installment","settle"):
+        abort(400,description="Invalid payment action")
+    try: amount=float(request.form.get("amount") or 0)
+    except (ValueError,TypeError): amount=0
+    con=db()
+    try:
+        con.execute("BEGIN IMMEDIATE")
+        debt=con.execute("""SELECT d.*,b.status booking_status FROM lesson_debts d
+                JOIN bookings b ON b.id=d.booking_id WHERE d.id=?""",(debt_id,)).fetchone()
+        if not debt:
+            con.rollback(); abort(404)
+        target=url_for("admin_student_profile",student_id=debt["student_id"])+"#payments"
+        if str(debt["booking_status"]).startswith("cancelled"):
+            con.rollback(); flash("Ακυρωμένη κράτηση: η οφειλή χρειάζεται χειροκίνητο έλεγχο."); return redirect(target)
+        price=round(float(debt["price"]),2);paid=round(float(debt["paid_amount"]),2)
+        balance=round(max(0,price-paid),2)
+        if not math.isfinite(amount) or round(amount,2)!=amount or amount<=0 or amount>balance:
+            con.rollback();flash("Μη έγκυρο ποσό πληρωμής.");return redirect(target)
+        used=con.execute("SELECT 1 FROM lesson_payments WHERE request_id=?",(request_id,)).fetchone()
+        if used:
+            con.rollback();flash("Η ίδια πληρωμή έχει ήδη καταχωριστεί.");return redirect(target)
+        total=round(paid+amount,2);discount=round(price-total,2) if action=="settle" else 0
+        new_price=total if action=="settle" else price
+        note=("Εξόφληση" if action=="settle" else "Δόση")
+        if discount>0: note+=f" · Συμφωνημένη έκπτωση {discount:.2f}€ (αρχική {debt['original_price']:.2f}€)"
+        now=datetime.now().isoformat()
+        con.execute("UPDATE lesson_debts SET paid_amount=?,price=?,note=COALESCE(note,'') || ? WHERE id=?",
+             (total,new_price,(" | "+note) if discount else "",debt_id))
+        con.execute("""INSERT INTO lesson_payments(debt_id,student_id,amount,payment_date,method,note,request_id,created_at)
+                VALUES(?,?,?,?,?,?,?,?)""",(debt_id,debt["student_id"],amount,datetime.now().date().isoformat(),"manual",note,request_id,now))
+        if abs(total-new_price)<0.001:
+            con.execute("UPDATE booking_participants SET payment_status='paid' WHERE booking_id=? AND student_id=? AND payment_status='pending'",(debt["booking_id"],debt["student_id"]))
+            rest=con.execute("SELECT COUNT(*) n FROM booking_participants WHERE booking_id=? AND payment_status='pending'",(debt["booking_id"],)).fetchone()["n"]
+            if rest==0:
+                # Completion/no-show states never change due to payment.
+                con.execute("UPDATE bookings SET payment_status='paid',status=CASE WHEN status='pending_payment' THEN 'confirmed' ELSE status END WHERE id=?",(debt["booking_id"],))
+        log_booking_audit(con,debt["booking_id"],"lesson_payment",f"{note}: {amount:.2f}€",u["id"],u["role"],"")
+        con.commit()
+        flash(f"Πληρωμή μαθήματος {amount:.2f}€ καταχωρίστηκε. Υπόλοιπο {new_price-total:.2f}€.")
+        return redirect(target)
+    except Exception:
+        con.rollback();raise
+    finally: con.close()
 
 @app.post("/admin/package-purchases/<int:purchase_id>/payments/add")
 def admin_package_purchase_add_payment(purchase_id):
@@ -5002,6 +5098,16 @@ def instructor_student_detail(student_id):
     no_show_count=sum(1 for r in history if r["status"]=="no_show")
     makeup_hours=sum(float(r["duration"] or 0) for r in history if r["status"]=="makeup")
     makeup_count=sum(1 for r in history if r["status"]=="makeup")
+    lesson_debts=con.execute("""
+      SELECT d.*,b.duration,b.status booking_status,sl.lesson_date,sl.start_time,
+        iu.name instructor_name,iu.surname instructor_surname
+      FROM lesson_debts d JOIN bookings b ON b.id=d.booking_id
+      JOIN slots sl ON sl.id=b.slot_id JOIN users iu ON iu.id=sl.instructor_id
+      WHERE d.student_id=? ORDER BY sl.lesson_date DESC,sl.start_time DESC,d.id DESC
+    """,(student_id,)).fetchall()
+    lesson_payments=con.execute("""SELECT lp.*,d.booking_id FROM lesson_payments lp
+      JOIN lesson_debts d ON d.id=lp.debt_id WHERE lp.student_id=?
+      ORDER BY lp.payment_date DESC,lp.id DESC""",(student_id,)).fetchall()
     group_members=_group_members(con,student_id)
     progress=get_student_progress(con,student_id)
     con.close()
@@ -5304,7 +5410,52 @@ def complete(booking_id):
     return redirect(url_for("instructor_lesson",booking_id=booking_id))
 
 
+# v76: Only freshly-created demo databases receive the clean seven-student seed.
+# EXISTING DATABASES ARE NEVER WIPED. To start over on Railway, use a new empty
+# persistent volume or an explicitly selected, empty DATA_DIR after backup.
+_V76_FRESH_DATABASE = not Path(DB).exists()
+
+
+def _v76_initialize_clean_demo():
+    """Remove v75 demo activity from a NEW database only; preserve identities/catalog."""
+    con = db()
+    try:
+        con.execute("BEGIN IMMEDIATE")
+        # Built-in demo startup creates open slots and nonzero student credits.
+        # All such activity is removed to establish the requested clean state.
+        for table in (
+            "booking_participants", "booking_slots", "booking_audit",
+            "instructor_hours", "package_usage", "credit_ledger",
+            "package_payment_requests", "student_payments", "student_packages",
+            "instructor_payments", "bookings", "slots", "day_hours",
+            "day_columns", "day_spots", "student_skill_history",
+            "student_skill_progress", "student_photos", "messages",
+            "student_groups", "login_attempts",
+        ):
+            con.execute(f"DELETE FROM {table}")
+        con.execute("UPDATE students SET credits=0, level='Beginner', group_id=NULL, lesson_type='private', crew_member=0, crew_start_date=NULL, crew_end_date=NULL")
+        # Verify that only the 7 original students remain in this fresh seed.
+        original_emails = (
+            'student@kiteclub.gr', 'maria.demo@kiteclub.gr',
+            'nikos.demo@kiteclub.gr', 'eleni.demo@kiteclub.gr',
+            'kostas.demo@kiteclub.gr', 'sofia.demo@kiteclub.gr',
+            'alexis.demo@kiteclub.gr',
+        )
+        present = {r['email'] for r in con.execute("SELECT u.email FROM users u JOIN students s ON s.user_id=u.id")}
+        if present != set(original_emails):
+            raise RuntimeError(f"Clean v76 seed unexpected student identities: {sorted(present)}")
+        con.execute("INSERT OR REPLACE INTO app_meta(key,value) VALUES('v76_clean_demo_seed','1')")
+        con.commit()
+    except Exception:
+        con.rollback()
+        raise
+    finally:
+        con.close()
+
+
 init_db()
+if _V76_FRESH_DATABASE and DEMO_MODE:
+    _v76_initialize_clean_demo()
 
 if __name__=="__main__":
     app.run(

@@ -1,0 +1,31 @@
+KITECLUB v76 — CLEAN DEMO
+========================
+A self-contained, minimal application build. NO SQLite database included.
+
+NEW, EMPTY INSTALLATION (local):
+1. Unzip into a new directory. Do not overlay existing live data.
+2. pip install -r requirements.txt
+3. Ensure kiteclub.db does not already exist in THIS NEW directory.
+4. Set ENABLE_DEMO_DATA=1 (default in this demo build), then python app.py.
+5. First boot creates exactly seven original demo student accounts,
+   Admin and instructors, with password hashes; retains the package catalog.
+6. All seven students start Beginner, 0/18 mastered, 0 credits.
+   There are zero bookings, lesson slots, purchases, payments, ledgers, or audits.
+7. Verify logins and empty Dashboard/Finance/Reports before deploying.
+
+RAILWAY / DATA SAFETY:
+- Existing Railway DATA_DIR=/data holds kiteclub.db on a persistent volume.
+- Deploying this code ALONE DOES NOT WIPE the existing Railway database.
+- To run an entirely clean environment, make a SEPARATE Railway service with
+  a NEW empty persistent volume mounted at /data, set DATA_DIR=/data,
+  ENABLE_DEMO_DATA=1 and a durable SECRET_KEY.
+- Do NOT delete or unmount a live volume without a verified backup and
+  explicit approval. A new Railway service is preferred for testing.
+- Never use demo passwords for real customers. Rotate them before production.
+- Version label: KiteClub v76 · Clean Demo.
+- This package does not include files from uploads or any personal data.
+
+CAVEAT:
+The cleaning process applies only when the DB file did not exist at startup.
+An existing database is migrated but NEVER auto-cleared, even if DEMO_MODE=1.
+Full browser and Railway deployment tests are still required.
