@@ -9,7 +9,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from pathlib import Path
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "KiteClub v76.2.1 · UI Consistency Fix"
+APP_VERSION = "KiteClub v76.2.2 · Status Label Fix"
 
 # v70: production-ready storage. Locally everything stays inside the project.
 # On Railway mount a persistent volume at /data and set DATA_DIR=/data.
@@ -321,6 +321,8 @@ def booking_state_meta(status, payment_status=None):
         return {"label":"Cancelled","class":"cancelled"}
     if status=="pending_payment":
         return {"label":"Pending payment","class":"pending"}
+    if status=="confirmed":
+        return {"label":"Confirmed","class":"booked"}
     return {"label":"Booked","class":"booked"}
 
 
