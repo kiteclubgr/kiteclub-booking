@@ -9,7 +9,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from pathlib import Path
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "KiteClub v76.2.2 · Status Label Fix"
+APP_VERSION = "KiteClub v76.2.3 · Booking Filter Fix"
 
 # v70: production-ready storage. Locally everything stays inside the project.
 # On Railway mount a persistent volume at /data and set DATA_DIR=/data.
@@ -4112,10 +4112,13 @@ def admin_bookings():
         except ValueError:
             spot_filter=""
 
-    if status_filter=="booked":
-        where.append("b.status='confirmed' AND COALESCE(b.payment_status,'')<>'pending'")
+    # Booking status filters are independent from payment status.
+    # A confirmed lesson must remain visible even when its payment is unpaid.
+    if status_filter in ("confirmed", "booked"):
+        status_filter="confirmed"  # accept old bookmarked ?status=booked links
+        where.append("b.status='confirmed'")
     elif status_filter=="pending":
-        where.append("(b.status='pending_payment' OR b.payment_status='pending')")
+        where.append("b.status='pending_payment'")
     elif status_filter=="completed":
         where.append("b.status='completed'")
     elif status_filter=="no_show":

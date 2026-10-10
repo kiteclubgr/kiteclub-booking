@@ -33,7 +33,7 @@
         <label>Spot<select name="spot_id"><option value="">Όλα</option>{% for s in spots %}<option value="{{s.id}}" {{'selected' if filters.spot_id and filters.spot_id|int==s.id else ''}}>{{s.name}}</option>{% endfor %}</select></label>
         <label>Status<select name="status">
           <option value="all" {{'selected' if filters.status=='all' else ''}}>Όλα</option>
-          <option value="booked" {{'selected' if filters.status=='booked' else ''}}>Booked</option>
+          <option value="confirmed" {{'selected' if filters.status=='confirmed' else ''}}>Confirmed</option>
           <option value="pending" {{'selected' if filters.status=='pending' else ''}}>Pending payment</option>
           <option value="completed" {{'selected' if filters.status=='completed' else ''}}>Completed</option>
           <option value="no_show" {{'selected' if filters.status=='no_show' else ''}}>No-show</option>
