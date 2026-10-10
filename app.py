@@ -9,7 +9,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from pathlib import Path
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "KiteClub v76.2 · Payment Consistency Fix"
+APP_VERSION = "KiteClub v76.2.1 · UI Consistency Fix"
 
 # v70: production-ready storage. Locally everything stays inside the project.
 # On Railway mount a persistent volume at /data and set DATA_DIR=/data.
@@ -319,7 +319,7 @@ def booking_state_meta(status, payment_status=None):
         return {"label":"No-show","class":"noshow"}
     if status.startswith("cancelled"):
         return {"label":"Cancelled","class":"cancelled"}
-    if status=="pending_payment" or payment_status=="pending":
+    if status=="pending_payment":
         return {"label":"Pending payment","class":"pending"}
     return {"label":"Booked","class":"booked"}
 
@@ -2227,6 +2227,8 @@ def admin():
     con=db()
     slots=con.execute("""SELECT s.*,u.name instructor,u.surname instructor_surname,sp.name spot FROM slots s JOIN users u ON u.id=s.instructor_id JOIN spots sp ON sp.id=s.spot_id WHERE s.lesson_date=? ORDER BY s.start_time,u.name,u.surname""",(date,)).fetchall()
     bookings=con.execute("""SELECT b.*,su.name student,su.surname student_surname,
+             (SELECT SUM(d.price) FROM lesson_debts d WHERE d.booking_id=b.id) lesson_final_price,
+             (SELECT SUM(d.original_price) FROM lesson_debts d WHERE d.booking_id=b.id) lesson_original_price,
              iu.name instructor,iu.surname instructor_surname,s.start_time,s.lesson_date,
              (SELECT COUNT(*) FROM booking_participants bp2 WHERE bp2.booking_id=b.id) participant_count,
              (SELECT GROUP_CONCAT(TRIM(pu.name || ' ' || COALESCE(pu.surname,'')), ' · ')

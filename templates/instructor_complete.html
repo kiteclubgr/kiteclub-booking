@@ -1,11 +1,15 @@
 {% extends "base.html" %}{% block content %}
 <link rel="stylesheet" href="{{url_for('static',filename='instructor-v39.css')}}">
 <link rel="stylesheet" href="{{url_for('static',filename='role-sidebar-v3.css')}}?v=3">
+<script>document.body.classList.add('instructor-portal-body')</script>
 {% include '_instructor_mobile_chrome.html' %}
 <style>
 .group-attendance{display:grid;gap:12px}.participant-card{border:1px solid var(--l);border-radius:15px;padding:14px;background:#fff}.participant-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}.participant-id{font-size:11px;color:var(--m)}.attendance-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.attendance-grid .full{grid-column:1/-1}.status-select{font-weight:800}.status-help{font-size:11px;color:var(--m);margin-top:6px}.participant-card textarea{min-height:78px}@media(max-width:620px){.attendance-grid{grid-template-columns:1fr}}
 .lesson-worked{display:grid;gap:12px}.level-picker-wrap{display:flex;align-items:end;gap:10px;background:#f7fbfe;border:1px solid var(--l);padding:13px;border-radius:13px}.level-step{width:30px;height:30px;flex:0 0 30px;border-radius:50%;background:#168fd0;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:900}.small-label{display:block;font-size:11px;color:var(--m);font-weight:800;margin-bottom:5px}.skill-picker-wrap{border:1px solid var(--l);border-radius:13px;padding:13px}.skill-picker-title{display:flex;gap:10px;align-items:center;margin-bottom:8px}.worked-skill-row{display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:10px;align-items:center;padding:10px 0;border-top:1px solid #edf2f5}.worked-skill-row:first-child{border-top:0}.skill-check{display:flex;align-items:center;gap:9px;font-weight:850}.skill-check input{width:18px;height:18px}.worked-skill-row select{padding:9px;border-radius:9px;border:1px solid #cfdde6;background:#fff}@media(max-width:620px){.worked-skill-row{grid-template-columns:1fr 125px}}
 </style>
+<div class="instructor-portal-shell">
+  {% set instructor_nav='schedule' %}{% include '_instructor_sidebar.html' %}
+  <main class="instructor-main"><div class="instructor-content">
 <div class="im-shell">
   <div class="card"><a href="{{url_for('instructor_lesson',booking_id=lesson.id)}}" class="muted" style="text-decoration:none">‹ Επιστροφή</a><br><br><h1>Ολοκλήρωση μαθήματος</h1></div>
   <div class="card"><div class="im-hero"><div class="im-avatar">{% if lesson.student_photo %}<img src="{{url_for('static',filename=lesson.student_photo)}}" alt="">{% else %}{{lesson.student[:1]}}{% endif %}</div><div><h2>{% if lesson.participant_count and lesson.participant_count>1 %}{{lesson.participant_count}}P Group{% else %}{{lesson.student}}{% if lesson.student_surname %} {{lesson.student_surname}}{% endif %}{% endif %}</h2><div class="muted">{% if lesson.participant_count and lesson.participant_count>1 %}{{lesson.participant_names}} · {% else %}{{progress.current_level if progress else (lesson.level or '—')}} · {% endif %}{{lesson.lesson_date|gr_date}} · {{lesson.start_time|hm24}} · {{lesson.duration}}h</div></div></div></div>
@@ -112,5 +116,6 @@
   </script>
   {% endif %}
 </div>
+</div></main></div>
 {% set active_tab='schedule' %}{% include '_instructor_bottom_nav.html' %}
 {% endblock %}

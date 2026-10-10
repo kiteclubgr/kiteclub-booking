@@ -330,8 +330,8 @@
                                   <span>{{bk.participant_names or (bk.student_name ~ (' ' ~ bk.student_surname if bk.student_surname else ''))}}</span>
                                   {% if bk.booking_status=='completed' %}<small class="mini-state completed">Completed</small>
                                   {% elif bk.booking_status=='no_show' %}<small class="mini-state noshow">No-show</small>
-                                  {% elif bk.booking_status=='pending_payment' or bk.payment_status=='pending' %}<small class="mini-state pending">Pending</small>
-                                  {% else %}<small class="mini-state booked">Booked</small>{% endif %}
+                                  {% elif bk.booking_status=='pending_payment' %}<small class="mini-state pending">Pending</small>
+                                  {% else %}<small class="mini-state booked">Booked</small>{% if bk.payment_status=='pending' %}<small class="mini-state pending">Unpaid</small>{% endif %}{% endif %}
                                 </div>
                               {% endfor %}
                             </div>
@@ -343,12 +343,12 @@
                           {% set bs=bk.booking_status %}
                           {% if bs=='completed' %}{% set cls='today-completed' %}{% set label='Completed' %}
                           {% elif bs=='no_show' %}{% set cls='today-noshow' %}{% set label='No-show' %}
-                          {% elif bs=='pending_payment' or bk.payment_status=='pending' %}{% set cls='today-pending' %}{% set label='Pending payment' %}
+                          {% elif bs=='pending_payment' %}{% set cls='today-pending' %}{% set label='Pending payment' %}
                           {% else %}{% set cls='today-booked' %}{% set label='Booked' %}{% endif %}
                           <div class="today-booking-cell {{cls}}" style="margin-bottom:6px">
                             <a href="{{url_for('admin_student_profile',student_id=bk.student_id)}}">{{bk.participant_names or (bk.student_name ~ (' ' ~ bk.student_surname if bk.student_surname else ''))}}</a>
                             <small>{% if bk.participant_count and bk.participant_count>1 %}{{bk.participant_count}}P Group · {% else %}{{bk.student_level or 'Student'}} · {% endif %}{{bk.duration|round(1)}}h</small>
-                            <span class="today-status">{{label}}</span>
+                            <span class="today-status">{{label}}</span>{% if bs=='confirmed' and bk.payment_status=='pending' %}<small class="mini-state pending">Unpaid</small>{% endif %}
                             {% if bs in ['confirmed','pending_payment'] %}
                             <button type="button" class="booking-edit-btn" onclick="openEditBooking({{bk.booking_id}},{{bk.student_id}},'{{bk.booking_lesson_date}}','{{bk.booking_start_time}}',{{bk.booking_instructor_id}},{{bk.duration|float}},'{{'pending' if bs=='pending_payment' or bk.payment_status=='pending' else 'booked'}}')">Επεξεργασία</button>
                             {% endif %}
@@ -641,8 +641,8 @@
                               <span>{{b.participant_names or (b.student_name ~ (' ' ~ b.student_surname if b.student_surname else ''))}}</span>
                               {% if b.booking_status == 'completed' %}<small class="mini-state completed">Completed</small>
                               {% elif b.booking_status == 'no_show' %}<small class="mini-state noshow">No-show</small>
-                              {% elif b.payment_status == 'pending' %}<small class="mini-state pending">Pending</small>
-                              {% else %}<small class="mini-state booked">Booked</small>{% endif %}
+                              {% elif b.booking_status == 'pending_payment' %}<small class="mini-state pending">Pending</small>
+                              {% else %}<small class="mini-state booked">Booked</small>{% if b.payment_status=='pending' %}<small class="mini-state pending">Unpaid</small>{% endif %}{% endif %}
                             </div>
                           {% endfor %}
                         </div>
@@ -663,7 +663,7 @@
                         <div class="tiny">{{b.participant_names or (b.student_name ~ (' ' ~ b.student_surname if b.student_surname else ''))}}{% if b.participant_count and b.participant_count>1 %}<br><b>{{b.participant_count}}P Group</b>{% endif %}</div>
                         <div class="tiny">{{h.spot}}</div>
                       </div>
-                      {% elif b.payment_status == 'pending' %}
+                      {% elif b.booking_status == 'pending_payment' %}
                       <div class="cell cell-pending" style="margin-bottom:6px">
                         <strong>Pending payment</strong>
                         <div class="tiny">{{b.participant_names or (b.student_name ~ (' ' ~ b.student_surname if b.student_surname else ''))}}{% if b.participant_count and b.participant_count>1 %}<br><b>{{b.participant_count}}P Group</b>{% endif %}</div>
@@ -672,7 +672,7 @@
                       </div>
                       {% else %}
                       <div class="cell cell-booked" style="margin-bottom:6px">
-                        <strong>Booked</strong>
+                        <strong>Booked{% if b.payment_status=='pending' %} · Unpaid{% endif %}</strong>
                         <div class="tiny">{{b.participant_names or (b.student_name ~ (' ' ~ b.student_surname if b.student_surname else ''))}}{% if b.participant_count and b.participant_count>1 %}<br><b>{{b.participant_count}}P Group</b>{% endif %}</div>
                         <div class="tiny">{{h.spot}}</div>
                         <button type="button" class="booking-edit-btn" onclick="openEditBooking({{b.booking_id}},{{b.student_id}},'{{b.booking_lesson_date}}','{{b.booking_start_time}}',{{b.booking_instructor_id}},{{b.duration|float}},'booked')">Επεξεργασία</button>
@@ -698,7 +698,7 @@
                     </div>
                     {% elif s.status == 'booked' %}
                     <div class="cell cell-manual-booked">
-                      <strong>Booked</strong><div class="tiny">{{h.spot}}</div>
+                      <strong>Booked{% if b.payment_status=='pending' %} · Unpaid{% endif %}</strong><div class="tiny">{{h.spot}}</div>
                       <button type="button" class="manual-book-link" onclick="openBookingModal({{s.id}})">+ Πρόσθεσε μαθητή</button>
                       <form method="post" action="{{url_for('manual_slot_state',slot_id=s.id)}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                         <select class="status-select" name="status" data-current="{{s.status}}" onchange="handleSlotStatus(this, {{s.id}})">
@@ -960,7 +960,7 @@
   {% for b in bookings %}
   <div class="item spread">
     <div><b>{{b.participant_names or (b.student ~ (' ' ~ b.student_surname if b.student_surname else ''))}}</b> — {{b.instructor}}{% if b.instructor_surname %} {{b.instructor_surname}}{% endif %} · {{b.start_time|hm24}}
-      <div class="muted">{{b.duration}} ώρες{% if b.participant_count and b.participant_count>1 %} · {{b.participant_count}}P Group{% endif %} · {{b.amount}}€</div>
+      <div class="muted">{{b.duration}} ώρες{% if b.participant_count and b.participant_count>1 %} · {{b.participant_count}}P Group{% endif %} · {% if b.lesson_final_price is not none %}{{"%.2f"|format(b.lesson_final_price)}}€{% if b.lesson_original_price and b.lesson_original_price>b.lesson_final_price+0.009 %} (αρχική {{"%.2f"|format(b.lesson_original_price)}}€){% endif %}{% else %}{{b.amount}}€{% endif %}</div>
     </div>
     <div class="row">
       <span class="badge {{'off' if b.status=='no_show' else ('ok' if b.status in ['confirmed','completed'] else 'wait')}}">{{'No-show' if b.status=='no_show' else b.status}}</span>
@@ -1140,7 +1140,7 @@
   ];
   const bookingEditData={
     {% for t, row in timetable.items() %}{% for iid, data in row.items() %}{% if data.bookings %}{% for b in data.bookings %}
-    {{b.booking_id}}:{bookingId:{{b.booking_id}},studentId:{{b.student_id}},studentName:{{(b.participant_names or (b.student_name ~ (' ' ~ b.student_surname if b.student_surname else '')))|tojson}},lessonDate:{{b.booking_lesson_date|tojson}},startTime:{{b.booking_start_time|tojson}},instructorId:{{b.booking_instructor_id}},duration:{{b.duration|float}},state:{{('pending' if b.booking_status=='pending_payment' or b.payment_status=='pending' else 'booked')|tojson}}},
+    {{b.booking_id}}:{bookingId:{{b.booking_id}},studentId:{{b.student_id}},studentName:{{(b.participant_names or (b.student_name ~ (' ' ~ b.student_surname if b.student_surname else '')))|tojson}},lessonDate:{{b.booking_lesson_date|tojson}},startTime:{{b.booking_start_time|tojson}},instructorId:{{b.booking_instructor_id}},duration:{{b.duration|float}},state:{{('pending' if b.booking_status=='pending_payment' else 'booked')|tojson}}},
     {% endfor %}{% endif %}{% endfor %}{% endfor %}
   };
   const editMemberSelect=document.getElementById('editBookingMemberSelect');
