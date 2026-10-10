@@ -9,7 +9,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from pathlib import Path
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "KiteClub v76.1 · Lesson Payments"
+APP_VERSION = "KiteClub v76.2 · Payment Consistency Fix"
 
 # v70: production-ready storage. Locally everything stays inside the project.
 # On Railway mount a persistent volume at /data and set DATA_DIR=/data.
@@ -658,6 +658,10 @@ def init_db():
       WHERE bp.payment_status='pending' AND bp.amount>0
         AND b.status NOT LIKE 'cancelled%'
     """,(datetime.now().isoformat(),))
+    # v76.2: normalize existing cancelled debts once, without deleting receipts.
+    con.execute("""UPDATE lesson_debts SET price=COALESCE(paid_amount,0)
+      WHERE price>COALESCE(paid_amount,0)
+      AND booking_id IN (SELECT id FROM bookings WHERE status LIKE 'cancelled%')""")
     # Existing terminal lessons keep their historical result after the v51 migration.
     con.execute("""
       UPDATE booking_participants
@@ -963,6 +967,15 @@ def _charge_booking_participants(con, booking_id, participant_ids, duration, for
     status="pending_payment" if any_pending else "confirmed"
     payment="pending" if any_pending else "credit"
     return status,payment,total_pending
+
+
+def _cancel_lesson_debts(con, booking_id):
+    """Void only outstanding amounts; preserve every historical receipt."""
+    con.execute("""UPDATE lesson_debts
+        SET price=COALESCE(paid_amount,0),
+            note=COALESCE(note,'') || ' | Ακύρωση: μηδενισμός ανεξόφλητου υπολοίπου'
+        WHERE booking_id=? AND price>COALESCE(paid_amount,0)
+    """,(booking_id,))
 
 
 def _refund_one_booking_participant(con, booking_id, student_id, kind="makeup_refund", note="Make-up credit returned"):
@@ -2081,6 +2094,7 @@ def cancel_student_booking(booking_id):
     participant_count=con.execute("SELECT COUNT(*) n FROM booking_participants WHERE booking_id=?",(booking_id,)).fetchone()["n"]
     # A group booking belongs to the fixed group, so cancellation by any member cancels the shared slot for everyone.
     con.execute("UPDATE bookings SET status='cancelled_student' WHERE id=?",(booking_id,))
+    _cancel_lesson_debts(con,booking_id)
     _refund_booking_participants(con,booking_id,"booking_refund","Refund for cancelled booking")
     log_booking_audit(con,booking_id,"cancelled","Ακύρωση κράτησης από μαθητή.",u["id"],u["role"],f"refunded_hours=yes; participants={participant_count}")
 
@@ -2586,44 +2600,29 @@ def admin():
 
 @app.post("/admin/payment/<int:booking_id>")
 def payment_received(booking_id):
+    """Deprecated legacy endpoint: never mark paid without a receipt."""
+    u=current_user()
+    if not u or u["role"]!="admin": return redirect(url_for("login"))
+    flash("Το παλιό Payment Received καταργήθηκε. Καταχώρισε Δόση ή Εξόφληση από τις Πληρωμές μαθητή.")
+    return redirect(url_for("admin_bookings"))
+
+@app.post("/admin/booking/<int:booking_id>/confirm-unpaid")
+def admin_confirm_unpaid_booking(booking_id):
+    """Confirm scheduling only; outstanding debt remains collectible after completion."""
     u=current_user()
     if not u or u["role"]!="admin": return redirect(url_for("login"))
     con=db()
     try:
-        # Serialize check-and-update with all other booking writers.
         con.execute("BEGIN IMMEDIATE")
-        # A cancelled, completed or no-show booking must never be reopened by payment.
-        # Require pending payment and an active booking; the conditional UPDATE also
-        # prevents a repeated POST from producing a second audit entry or email.
-        updated=con.execute("""
-          UPDATE bookings SET payment_status='paid',status='confirmed'
-          WHERE id=? AND status IN ('pending_payment','confirmed')
-            AND payment_status='pending'
-        """,(booking_id,))
-        if updated.rowcount != 1:
-            con.rollback()
-            flash("Η πληρωμή δεν μπορεί να επιβεβαιωθεί: η κράτηση ακυρώθηκε, ολοκληρώθηκε ή δεν εκκρεμεί πληρωμή.")
-            return redirect(url_for("admin"))
-        con.execute("UPDATE booking_participants SET payment_status='paid' WHERE booking_id=? AND payment_status='pending'",(booking_id,))
-        b=con.execute("""
-          SELECT b.*,s.lesson_date,s.start_time,sp.name spot,sp.info,sp.map_url
-          FROM bookings b JOIN slots s ON s.id=b.slot_id JOIN spots sp ON sp.id=s.spot_id
-          WHERE b.id=?
-        """,(booking_id,)).fetchone()
-        participants=_booking_participants(con,booking_id)
-        log_booking_audit(con,booking_id,"payment_received","Επιβεβαιώθηκε η πληρωμή της κράτησης.",u["id"],u["role"],"")
-        con.commit()
-    except Exception:
-        con.rollback()
-        raise
+        changed=con.execute("UPDATE bookings SET status='confirmed' WHERE id=? AND status='pending_payment' AND payment_status='pending'",(booking_id,))
+        if changed.rowcount:
+            log_booking_audit(con,booking_id,"confirmed_unpaid","Επιβεβαίωση μαθήματος χωρίς εξόφληση.",u["id"],u["role"],"")
+            con.commit();flash("Το μάθημα επιβεβαιώθηκε χωρίς πληρωμή. Η οφειλή παραμένει ανοιχτή.")
+        else:
+            con.rollback();flash("Η κράτηση δεν είναι ενεργή Pending Payment.")
     finally:
         con.close()
-    for person in participants:
-        if person["email"]:
-            send_email(person["email"],"KiteClub — Η πληρωμή και η κράτησή σου επιβεβαιώθηκαν",
-              f"Γεια σου {person['name']},\nΗ κράτησή σου είναι confirmed.\n{b['lesson_date']} {b['start_time']} — {b['spot']}\n{b['info']}\nΧάρτης: {b['map_url']}")
-    flash("Η πληρωμή επιβεβαιώθηκε.")
-    return redirect(url_for("admin"))
+    return redirect(url_for("admin_bookings"))
 
 @app.post("/admin/add-slot")
 def add_slot():
@@ -3248,6 +3247,11 @@ def admin_edit_booking(booking_id):
             con.rollback(); con.close(); flash(f"Ο instructor έχει ήδη άλλο μάθημα στις {target['start_time']}.")
             return _admin_booking_action_redirect(lesson_date)
 
+    previous_paid=con.execute("SELECT COUNT(*) n FROM lesson_debts WHERE booking_id=? AND paid_amount>0",(booking_id,)).fetchone()["n"]
+    previous_ids={r["student_id"] for r in con.execute("SELECT student_id FROM lesson_debts WHERE booking_id=?",(booking_id,))}
+    if previous_paid and not previous_ids.issubset(set(new_participant_ids)):
+        con.rollback(); con.close(); flash("Υπάρχουν ήδη εισπράξεις. Δεν μπορείς να αλλάξεις μαθητή χωρίς ξεχωριστή τακτοποίηση πληρωμών.")
+        return _admin_booking_action_redirect(lesson_date)
     old_participants=_booking_participants(con,booking_id)
     old_participant_ids=[r["student_id"] for r in old_participants] or [b["student_id"]]
     old_duration=float(b["duration"] or 1)
@@ -3278,6 +3282,21 @@ def admin_edit_booking(booking_id):
     con.execute("""
       UPDATE bookings SET slot_id=?,student_id=?,duration=?,status=?,payment_status=?,amount=? WHERE id=?
     """,(first["id"],student_id,duration,new_status,new_payment,new_amount,booking_id))
+    # Keep each existing debt synchronized with changed 1h/2h price, preserving installments.
+    # Credit-funded participants do not acquire a lesson debt.
+    # Former participants retain payment history but no longer owe this booking.
+    for former_id in set(old_participant_ids)-set(new_participant_ids):
+        con.execute("UPDATE lesson_debts SET price=COALESCE(paid_amount,0) WHERE booking_id=? AND student_id=?",
+                    (booking_id,former_id))
+    for bp in con.execute("SELECT * FROM booking_participants WHERE booking_id=?",(booking_id,)).fetchall():
+        debt=con.execute("SELECT * FROM lesson_debts WHERE booking_id=? AND student_id=?",(booking_id,bp["student_id"])).fetchone()
+        if not debt: continue
+        if bp["payment_status"]=="pending":
+            updated_price=round(float(bp["amount"] or 0),2)
+            if updated_price>0:
+                con.execute("UPDATE lesson_debts SET original_price=?,price=? WHERE id=?",
+                           (updated_price,max(updated_price,float(debt["paid_amount"] or 0)),debt["id"]))
+        # A debt that is paid or partially paid must not be silently erased by a credit change.
     participants=_booking_participants(con,booking_id)
     log_booking_audit(con,booking_id,"edited",f"Ο Admin ενημέρωσε την κράτηση σε {start_time} ({duration:g}h).",u["id"],u["role"],f"student_id={student_id}; instructor_id={instructor_id}; status={new_status}; payment={new_payment}")
     con.commit(); con.close()
@@ -3314,6 +3333,7 @@ def admin_cancel_booking(booking_id):
     refunded=_refund_booking_participants(con,booking_id,"admin_booking_cancel_refund","Admin cancellation refund")
     linked=con.execute("SELECT slot_id FROM booking_slots WHERE booking_id=?",(booking_id,)).fetchall()
     con.execute("UPDATE bookings SET status='cancelled_admin' WHERE id=?",(booking_id,))
+    _cancel_lesson_debts(con,booking_id)
     for r in linked:
         con.execute("UPDATE slots SET status='open' WHERE id=?",(r["slot_id"],))
     log_booking_audit(con,booking_id,"cancelled","Ακύρωση κράτησης από Admin.",u["id"],u["role"],f"refunded_hours={refunded}; participants={participant_count}")
@@ -4104,6 +4124,9 @@ def admin_bookings():
     con=db()
     sql=f"""
       SELECT b.id,b.student_id,b.duration,b.status,b.payment_status,b.amount,b.created_at,b.completed_at,
+             (SELECT SUM(d.price) FROM lesson_debts d WHERE d.booking_id=b.id) lesson_final_price,
+             (SELECT SUM(d.original_price) FROM lesson_debts d WHERE d.booking_id=b.id) lesson_original_price,
+             (SELECT SUM(MAX(0,d.price-COALESCE(d.paid_amount,0))) FROM lesson_debts d WHERE d.booking_id=b.id) lesson_balance,
              s.lesson_date,s.start_time,s.instructor_id,s.spot_id,
              su.name student_name,su.surname student_surname,su.email student_email,su.phone student_phone,
              (CASE WHEN (SELECT COUNT(DISTINCT spp.skill_key) FROM student_skill_progress spp WHERE spp.student_id=su.id AND spp.status='mastered' AND spp.skill_key IN ('l1_theory','l1_trim','l1_control','l1_quick_release','l1_power_strike','l1_bodydrag','l2_control','l2_water_relaunch','l2_bodydrag','l2_self_rescue','l3_control','l3_bodydrag_downwind','l3_bodydrag_upwind','l3_bodydrag_board','l4_bodydrag','l4_waterstart','l4_keep_going','l4_upwind')) = 18 THEN 'Kiter' ELSE 'Beginner' END) student_level,st.student_code student_code,
@@ -4470,9 +4493,10 @@ def admin_finance():
       WHERE payment_status IN ('unpaid','partial','pending') AND substr(purchased_at,1,10) BETWEEN ? AND ?
     """,(date_from,date_to)).fetchone()["v"] or 0)
     pending_bookings=float(con.execute("""
-      SELECT COALESCE(SUM(bp.amount),0) v
-      FROM booking_participants bp JOIN bookings b ON b.id=bp.booking_id JOIN slots s ON s.id=b.slot_id
-      WHERE bp.payment_status='pending' AND s.lesson_date BETWEEN ? AND ? AND b.status NOT LIKE 'cancelled%'
+      SELECT COALESCE(SUM(MAX(0,d.price-COALESCE(d.paid_amount,0))),0) v
+      FROM lesson_debts d JOIN bookings b ON b.id=d.booking_id
+      JOIN slots s ON s.id=b.slot_id
+      WHERE s.lesson_date BETWEEN ? AND ? AND b.status NOT LIKE 'cancelled%'
     """,(date_from,date_to)).fetchone()["v"] or 0)
     pending_total=pending_packages+pending_bookings
 

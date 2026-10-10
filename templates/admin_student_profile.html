@@ -127,7 +127,7 @@
               <div><b>Μάθημα {{d.duration}}h · {{d.lesson_date|gr_date}} {{d.start_time|hm24}}</b><div class="package-stat">Κράτηση #{{d.booking_id}} · {{d.instructor_name}} {{d.instructor_surname or ''}} · {{d.booking_status}}</div></div>
               <div><b>{{d.duration}}h</b><div class="package-stat">Χωρίς credits</div></div>
               <div><b class="money-paid">{{'%.2f'|format(d.paid_amount)}}€</b><div class="package-stat">πληρωμένα / {{'%.2f'|format(d.price)}}€</div><b class="money-due">{{'%.2f'|format(due if due>0 else 0)}}€</b><div class="package-stat">υπόλοιπο</div></div>
-              <div>{% if due<=0.009 %}<span class="badge ok">PAID</span>{% elif d.paid_amount>0 %}<span class="badge status-partial">PARTIALLY PAID</span>{% else %}<span class="badge status-unpaid">UNPAID</span>{% endif %}<div class="package-stat">{{d.note or ''}}</div></div>
+              <div>{% if d.booking_status.startswith('cancelled') %}<span class="badge off">CANCELLED</span>{% elif due<=0.009 %}<span class="badge ok">PAID</span>{% elif d.paid_amount>0 %}<span class="badge status-partial">PARTIALLY PAID</span>{% else %}<span class="badge status-unpaid">UNPAID</span>{% endif %}<div class="package-stat">{{d.note or ''}}</div></div>
               <div class="pay-actions">
                 {% if due>0.009 and not d.booking_status.startswith('cancelled') %}
                 <form method="post" action="{{url_for('admin_lesson_debt_payment',debt_id=d.id)}}" class="flexible-payment-form">
@@ -137,7 +137,7 @@
                   <button class="btn alt" type="submit" name="payment_action" value="installment">Δόση</button>
                   <button class="btn" type="submit" name="payment_action" value="settle">Εξόφληση</button>
                 </form>
-                {% elif d.booking_status.startswith('cancelled') %}<span class="muted">Ακυρωμένη — έλεγχος Admin</span>{% else %}<span class="badge ok">Εξοφλημένο</span>{% endif %}
+                {% elif d.booking_status.startswith('cancelled') %}<span class="muted">Ακυρωμένο — χωρίς ανοιχτή οφειλή</span>{% else %}<span class="badge ok">Εξοφλημένο</span>{% endif %}
               </div>
             </div>
             {% endfor %}
@@ -173,7 +173,7 @@
         <div class="section-card">
           <h2>Ιστορικό πληρωμών</h2><div class="muted">Κάθε δόση καταγράφεται ξεχωριστά.</div><br>
           {% if lesson_payments %}<div class="table-wrap"><table class="history-table"><thead><tr><th>Ημερομηνία</th><th>Μάθημα</th><th>Ποσό</th><th>Σημείωση</th></tr></thead><tbody>{% for py in lesson_payments %}<tr><td>{{py.payment_date|gr_date}}</td><td>Κράτηση #{{py.booking_id}}</td><td class="money-paid">{{'%.2f'|format(py.amount)}}€</td><td>{{py.note}}</td></tr>{% endfor %}</tbody></table></div><br>{% endif %}
-          {% if package_payments %}<div class="table-wrap"><table class="history-table"><thead><tr><th>Ημερομηνία</th><th>Ποσό</th><th>Τρόπος</th><th>Σημείωση</th></tr></thead><tbody>{% for py in package_payments %}<tr><td>{{py.payment_date|gr_date}}</td><td class="money-paid">{{'%.2f'|format(py.amount)}}€</td><td>{{py.method or 'manual'}}</td><td>{{py.note or '—'}}</td></tr>{% endfor %}</tbody></table></div>{% else %}<p class="muted">Δεν υπάρχουν καταχωρημένες πληρωμές.</p>{% endif %}
+          {% if package_payments %}<div class="table-wrap"><table class="history-table"><thead><tr><th>Ημερομηνία</th><th>Ποσό</th><th>Τρόπος</th><th>Σημείωση</th></tr></thead><tbody>{% for py in package_payments %}<tr><td>{{py.payment_date|gr_date}}</td><td class="money-paid">{{'%.2f'|format(py.amount)}}€</td><td>{{py.method or 'manual'}}</td><td>{{py.note or '—'}}</td></tr>{% endfor %}</tbody></table></div>{% elif not lesson_payments %}<p class="muted">Δεν υπάρχουν καταχωρημένες πληρωμές.</p>{% endif %}
         </div>
       </section>
 

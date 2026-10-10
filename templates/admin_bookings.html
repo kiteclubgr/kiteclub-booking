@@ -57,10 +57,11 @@
             <td>{{b.spot_name or '—'}}</td>
             <td><b>{{b.duration|round(1)}}h</b></td>
             <td><span class="status s-{{state.class}}">{{state.label}}</span></td>
-            <td>{{'Paid / credits' if b.payment_status in ['credit','paid'] else ('Pending payment' if b.payment_status=='pending' else (b.payment_status or '—'))}}{% if b.amount %}<div class="sub">{{'%.2f'|format(b.amount)}}€</div>{% endif %}</td>
+            <td>{{'Paid / credits' if b.payment_status in ['credit','paid'] else ('Pending payment' if b.payment_status=='pending' else (b.payment_status or '—'))}}{% if b.lesson_final_price is not none %}<div class="sub">Τελική {{'%.2f'|format(b.lesson_final_price)}}€{% if b.lesson_original_price and b.lesson_original_price>b.lesson_final_price+0.009 %} · αρχική {{'%.2f'|format(b.lesson_original_price)}}€{% endif %} · υπόλοιπο {{'%.2f'|format(b.lesson_balance or 0)}}€</div>{% elif b.amount %}<div class="sub">{{'%.2f'|format(b.amount)}}€</div>{% endif %}</td>
             <td><div class="row-actions">
               <a class="small-btn" href="{{url_for('admin',date=b.lesson_date)}}#day">Ημέρα</a>
               <a class="small-btn" href="{{url_for('admin_booking_history',booking_id=b.id)}}">History</a>
+              {% if b.status=='pending_payment' %}<form method="post" action="{{url_for('admin_confirm_unpaid_booking',booking_id=b.id)}}"><input type="hidden" name="_csrf_token" value="{{csrf_token()}}"><button type="submit" class="small-btn" title="Επιβεβαίωση μαθήματος χωρίς πληρωμή">Confirm unpaid</button></form>{% endif %}
             {% if b.payment_status=='pending' or b.status=='completed' %}<a class="small-btn" href="{{url_for('admin_student_profile',student_id=b.student_id)}}#payments">Πληρωμή</a>{% endif %}
               {% if b.status in ('confirmed','pending_payment') %}
                 <button type="button" class="small-btn primary edit-booking" data-id="{{b.id}}" data-student="{{b.student_id}}" data-date="{{b.lesson_date}}" data-time="{{b.start_time}}" data-instructor="{{b.instructor_id}}" data-duration="{{b.duration}}" data-state="{{'pending' if b.status=='pending_payment' or b.payment_status=='pending' else 'booked'}}">Επεξεργασία</button>
@@ -81,11 +82,12 @@
             <div><b>Instructor</b>{{b.instructor_name}}{% if b.instructor_surname %} {{b.instructor_surname}}{% endif %}</div>
             <div><b>Spot</b>{{b.spot_name or '—'}}</div>
             <div><b>Διάρκεια</b>{{b.duration|round(1)}}h</div>
-            <div><b>Πληρωμή</b>{{'Paid / credits' if b.payment_status in ['credit','paid'] else ('Pending payment' if b.payment_status=='pending' else (b.payment_status or '—'))}}{% if b.amount %} · {{'%.2f'|format(b.amount)}}€{% endif %}</div>
+            <div><b>Πληρωμή</b>{{'Paid / credits' if b.payment_status in ['credit','paid'] else ('Pending payment' if b.payment_status=='pending' else (b.payment_status or '—'))}}{% if b.lesson_final_price is not none %} · {{'%.2f'|format(b.lesson_final_price)}}€{% elif b.amount %} · {{'%.2f'|format(b.amount)}}€{% endif %}</div>
           </div>
           <div class="booking-card-actions">
             <a class="small-btn" href="{{url_for('admin',date=b.lesson_date)}}#day">Ημέρα</a>
             <a class="small-btn" href="{{url_for('admin_booking_history',booking_id=b.id)}}">History</a>
+              {% if b.status=='pending_payment' %}<form method="post" action="{{url_for('admin_confirm_unpaid_booking',booking_id=b.id)}}"><input type="hidden" name="_csrf_token" value="{{csrf_token()}}"><button type="submit" class="small-btn" title="Επιβεβαίωση μαθήματος χωρίς πληρωμή">Confirm unpaid</button></form>{% endif %}
             {% if b.status in ('confirmed','pending_payment') %}<button type="button" class="small-btn primary edit-booking" data-id="{{b.id}}" data-student="{{b.student_id}}" data-date="{{b.lesson_date}}" data-time="{{b.start_time}}" data-instructor="{{b.instructor_id}}" data-duration="{{b.duration}}" data-state="{{'pending' if b.status=='pending_payment' or b.payment_status=='pending' else 'booked'}}">Επεξεργασία</button>{% endif %}
           </div>
         </article>{% endfor %}</div>

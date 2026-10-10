@@ -964,11 +964,7 @@
     </div>
     <div class="row">
       <span class="badge {{'off' if b.status=='no_show' else ('ok' if b.status in ['confirmed','completed'] else 'wait')}}">{{'No-show' if b.status=='no_show' else b.status}}</span>
-      {% if b.payment_status=='pending' and b.status in ['pending_payment', 'confirmed'] %}
-      <form method="post" action="{{url_for('payment_received',booking_id=b.id)}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-        <button class="btn">Payment Received</button>
-      </form>
-      {% endif %}
+
     </div>
   </div>
   {% else %}
