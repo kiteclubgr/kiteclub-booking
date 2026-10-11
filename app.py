@@ -10,7 +10,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from pathlib import Path
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "KiteClub v76.3 · Payment Safety"
+APP_VERSION = "KiteClub v76.3.1 · Booking Counters Fix"
 
 # v70: production-ready storage. Locally everything stays inside the project.
 # On Railway mount a persistent volume at /data and set DATA_DIR=/data.
@@ -4172,7 +4172,7 @@ def admin_bookings():
       "hours":sum(float(r["duration"] or 0) for r in bookings if not str(r["status"] or "").startswith("cancelled")),
       "completed":sum(1 for r in bookings if r["status"]=="completed"),
       "no_show":sum(1 for r in bookings if r["status"]=="no_show"),
-      "pending":sum(1 for r in bookings if r["status"]=="pending_payment" or r["payment_status"]=="pending"),
+      "pending":sum(1 for r in bookings if r["status"]=="pending_payment"),
     }
 
     students=con.execute("""
