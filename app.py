@@ -10,7 +10,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from pathlib import Path
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "KiteClub v76.3.1 · Booking Counters Fix"
+APP_VERSION = "KiteClub v76.4 · Student Debts Management"
 
 # v70: production-ready storage. Locally everything stays inside the project.
 # On Railway mount a persistent volume at /data and set DATA_DIR=/data.
@@ -4446,6 +4446,69 @@ def admin_reports():
     return render_template("admin_reports.html",summary=summary,instructors=instructors,top_students=top_students,
                            weeks=weeks,max_week=max_week,date_from=date_from,date_to=date_to,sales_map=sales_map,lesson_mix=lesson_mix)
 
+
+
+@app.route("/admin/debts")
+def admin_debts():
+    u=current_user()
+    if not u or u["role"]!="admin":
+        return redirect(url_for("login"))
+
+    con=db()
+    # Each row is one real, still-open debt. Never include cancelled lessons.
+    rows=con.execute("""
+      SELECT 'lesson' kind,d.id debt_id,d.student_id,u.name,u.surname,
+             s.student_code,u.email, 'Κράτηση #' || d.booking_id label,
+             'Μάθημα ' || printf('%g',b.duration) || 'h' detail,
+             COALESCE(d.price,0) price,COALESCE(d.paid_amount,0) paid,
+             substr(sl.lesson_date,1,10) activity_date
+      FROM lesson_debts d JOIN bookings b ON b.id=d.booking_id
+      JOIN slots sl ON sl.id=b.slot_id
+      JOIN users u ON u.id=d.student_id JOIN students s ON s.user_id=u.id
+      WHERE b.status NOT LIKE 'cancelled%'
+        AND ROUND(COALESCE(d.price,0)-COALESCE(d.paid_amount,0),2)>0
+      UNION ALL
+      SELECT 'package' kind,sp.id debt_id,sp.student_id,u.name,u.surname,
+             s.student_code,u.email,sp.package_name label,
+             'Αγορά #' || sp.id detail,
+             COALESCE(sp.price,0) price,COALESCE(sp.paid_amount,0) paid,
+             substr(sp.purchased_at,1,10) activity_date
+      FROM student_packages sp JOIN users u ON u.id=sp.student_id
+      JOIN students s ON s.user_id=u.id
+      WHERE sp.payment_status IN ('unpaid','partial','pending')
+        AND ROUND(COALESCE(sp.price,0)-COALESCE(sp.paid_amount,0),2)>0
+    """).fetchall()
+    con.close()
+    debts=[dict(r) for r in rows]
+    for d in debts:
+        d['balance']=round(max(0,float(d['price'] or 0)-float(d['paid'] or 0)),2)
+    # Summary always reflects *all* active debts, regardless of display filters.
+    lesson_total=round(sum(d['balance'] for d in debts if d['kind']=='lesson'),2)
+    package_total=round(sum(d['balance'] for d in debts if d['kind']=='package'),2)
+    q=(request.args.get('q') or '').strip().casefold()
+    kind=request.args.get('kind','all')
+    if kind not in ('all','lesson','package'): kind='all'
+    def money_filter(key):
+        raw=(request.args.get(key) or '').strip().replace(',','.')
+        try: return max(0,float(raw)) if raw else None
+        except ValueError: return None
+    low=money_filter('min_amount');high=money_filter('max_amount')
+    filtered=[d for d in debts if
+              (kind=='all' or d['kind']==kind) and
+              (not q or q in (' '.join(str(d.get(k) or '') for k in ('name','surname','student_code','email','label','detail'))).casefold()) and
+              (low is None or d['balance']>=low) and
+              (high is None or d['balance']<=high)]
+    filtered.sort(key=lambda d:(-d['balance'],d['student_id'],d['debt_id']))
+    try: page=max(1,int(request.args.get('page','1')))
+    except (ValueError,TypeError): page=1
+    per_page=25;pages=max(1,(len(filtered)+per_page-1)//per_page)
+    page=min(page,pages)
+    visible=filtered[(page-1)*per_page:page*per_page]
+    return render_template('admin_debts.html',debts=visible,all_count=len(filtered),
+        lesson_total=lesson_total,package_total=package_total,total=round(lesson_total+package_total,2),
+        page=page,pages=pages,per_page=per_page,filters={'q':request.args.get('q',''),
+        'kind':kind,'min_amount':request.args.get('min_amount',''),'max_amount':request.args.get('max_amount','')},
+        admin_active='debts')
 
 @app.route("/admin/finance")
 def admin_finance():

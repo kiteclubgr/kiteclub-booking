@@ -1,0 +1,34 @@
+{% extends "base.html" %}{% block content %}
+<link rel="stylesheet" href="{{url_for('static',filename='admin-shared.css')}}">
+<style>
+.debt-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px}.debt-card{padding:20px;background:#fff;border:1px solid var(--l);border-radius:16px}.debt-card .amount{font-size:29px;font-weight:950;margin-top:7px}.debt-card small{color:var(--m);font-weight:800}.debt-card.total{background:#fff6f5}.debt-card.total .amount{color:#bf3131}.debt-card.lessons{background:#f2f8ff}.debt-card.packages{background:#f1fbf6}.debt-filter{display:grid;grid-template-columns:minmax(190px,2fr) minmax(115px,1fr) 125px 125px auto;gap:10px;align-items:end}.debt-filter label{display:flex;flex-direction:column;gap:6px;color:var(--m);font-size:12px;font-weight:850}.debt-filter input,.debt-filter select{width:100%}.debt-actions{display:flex;gap:8px}.debt-table-wrap{overflow-x:auto;border:1px solid var(--l);border-radius:14px}.debt-table{border-collapse:collapse;width:100%;min-width:940px}.debt-table td,.debt-table th{text-align:left;padding:12px 10px;border-bottom:1px solid var(--l)}.debt-table th{background:#f5f9fc;color:var(--m);font-size:11px;text-transform:uppercase}.debt-table .number{text-align:right;font-variant-numeric:tabular-nums}.debt-table .balance{font-weight:950;color:#ba3333}.debt-table small{color:var(--m)}.debt-pill{display:inline-block;padding:5px 9px;border-radius:8px;font-size:11px;font-weight:850;background:#e9f3fe;color:#0b679e}.debt-pill.package{background:#e5f9ed;color:#14824a}.debt-pager{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 0}.debt-pager a{font-weight:850}.debt-note{color:var(--m);font-size:12px;margin-top:8px}@media(max-width:880px){.debt-filter{grid-template-columns:1fr 1fr}.debt-cards{grid-template-columns:1fr}.debt-actions{grid-column:1/-1}}@media(max-width:500px){.debt-filter{grid-template-columns:1fr}}
+</style>
+<div class="admin-shell">
+ {% set admin_active='debts' %}{% include '_admin_sidebar_static.html' %}
+ <main class="admin-main">
+  <div class="admin-page-head"><div><h1>Οφειλές Μαθητών</h1><div class="admin-page-sub">Ανεξόφλητα πακέτα και μεμονωμένα μαθήματα, σε μία σελίδα.</div></div><a class="btn alt" href="{{url_for('admin_finance')}}">Οικονομικά →</a></div>
+  <section class="debt-cards" aria-label="Σύνολα οφειλών">
+    <div class="debt-card total"><small>Συνολικά προς είσπραξη</small><div class="amount">{{'%.2f'|format(total)}}€</div></div>
+    <div class="debt-card lessons"><small>Οφειλές μαθημάτων</small><div class="amount">{{'%.2f'|format(lesson_total)}}€</div></div>
+    <div class="debt-card packages"><small>Οφειλές πακέτων</small><div class="amount">{{'%.2f'|format(package_total)}}€</div></div>
+  </section>
+  <section class="card" style="margin-bottom:14px;padding:16px">
+   <form method="get" action="{{url_for('admin_debts')}}" class="debt-filter">
+    <label>Αναζήτηση μαθητή<input type="search" name="q" value="{{filters.q}}" placeholder="Όνομα, email, Student ID..."></label>
+    <label>Τύπος οφειλής<select name="kind"><option value="all" {{'selected' if filters.kind=='all' else ''}}>Όλες</option><option value="lesson" {{'selected' if filters.kind=='lesson' else ''}}>Μαθήματα</option><option value="package" {{'selected' if filters.kind=='package' else ''}}>Πακέτα</option></select></label>
+    <label>Ελάχιστο €<input type="number" min="0" step="0.01" name="min_amount" value="{{filters.min_amount}}" placeholder="0"></label>
+    <label>Μέγιστο €<input type="number" min="0" step="0.01" name="max_amount" value="{{filters.max_amount}}" placeholder="Όλα"></label>
+    <div class="debt-actions"><button class="btn" type="submit">Φίλτρο</button><a class="btn alt" href="{{url_for('admin_debts')}}">Καθαρισμός</a></div>
+   </form>
+  </section>
+  <section class="card" style="padding:15px"><h2 style="margin:0 0 10px">Ανοιχτές οφειλές ({{all_count}})</h2>
+   <div class="debt-table-wrap"><table class="debt-table"><thead><tr><th>Μαθητής</th><th>Τύπος</th><th>Αιτία</th><th class="number">Αρχική / τελική αξία</th><th class="number">Πληρωμένα</th><th class="number">Υπόλοιπο</th><th>Ημερομηνία</th><th>Ενέργεια</th></tr></thead><tbody>
+   {% for d in debts %}<tr><td><b>{{d.name}} {{d.surname or ''}}</b><br><small>{{d.student_code or ''}}</small></td><td><span class="debt-pill {{'package' if d.kind=='package' else ''}}">{{'Πακέτο' if d.kind=='package' else 'Μάθημα'}}</span></td><td><b>{{d.label}}</b><br><small>{{d.detail}}</small></td><td class="number">{{'%.2f'|format(d.price)}}€</td><td class="number">{{'%.2f'|format(d.paid)}}€</td><td class="number balance">{{'%.2f'|format(d.balance)}}€</td><td>{{d.activity_date|gr_date}}</td><td><a class="btn" href="{{url_for('admin_student_profile',student_id=d.student_id)}}#payments">Πληρωμή</a></td></tr>
+   {% else %}<tr><td colspan="8" style="padding:32px;text-align:center">Δεν βρέθηκαν ενεργές οφειλές για τα επιλεγμένα φίλτρα.</td></tr>{% endfor %}
+   </tbody></table></div>
+   <div class="debt-pager"><small>Εμφανίζονται {{(page-1)*per_page+1 if all_count else 0}}–{{[page*per_page,all_count]|min}} από {{all_count}} οφειλές</small><div>{% if page>1 %}<a class="btn alt" href="{{url_for('admin_debts',q=filters.q,kind=filters.kind,min_amount=filters.min_amount,max_amount=filters.max_amount,page=page-1)}}">← Πριν</a>{% endif %} <span>Σελίδα {{page}} / {{pages}}</span> {% if page<pages %}<a class="btn alt" href="{{url_for('admin_debts',q=filters.q,kind=filters.kind,min_amount=filters.min_amount,max_amount=filters.max_amount,page=page+1)}}">Μετά →</a>{% endif %}</div></div>
+   <p class="debt-note">Τα σύνολα αφορούν όλες τις ενεργές οφειλές, ανεξάρτητα από μήνα ή φίλτρα. Οι ακυρωμένες κρατήσεις δεν περιλαμβάνονται. Η είσπραξη γίνεται μόνο στην καρτέλα του μαθητή.</p>
+  </section>
+ </main>
+</div><link rel="stylesheet" href="{{url_for('static',filename='admin-v4.css')}}">
+{% endblock %}
