@@ -172,8 +172,8 @@
         </div>
         <div class="section-card">
           <h2>Ιστορικό πληρωμών</h2><div class="muted">Κάθε δόση καταγράφεται ξεχωριστά.</div><br>
-          {% if lesson_payments %}<div class="table-wrap"><table class="history-table"><thead><tr><th>Ημερομηνία</th><th>Μάθημα</th><th>Ποσό</th><th>Σημείωση</th></tr></thead><tbody>{% for py in lesson_payments %}<tr><td>{{py.payment_date|gr_date}}</td><td>Κράτηση #{{py.booking_id}}</td><td class="money-paid">{{'%.2f'|format(py.amount)}}€</td><td>{{py.note}}</td></tr>{% endfor %}</tbody></table></div><br>{% endif %}
-          {% if package_payments %}<div class="table-wrap"><table class="history-table"><thead><tr><th>Ημερομηνία</th><th>Ποσό</th><th>Τρόπος</th><th>Σημείωση</th></tr></thead><tbody>{% for py in package_payments %}<tr><td>{{py.payment_date|gr_date}}</td><td class="money-paid">{{'%.2f'|format(py.amount)}}€</td><td>{{py.method or 'manual'}}</td><td>{{py.note or '—'}}</td></tr>{% endfor %}</tbody></table></div>{% elif not lesson_payments %}<p class="muted">Δεν υπάρχουν καταχωρημένες πληρωμές.</p>{% endif %}
+          {% if lesson_payments %}<div class="table-wrap"><table class="history-table"><thead><tr><th>Ημερομηνία</th><th>Μάθημα</th><th>Ποσό</th><th>Σημείωση</th><th>Είσπραξη από</th></tr></thead><tbody>{% for py in lesson_payments %}<tr><td>{{py.payment_date|gr_date}}</td><td>Κράτηση #{{py.booking_id}}</td><td class="money-paid">{{'%.2f'|format(py.amount)}}€</td><td>{{py.note}}</td><td>{{py.received_by or "—"}}</td></tr>{% endfor %}</tbody></table></div><br>{% endif %}
+          {% if package_payments %}<div class="table-wrap"><table class="history-table"><thead><tr><th>Ημερομηνία</th><th>Ποσό</th><th>Τρόπος</th><th>Σημείωση</th><th>Είσπραξη από</th></tr></thead><tbody>{% for py in package_payments %}<tr><td>{{py.payment_date|gr_date}}</td><td class="money-paid">{{'%.2f'|format(py.amount)}}€</td><td>{{py.method or 'manual'}}</td><td>{{py.note or '—'}}</td><td>{{py.received_by or "—"}}</td></tr>{% endfor %}</tbody></table></div>{% elif not lesson_payments %}<p class="muted">Δεν υπάρχουν καταχωρημένες πληρωμές.</p>{% endif %}
         </div>
       </section>
 

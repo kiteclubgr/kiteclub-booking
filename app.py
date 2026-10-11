@@ -1,6 +1,7 @@
 
 from flask import Flask, render_template, request, redirect, url_for, flash, session, abort
 import sqlite3, os, smtplib, secrets, hmac, time, logging, re, math
+from decimal import Decimal, InvalidOperation
 from email.message import EmailMessage
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -9,7 +10,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from pathlib import Path
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "KiteClub v76.2.3 · Booking Filter Fix"
+APP_VERSION = "KiteClub v76.3 · Payment Safety"
 
 # v70: production-ready storage. Locally everything stays inside the project.
 # On Railway mount a persistent volume at /data and set DATA_DIR=/data.
@@ -532,6 +533,14 @@ def init_db():
         request_id TEXT NOT NULL UNIQUE, created_at TEXT NOT NULL
       );
     """)
+    # v76.3: who actually received a payment. Nullable for existing history.
+    ensure_column(con, "student_payments", "received_by", "INTEGER")
+    ensure_column(con, "lesson_payments", "received_by", "INTEGER")
+    # Shared idempotency ledger across BOTH lesson and package payments.
+    con.execute("""CREATE TABLE IF NOT EXISTS payment_requests (
+        request_id TEXT PRIMARY KEY, kind TEXT NOT NULL, record_id INTEGER NOT NULL,
+        created_at TEXT NOT NULL
+    )""")
     # Existing unpaid bookings are included without charging any credits.
     # v7: create the idempotency ledger during startup/migration, not during
     # a payment POST, so no schema DDL runs in the payment transaction.
@@ -4650,6 +4659,30 @@ def admin_student_package_purchase(student_id):
     con.commit(); con.close(); flash(f"Το {package['name']} καταχωρήθηκε ως {'Paid' if payment_status=='paid' else 'Unpaid'}.")
     return redirect(url_for("admin_student_profile",student_id=student_id))
 
+def _safe_payment_amount(form):
+    """Reject non-currency amounts rather than rounding them into receipts."""
+    raw=(form.get("amount") or "").strip()
+    try:
+        value=Decimal(raw)
+    except (InvalidOperation, ValueError):
+        return None
+    if not value.is_finite() or value<=0 or value.as_tuple().exponent < -2:
+        return None
+    cents=value * 100
+    if cents!=cents.to_integral_value():
+        return None
+    return int(cents)
+
+
+def _payment_request_used(con, request_id):
+    """Old ledgers remain authoritative for requests made before this release."""
+    return bool(
+        con.execute("SELECT 1 FROM payment_requests WHERE request_id=?",(request_id,)).fetchone()
+        or con.execute("SELECT 1 FROM package_payment_requests WHERE request_id=?",(request_id,)).fetchone()
+        or con.execute("SELECT 1 FROM lesson_payments WHERE request_id=?",(request_id,)).fetchone()
+    )
+
+
 @app.post("/admin/lesson-debts/<int:debt_id>/payments/add")
 def admin_lesson_debt_payment(debt_id):
     u=current_user()
@@ -4660,8 +4693,7 @@ def admin_lesson_debt_payment(debt_id):
     action=(request.form.get("payment_action") or "").strip()
     if action not in ("installment","settle"):
         abort(400,description="Invalid payment action")
-    try: amount=float(request.form.get("amount") or 0)
-    except (ValueError,TypeError): amount=0
+    amount_cents=_safe_payment_amount(request.form)
     con=db()
     try:
         con.execute("BEGIN IMMEDIATE")
@@ -4670,15 +4702,18 @@ def admin_lesson_debt_payment(debt_id):
         if not debt:
             con.rollback(); abort(404)
         target=url_for("admin_student_profile",student_id=debt["student_id"])+"#payments"
+        # Detect replay before checking cancellation or balance.
+        if _payment_request_used(con,request_id):
+            con.rollback();flash("Η ίδια πληρωμή έχει ήδη καταχωριστεί. Δεν έγινε νέα είσπραξη.");return redirect(target)
         if str(debt["booking_status"]).startswith("cancelled"):
-            con.rollback(); flash("Ακυρωμένη κράτηση: η οφειλή χρειάζεται χειροκίνητο έλεγχο."); return redirect(target)
+            con.rollback();flash("Ακυρωμένη κράτηση: δεν επιτρέπεται νέα είσπραξη.");return redirect(target)
         price=round(float(debt["price"]),2);paid=round(float(debt["paid_amount"]),2)
         balance=round(max(0,price-paid),2)
-        if not math.isfinite(amount) or round(amount,2)!=amount or amount<=0 or amount>balance:
+        if amount_cents is None or amount_cents>round(balance*100):
             con.rollback();flash("Μη έγκυρο ποσό πληρωμής.");return redirect(target)
-        used=con.execute("SELECT 1 FROM lesson_payments WHERE request_id=?",(request_id,)).fetchone()
-        if used:
-            con.rollback();flash("Η ίδια πληρωμή έχει ήδη καταχωριστεί.");return redirect(target)
+        amount=amount_cents/100
+        con.execute("INSERT INTO payment_requests(request_id,kind,record_id,created_at) VALUES(?,?,?,?)",
+                    (request_id,"lesson",debt_id,datetime.now().isoformat()))
         total=round(paid+amount,2);discount=round(price-total,2) if action=="settle" else 0
         new_price=total if action=="settle" else price
         note=("Εξόφληση" if action=="settle" else "Δόση")
@@ -4686,8 +4721,8 @@ def admin_lesson_debt_payment(debt_id):
         now=datetime.now().isoformat()
         con.execute("UPDATE lesson_debts SET paid_amount=?,price=?,note=COALESCE(note,'') || ? WHERE id=?",
              (total,new_price,(" | "+note) if discount else "",debt_id))
-        con.execute("""INSERT INTO lesson_payments(debt_id,student_id,amount,payment_date,method,note,request_id,created_at)
-                VALUES(?,?,?,?,?,?,?,?)""",(debt_id,debt["student_id"],amount,datetime.now().date().isoformat(),"manual",note,request_id,now))
+        con.execute("""INSERT INTO lesson_payments(debt_id,student_id,amount,payment_date,method,note,request_id,created_at,received_by)
+                VALUES(?,?,?,?,?,?,?,?,?)""",(debt_id,debt["student_id"],amount,datetime.now().date().isoformat(),"manual",note,request_id,now,u["id"]))
         if abs(total-new_price)<0.001:
             con.execute("UPDATE booking_participants SET payment_status='paid' WHERE booking_id=? AND student_id=? AND payment_status='pending'",(debt["booking_id"],debt["student_id"]))
             rest=con.execute("SELECT COUNT(*) n FROM booking_participants WHERE booking_id=? AND payment_status='pending'",(debt["booking_id"],)).fetchone()["n"]
@@ -4714,21 +4749,26 @@ def admin_package_purchase_add_payment(purchase_id):
     con=db(); con.execute("BEGIN IMMEDIATE"); purchase=con.execute("SELECT * FROM student_packages WHERE id=?",(purchase_id,)).fetchone()
     if not purchase:
         con.rollback(); con.close(); flash("Η αγορά δεν βρέθηκε."); return redirect(url_for("admin_packages"))
+    if _payment_request_used(con,request_id):
+        con.rollback();con.close();flash("Η ίδια πληρωμή έχει ήδη καταχωριστεί. Δεν έγινε νέα είσπραξη.")
+        return redirect(url_for("admin_student_profile",student_id=purchase["student_id"]))
     price=float(purchase["price"] or 0); already=float(purchase["paid_amount"] or 0); balance=max(0.0,price-already)
-    try: amount=float(request.form.get("amount") or 0)
-    except (TypeError,ValueError): amount=0
+    amount_cents=_safe_payment_amount(request.form)
     # An installment reduces the outstanding balance. A final settlement can be
     # less than the advertised price: the admin explicitly agrees to a reduced
     # FINAL purchase price (not a phantom payment or debt write-off).
     action=(request.form.get("payment_action") or "installment").strip()
     if action not in {"installment", "settle"}:
         con.rollback(); con.close(); abort(400, description="Invalid payment action")
-    if not math.isfinite(amount) or round(amount,2)!=amount:
+    if amount_cents is None:
         con.rollback(); con.close(); flash("Βάλε έγκυρο ποσό με έως 2 δεκαδικά."); return redirect(url_for("admin_student_profile",student_id=purchase["student_id"]))
-    if amount<=0 or amount>balance+0.001:
+    if amount_cents>round(balance*100):
         con.rollback(); con.close(); flash("Το ποσό πληρωμής δεν είναι έγκυρο."); return redirect(url_for("admin_student_profile",student_id=purchase["student_id"]))
     # Durable idempotency ledger: the key is committed atomically alongside
     # the payment and credit activation. Rolled-back attempts do not consume it.
+    amount=amount_cents/100
+    con.execute("INSERT INTO payment_requests(request_id,kind,record_id,created_at) VALUES(?,?,?,?)",
+                (request_id,"package",purchase_id,datetime.now().isoformat()))
     inserted=con.execute("INSERT OR IGNORE INTO package_payment_requests(request_id,purchase_id,created_at) VALUES(?,?,?)",(request_id,purchase_id,datetime.now().isoformat()))
     if inserted.rowcount != 1:
         con.rollback(); con.close()
@@ -4750,7 +4790,7 @@ def admin_package_purchase_add_payment(purchase_id):
         con.execute("UPDATE student_packages SET price=?, paid_amount=?, payment_status=?, paid_at=?, note=? WHERE id=?",(final_price,new_paid,"paid",now,updated_note,purchase_id))
     else:
         con.execute("UPDATE student_packages SET paid_amount=?,payment_status=?,paid_at=CASE WHEN ?='paid' THEN ? ELSE paid_at END WHERE id=?",(new_paid,new_status,new_status,now,purchase_id))
-    con.execute("INSERT INTO student_payments(student_id,purchase_id,amount,payment_date,method,note,created_at) VALUES(?,?,?,?,?,?,?)",(purchase["student_id"],purchase_id,amount,datetime.now().date().isoformat(),method,note,now))
+    con.execute("INSERT INTO student_payments(student_id,purchase_id,amount,payment_date,method,note,created_at,received_by) VALUES(?,?,?,?,?,?,?,?)",(purchase["student_id"],purchase_id,amount,datetime.now().date().isoformat(),method,note,now,u["id"]))
     purchase=con.execute("SELECT * FROM student_packages WHERE id=?",(purchase_id,)).fetchone(); rule=(purchase["activation_rule"] or "paid_only")
     if (purchase["package_type"] or "lesson")=="lesson" and int(purchase["credits_activated"] or 0)==0:
         if rule=="first_payment" and new_paid>0: _activate_student_purchase(con,purchase,"First payment")
