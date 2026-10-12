@@ -10,7 +10,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from pathlib import Path
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "KiteClub v76.5.4 · Student Profile Fix"
+APP_VERSION = "KiteClub v76.6 · Group Packages & Shared Credits"
 
 # v70: production-ready storage. Locally everything stays inside the project.
 # On Railway mount a persistent volume at /data and set DATA_DIR=/data.
@@ -454,6 +454,7 @@ def init_db():
     ensure_column(con,"students","crew_fee","REAL DEFAULT 0")
     ensure_column(con,"bookings","instructor_notes","TEXT")
     ensure_column(con,"bookings","actual_duration","REAL")
+    ensure_column(con,"bookings","group_lesson_type","TEXT DEFAULT 'private'")
     ensure_column(con,"bookings","no_show_at","TEXT")
     ensure_column(con,"slots","manual_override","TEXT")
     # v42: per-day, per-column activation control. activation_override is
@@ -578,6 +579,11 @@ def init_db():
         else:
             con.execute("INSERT INTO packages(name,hours,price,active,created_at,package_type,activation_rule) VALUES(?,?,?,?,?,?,?)",(pname,phours,pprice,1,datetime.now().isoformat(),"lesson",rule))
 
+    # v76.6 revised: 2P/3P catalog is idempotent and shares standard lesson credits.
+    for kind,name,price in (("group_2p","2P · Πακέτο 8 ωρών",260.0),("group_3p","3P · Πακέτο 8 ωρών",190.0)):
+        exists=con.execute("SELECT id FROM packages WHERE package_type=? AND hours=8 AND price=? LIMIT 1",(kind,price)).fetchone()
+        if not exists:
+            con.execute("INSERT INTO packages(name,hours,price,active,created_at,package_type,activation_rule) VALUES(?,?,?,?,?,?,?)",(name,8.,price,1,datetime.now().isoformat(),kind,"immediate"))
     # v64: lesson-photo gallery per student.
     con.execute("""
       CREATE TABLE IF NOT EXISTS student_photos(
@@ -948,9 +954,20 @@ def _booking_participants(con, booking_id):
     """,(booking_id,)).fetchall()
 
 
+# One common credit pool; group type determines the cash price only.
+GROUP_RATES={"private":{1.:60.,1.5:90.,2.:110.},"2p":{1.:40.,1.5:60.,2.:80.},"3p":{1.:30.,1.5:45.,2.:55.}}
+
+
+def _booking_kind(con,booking_id):
+    b=con.execute("SELECT group_lesson_type FROM bookings WHERE id=?",(booking_id,)).fetchone()
+    kind=(b["group_lesson_type"] or "private").lower() if b else "private"
+    return kind if kind in GROUP_RATES else "private"
+
+
 def _charge_booking_participants(con, booking_id, participant_ids, duration, force_pending=False, note_prefix="Booking reservation"):
     """Charge each group member independently while the instructor slot is reserved only once."""
     duration=float(duration or 1)
+    kind=_booking_kind(con,booking_id)
     any_pending=False
     total_pending=0.0
     now=datetime.now().isoformat()
@@ -966,7 +983,7 @@ def _charge_booking_participants(con, booking_id, participant_ids, duration, for
             """,(sid,booking_id,-duration,"reserve",f"{note_prefix} #{booking_id}",now))
             _consume_package_hours(con,sid,booking_id,duration)
         else:
-            pay="pending"; amount=(110.0 if abs(duration-2.0)<0.01 else 60.0*duration); charged=0.0
+            pay="pending"; amount=GROUP_RATES[kind][duration]; charged=0.0
             any_pending=True; total_pending+=amount
         con.execute("""
           INSERT OR REPLACE INTO booking_participants(booking_id,student_id,payment_status,amount,credit_charged,created_at)
@@ -2123,6 +2140,7 @@ def book(slot_id):
       VALUES(?,?,?,'confirmed','credit',0,?)
     """,(slot_id,u["id"],duration,datetime.now().isoformat()))
     bid=cur.lastrowid
+    con.execute("UPDATE bookings SET group_lesson_type=? WHERE id=?",((st["lesson_type"] or "private").lower(),bid))
     status,pay,amount=_charge_booking_participants(con,bid,participant_ids,duration,note_prefix="Group/private booking reservation")
     con.execute("UPDATE bookings SET status=?,payment_status=?,amount=? WHERE id=?",(status,pay,amount,bid))
 
@@ -3234,6 +3252,7 @@ def admin_book_student(slot_id):
       VALUES(?,?,?,'confirmed','credit',0,?)
     """,(slot_id,student_id,duration,datetime.now().isoformat()))
     booking_id=cur.lastrowid
+    con.execute("UPDATE bookings SET group_lesson_type=? WHERE id=?",((student["lesson_type"] or "private").lower(),booking_id))
     status,payment_status,amount=_charge_booking_participants(
         con,booking_id,participant_ids,duration,note_prefix="Admin booking reservation"
     )
@@ -3370,7 +3389,7 @@ def admin_edit_booking(booking_id):
     old_duration=float(b["duration"] or 1)
     same_people=set(old_participant_ids)==set(new_participant_ids)
     same_payment_state=((desired=="booked" and b["status"]=="confirmed") or (desired=="pending" and b["status"]=="pending_payment"))
-    preserve_payment=same_people and old_duration==duration and same_payment_state
+    preserve_payment=same_people and old_duration==duration and same_payment_state and _booking_kind(con,booking_id)==(student["lesson_type"] or "private").lower()
 
     if preserve_payment:
         new_status=b["status"]; new_payment=b["payment_status"]; new_amount=float(b["amount"] or 0)
@@ -3378,6 +3397,7 @@ def admin_edit_booking(booking_id):
         _refund_booking_participants(con,booking_id,"admin_booking_edit_refund","Credit returned before editing booking")
         con.execute("DELETE FROM booking_participants WHERE booking_id=?",(booking_id,))
         force_pending=(desired=="pending") or (b["payment_status"]=="paid" and (not same_people or old_duration!=duration))
+        con.execute("UPDATE bookings SET group_lesson_type=? WHERE id=?",((student["lesson_type"] or "private").lower(),booking_id))
         new_status,new_payment,new_amount=_charge_booking_participants(
             con,booking_id,new_participant_ids,duration,force_pending=force_pending,
             note_prefix="Credit reserved after editing booking"
@@ -4776,7 +4796,7 @@ def admin_package_create():
         return redirect(url_for("login"))
     name=(request.form.get("name") or "").strip()
     package_type=(request.form.get("package_type") or "lesson").strip().lower()
-    if package_type not in ("lesson","crew"):
+    if package_type not in ("lesson","group_2p","group_3p","crew"):
         package_type="lesson"
     try:
         hours=float(request.form.get("hours") or 0)
@@ -4785,7 +4805,7 @@ def admin_package_create():
         hours=0; price=0
     if package_type=="crew":
         hours=0.0
-    if not name or (package_type=="lesson" and hours<=0) or price<0:
+    if not name or (package_type!="crew" and hours<=0) or price<0:
         flash("Συμπλήρωσε σωστά τα στοιχεία του πακέτου.")
         return redirect(url_for("admin_packages"))
     con=db()
@@ -4829,7 +4849,7 @@ def admin_student_package_purchase(student_id):
     paid_amount=float(package["price"] or 0) if payment_status=="paid" else 0.0
     cur=con.execute("""INSERT INTO student_packages(student_id,package_id,package_name,hours_total,hours_remaining,price,payment_status,purchased_at,paid_at,note,package_type,valid_from,valid_until,activation_rule,paid_amount,credits_activated) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",(student_id,package["id"],package["name"],float(package["hours"] or 0),0.0,float(package["price"] or 0),payment_status,now,now if payment_status=="paid" else None,note,package_type,valid_from,valid_until,rule,paid_amount,0))
     purchase=con.execute("SELECT * FROM student_packages WHERE id=?",(cur.lastrowid,)).fetchone()
-    if package_type=="lesson": _activate_student_purchase(con,purchase,"Package purchase (payment independent)")
+    if package_type in ("lesson","group_2p","group_3p"): _activate_student_purchase(con,purchase,"Package purchase (payment independent)")
     if payment_status=="paid" and float(package["price"] or 0)>0:
         con.execute("INSERT INTO student_payments(student_id,purchase_id,amount,payment_date,method,note,created_at) VALUES(?,?,?,?,?,?,?)",(student_id,purchase["id"],float(package["price"] or 0),datetime.now().date().isoformat(),"manual",note,now))
     if payment_status=="paid" and package_type=="crew": con.execute("UPDATE students SET crew_member=1,crew_start_date=?,crew_end_date=?,crew_fee=? WHERE user_id=?",(valid_from,valid_until,float(package["price"] or 0),student_id))
@@ -4969,7 +4989,7 @@ def admin_package_purchase_add_payment(purchase_id):
         con.execute("UPDATE student_packages SET paid_amount=?,payment_status=?,paid_at=CASE WHEN ?='paid' THEN ? ELSE paid_at END WHERE id=?",(new_paid,new_status,new_status,now,purchase_id))
     con.execute("INSERT INTO student_payments(student_id,purchase_id,amount,payment_date,method,note,created_at,received_by) VALUES(?,?,?,?,?,?,?,?)",(purchase["student_id"],purchase_id,amount,datetime.now().date().isoformat(),method,note,now,u["id"]))
     purchase=con.execute("SELECT * FROM student_packages WHERE id=?",(purchase_id,)).fetchone(); rule=(purchase["activation_rule"] or "paid_only")
-    if (purchase["package_type"] or "lesson")=="lesson" and int(purchase["credits_activated"] or 0)==0:
+    if (purchase["package_type"] or "lesson") in ("lesson","group_2p","group_3p") and int(purchase["credits_activated"] or 0)==0:
         if rule=="first_payment" and new_paid>0: _activate_student_purchase(con,purchase,"First payment")
         elif rule=="paid_only" and new_status=="paid": _activate_student_purchase(con,purchase,"Full payment")
     if (purchase["package_type"] or "lesson")=="crew" and new_status=="paid":
@@ -4993,7 +5013,7 @@ def admin_package_purchase_mark_paid(purchase_id):
     now=datetime.now().isoformat(); con.execute("UPDATE student_packages SET paid_amount=price,payment_status='paid',paid_at=? WHERE id=?",(now,purchase_id))
     con.execute("INSERT INTO student_payments(student_id,purchase_id,amount,payment_date,method,note,created_at) VALUES(?,?,?,?,?,?,?)",(purchase["student_id"],purchase_id,balance,datetime.now().date().isoformat(),"manual","Mark paid",now))
     purchase=con.execute("SELECT * FROM student_packages WHERE id=?",(purchase_id,)).fetchone()
-    if (purchase["package_type"] or "lesson")=="lesson" and int(purchase["credits_activated"] or 0)==0: _activate_student_purchase(con,purchase,"Full payment")
+    if (purchase["package_type"] or "lesson") in ("lesson","group_2p","group_3p") and int(purchase["credits_activated"] or 0)==0: _activate_student_purchase(con,purchase,"Full payment")
     if (purchase["package_type"] or "lesson")=="crew":
         vf=purchase["valid_from"]; vu=purchase["valid_until"]
         if not vf or not vu:
@@ -5512,6 +5532,30 @@ def instructor_no_show(booking_id):
     return redirect(url_for("instructor_lesson",booking_id=booking_id))
 
 
+def _adjust_group_member_actual(con, booking, sid, actual):
+    """One completed group member: reconcile reserved credit OR individual debt."""
+    booked=float(booking["duration"] or 1)
+    delta=round(booked-actual,2)
+    if delta<=0: return
+    bp=con.execute("SELECT * FROM booking_participants WHERE booking_id=? AND student_id=?",(booking["id"],sid)).fetchone()
+    if not bp: return
+    credit=float(bp["credit_charged"] or 0)
+    if credit>=delta-1e-8:
+        con.execute("UPDATE students SET credits=credits+? WHERE user_id=?",(delta,sid))
+        con.execute("UPDATE booking_participants SET credit_charged=credit_charged-? WHERE booking_id=? AND student_id=?",(delta,booking["id"],sid))
+        con.execute("INSERT INTO credit_ledger(student_id,booking_id,amount,kind,note,created_at) VALUES(?,?,?,?,?,?)",(sid,booking["id"],delta,"duration_adjustment","Group actual duration adjustment",datetime.now().isoformat()))
+        _refund_package_hours(con,sid,booking["id"],delta)
+    elif credit<=0:
+        kind=_booking_kind(con,booking["id"])
+        price=GROUP_RATES[kind][actual]
+        debt=con.execute("SELECT * FROM lesson_debts WHERE booking_id=? AND student_id=?",(booking["id"],sid)).fetchone()
+        if debt:
+            paid=float(debt["paid_amount"] or 0)
+            note=f" | Group actual {actual:g}h; " + (f"overpaid {paid-price:.2f} EUR; admin review" if paid>price else "adjusted price")
+            con.execute("UPDATE lesson_debts SET original_price=?,price=?,note=COALESCE(note,'') || ? WHERE id=?",(price,price,note,debt["id"]))
+            con.execute("UPDATE booking_participants SET amount=? WHERE booking_id=? AND student_id=?",(price,booking["id"],sid))
+
+
 @app.post("/instructor/group-complete/<int:booking_id>")
 def complete_group(booking_id):
     u=current_user()
@@ -5534,6 +5578,12 @@ def complete_group(booking_id):
         con.rollback(); con.close(); flash("Το group μάθημα έχει ήδη κλείσει.")
         return redirect(url_for("instructor_lesson",booking_id=booking_id))
 
+    try: actual=float(request.form.get("actual_duration","0"))
+    except (ValueError,TypeError): actual=0.
+    booked=float(b["duration"] or 1)
+    if actual not in ((1.,) if booked==1 else (1.,1.5,2.)):
+        con.rollback();con.close();flash("Επίλεξε έγκυρη πραγματική διάρκεια ομαδικού μαθήματος.")
+        return redirect(url_for("instructor_complete_lesson",booking_id=booking_id))
     valid={"completed","makeup","no_show"}; now=datetime.now().isoformat(); results=[]; any_completed=False
     for person in participants:
         sid=int(person["student_id"])
@@ -5557,6 +5607,8 @@ def complete_group(booking_id):
         """,(status,now,skill or None,notes or None,booking_id,sid))
         # v52: Make-up does not consume the lesson hour. Return only this member's
         # already-reserved credit/package hour so it can be used later for Private or Group.
+        if status=="completed":
+            _adjust_group_member_actual(con,b,sid,actual)
         if status=="makeup":
             makeup_refunded += _refund_one_booking_participant(
                 con,booking_id,sid,"makeup_refund","Make-up hour returned"
@@ -5567,12 +5619,12 @@ def complete_group(booking_id):
     common_skill=next((skill for _,status,skill,_,_ in results if status=="completed" and skill),None)
     common_notes=" | ".join(f"{person['name']}: {notes}" for _,_,_,notes,person in results if notes) or None
     con.execute("""
-      UPDATE bookings SET status=?,completed_at=?,no_show_at=?,next_skill=?,instructor_notes=? WHERE id=?
-    """,(overall_status,now if any_completed else None,None if any_completed else now,common_skill,common_notes,booking_id))
+      UPDATE bookings SET status=?,completed_at=?,no_show_at=?,next_skill=?,instructor_notes=?,actual_duration=? WHERE id=?
+    """,(overall_status,now if any_completed else None,None if any_completed else now,common_skill,common_notes,actual if any_completed else None,booking_id))
 
     already=con.execute("SELECT id FROM instructor_hours WHERE instructor_id=? AND booking_id=? LIMIT 1",(u["id"],booking_id)).fetchone()
     if any_completed and not already:
-        worked=_unlogged_instructor_hours_for_booking(con,u["id"],booking_id)
+        worked=min(actual,_unlogged_instructor_hours_for_booking(con,u["id"],booking_id))
         if worked>0:
             con.execute("""
               INSERT INTO instructor_hours(instructor_id,booking_id,hours,lesson_date,created_at)
@@ -5588,7 +5640,7 @@ def complete_group(booking_id):
         con.execute("UPDATE slots SET status='booked' WHERE id=?",(r["slot_id"],))
     lesson_date=b["lesson_date"]
     detail_items=[f"{sid}:{status}" for sid,status,_,_,_ in results]
-    log_booking_audit(con,booking_id,"attendance","Ο instructor ολοκλήρωσε την καταχώρηση παρουσίας group.",u["id"],u["role"],"; ".join(detail_items))
+    log_booking_audit(con,booking_id,"attendance","Ο instructor ολοκλήρωσε την καταχώρηση παρουσίας group.",u["id"],u["role"],f"actual={actual:g}h; " + "; ".join(detail_items))
     con.commit(); con.close()
 
     for email,name,skill,skill_notes,video_url in mail_jobs:

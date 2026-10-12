@@ -17,7 +17,7 @@
         <h2>Νέο πακέτο</h2>
         <form method="post" action="{{url_for('admin_package_create')}}" class="pack-form"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
           <div><label>Όνομα</label><input name="name" placeholder="π.χ. Beginner 6h / Crew Member" required></div>
-          <div><label>Τύπος</label><select name="package_type" id="packageType"><option value="lesson">Μαθήματα</option><option value="crew">Crew Member</option></select></div>
+          <div><label>Τύπος</label><select name="package_type" id="packageType"><option value="lesson">Ατομικό 1P</option><option value="group_2p">Ομαδικό 2P</option><option value="group_3p">Ομαδικό 3P</option><option value="crew">Crew Member</option></select></div>
           <div><label>Ώρες</label><input id="packageHours" type="number" name="hours" step="0.5" min="0" value="6"></div>
           <div><label>Τιμή €</label><input type="number" name="price" step="0.01" min="0" required></div>
           <button class="btn" type="submit">Δημιουργία</button>
@@ -25,7 +25,7 @@
       </div>
       <div class="card">
         <h2>Πώς λειτουργεί</h2>
-        <div class="muted"><b>Πακέτο μαθημάτων:</b> Paid → προστίθενται αυτόματα ώρες στα credits. <br><b>Crew Member:</b> δεν προσθέτει ώρες και ενεργοποιεί membership για τη σταθερή season Μάιος → Απρίλιος. Pending → ενεργοποιείται όταν πατήσεις Mark paid.</div>
+        <div class="muted"><b>Πακέτο μαθημάτων:</b> Αγορά πακέτου 1P, 2P ή 3P → προστίθενται αμέσως ώρες στο κοινό υπόλοιπο credits, ανεξάρτητα από την πληρωμή. <br><b>Crew Member:</b> δεν προσθέτει ώρες και ενεργοποιεί membership για τη σταθερή season Μάιος → Απρίλιος. Pending → ενεργοποιείται όταν πατήσεις Mark paid.</div>
       </div>
     </div>
 

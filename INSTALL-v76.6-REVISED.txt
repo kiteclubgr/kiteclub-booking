@@ -1,0 +1,19 @@
+KiteClub v76.6 · Group Packages & Shared Credits (REVISED)
+BASE: verified v76.5.4. Do not use the cancelled v76.6 split-credit patch.
+Files to replace in GitHub:
+  app.py
+  templates/instructor_complete.html
+  templates/admin_packages.html
+Do not upload/change any live SQLite database. Back up Railway persistent volume before deploying.
+
+Pricing per student: 1P 60/90/110 EUR, 2P 40/60/80 EUR, 3P 30/45/55 EUR for 1/1.5/2 hours.
+New catalog packages: 2P 8h 260 EUR; 3P 8h 190 EUR; legacy 1P 8h 360 EUR unchanged.
+All lesson package purchases activate the SAME shared credits balance even when unpaid; financial records remain per student.
+Group completion 1/1.5/2h reconciles each Completed participant separately, leaves Make-up refund and No-show rules, and records one instructor work duration per booking.
+
+IMPORTANT:
+- No runtime Flask/browser QA completed in this environment; run Work in staging, or backed-up production only with QA users.
+- Existing #67/#68 created under v76.5.4 retain their historical original 110 EUR per-student debts until manually adjusted; do not silently overwrite historical finances. New 2P/3P group bookings price correctly.
+- A shared credit pool permits usage of cheaper group package credits for individual lessons. Admin supervises policy by agreement.
+- Manual makeup price difference is an ADMIN operational workflow, not automated in this patch.
+- Verify zero-impact on existing payment history and previously completed bookings.

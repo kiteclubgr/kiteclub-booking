@@ -16,6 +16,14 @@
 
   {% if participants|length > 1 %}
   <form method="post" action="{{url_for('complete_group',booking_id=lesson.id)}}" onsubmit="return confirm('Να αποθηκευτεί η παρουσία για όλα τα μέλη του group;');"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+    <div style="padding:16px;margin:14px 0;background:#eef8ff;border:2px solid #168fd0;border-radius:12px">
+      <label for="groupActualDuration"><b>Πραγματική διάρκεια κοινής διδασκαλίας</b></label>
+      <select id="groupActualDuration" name="actual_duration" required style="display:block;margin-top:8px;padding:11px;width:100%;max-width:350px">
+        <option value="1" {{'selected' if lesson.duration|float == 1 else ''}}>1 ώρα</option>
+        {% if lesson.duration|float >= 2 %}<option value="1.5">1,5 ώρα</option><option value="2" selected>2 ώρες</option>{% endif %}
+      </select>
+      <div class="muted">Μία διάρκεια για όλα τα Completed μέλη. Οι αρχικές θέσεις παραμένουν δεσμευμένες.</div>
+    </div>
     <div class="group-attendance">
       {% for p in participants %}
       <div class="participant-card">
