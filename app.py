@@ -10,7 +10,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from pathlib import Path
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "KiteClub v76.5.3 · Daily Pay Display Fix"
+APP_VERSION = "KiteClub v76.5.4 · Student Profile Fix"
 
 # v70: production-ready storage. Locally everything stays inside the project.
 # On Railway mount a persistent volume at /data and set DATA_DIR=/data.
@@ -3928,7 +3928,7 @@ def admin_student_profile(student_id):
     """,(student_id,)).fetchall()
 
     completed_report=con.execute("""
-      SELECT b.id,b.duration,COALESCE(bp.participant_next_skill,b.next_skill) next_skill,
+      SELECT b.id,b.duration,b.actual_duration,COALESCE(bp.participant_next_skill,b.next_skill) next_skill,
              COALESCE(bp.attendance_at,b.completed_at) completed_at,
              sl.lesson_date,sl.start_time,
              ins.name instructor,ins.surname instructor_surname,

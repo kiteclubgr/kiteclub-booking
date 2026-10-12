@@ -1,5 +1,24 @@
-KiteClub v76.5.3 — Daily Pay Display Fix
+KiteClub v76.5.4 — Student Profile Fix
 
-Apply on top of v76.5.2. Replace app.py and templates/instructor.html preserving folders. Restart Flask or wait for Railway deploy. No database changes.
+Base version: v76.5.3 (Daily Pay Display Fix)
 
-QA: Instructor Angelos, date 08/10/2026: 1.5h / 22.50 EUR, week 67.50 EUR, Admin Reports 5.5h / 82.50 EUR for 01-12/10. Existing HTTP 500 is out of scope.
+GitHub installation:
+1. Replace ONLY root app.py with this ZIP's app.py.
+2. Commit and wait for Railway deploy. Do not upload ZIP itself as a single file.
+3. Do NOT replace, migrate, delete, or reset your database/volume.
+
+Fix:
+The admin_student_profile completed_report SELECT now includes bookings.actual_duration.
+Previously completed_hours accessed sqlite3.Row["actual_duration"] without that SELECT column,
+causing IndexError: No item with that key (HTTP 500) on completed student profiles.
+Old completed rows with NULL actual_duration use the original bookings.duration.
+No changes to credits, payments, bookings, or instructor compensation.
+
+QA:
+- Open /admin/students/21 and /admin/students/23; both should load without 500.
+- Verify each completed 2h lesson actually taught for 1.5h contributes 1.5h.
+- Check a demo student with no completed lessons and a legacy completed lesson.
+- Confirm Finance/Reports, instructor payouts, credits unchanged.
+
+Validation: Python syntax PASS; isolated sqlite Row SELECT & fallback PASS; ZIP integrity PASS.
+No full Railway/browser test has been performed.
