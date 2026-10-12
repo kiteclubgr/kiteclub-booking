@@ -1,0 +1,37 @@
+KiteClub v76.5 · Flexible Lesson Duration — LOCAL QA PATCH
+
+Apply on KiteClub v76.4. Replace:
+  app.py
+  templates/instructor_complete.html
+
+DO NOT deploy to Railway before browser QA and backup. Existing SQLite data is preserved;
+startup adds nullable bookings.actual_duration.
+
+Features:
+- Admin adds 12-13 and 13-14: private 1h bookings auto-merge into one 2h booking.
+- Same student/date/instructor/spot. Reverse order supported. Only active private lessons.
+- No merging booking containing historical lesson payments; no group merging.
+- Instructor completion: single-student booking, actual duration 1/1.5/2 hours.
+- Scheduled occupancy remains unchanged (2h remains reserved).
+- 2h paid by credits, completed 1.5h: return 0.5 credit and package usage.
+- 2h unpaid, completed 1.5h: price becomes 90 EUR.
+- Instructor work logged at actual hours; 15 EUR/h => 22.50 EUR for 1.5h.
+- Already received lesson payments are never erased; if overpaid, debt notes
+  require separate Admin refund/credit handling.
+
+IMPORTANT LIMITATIONS FOR QA:
+- Group completion still uses its existing flow. Actual duration adjustment currently
+  applies only to private/single-participant lessons.
+- Paid adjacent lessons are deliberately not auto-merged to preserve payment histories.
+- Reports derived from reserved physical slots may continue to show scheduled 2h,
+  whereas instructor_hours uses actual 1.5h. Verify all report widgets before live deploy.
+- SQLite unit smoke tests PASS; no Flask/browser QA yet.
+
+Recommended QA:
+  1) Two adjacent 1h unpaid in both orders -> one booking, 2h, 110 EUR debt.
+  2) Two adjacent credit hours -> one booking, 2 credit charge.
+  3) A single credit remaining -> one 110 EUR unpaid booking, credit returned.
+  4) Complete 2h credit lesson as 1.5h -> 0.5 credit returned once.
+  5) Complete unpaid 2h as 1.5h -> debt 90 EUR, slots 2h reserved.
+  6) Instructor pay uses 1.5h; check Finance, Reports and student credits.
+  7) Regression shared lessons/credits/paid history.
