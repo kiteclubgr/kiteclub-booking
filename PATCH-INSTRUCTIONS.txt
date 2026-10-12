@@ -1,22 +1,7 @@
-KiteClub v75.2 — Credits Fix v13
+KiteClub v76.5.2 — Duration Reports Fix
 
-Base: Finance & Student Fix v12. Replace ONLY app.py.
-Database is not included; never overwrite your live DB.
-
-Changes:
-- New lesson package purchases activate all credits immediately regardless of Paid/Unpaid.
-- The initial lesson service for a newly-created student also activates immediately.
-- Crew Membership purchase/payment behavior is unchanged.
-- Payment installment and settlement code is unchanged.
-- Version label updated on all portals via APP_VERSION.
-
-Existing unpaid purchases are NOT automatically modified on startup.
-Repair them separately using repair_existing_credits_v13.py:
-1) Back up your Railway volume and take a DB snapshot (or download safely).
-2) Inspect: python repair_existing_credits_v13.py --db PATH --student-id 16
-3) Verify exact purchase IDs and eligibility; do not assume they are consecutive.
-4) Only when verified run with --purchase-ids ID1,ID2 --apply.
-   Script creates a .bak snapshot before modification and protects against second application.
-
-IMPORTANT: Do NOT upload the repair script as a public web route or run it automatically at startup.
-Test on a copy of the database first. A user_id must be confirmed from the live DB; STU-0012 is not necessarily user_id=12.
+Apply to existing v76.5.1: replace app.py and templates/admin_reports.html.
+No SQLite database included; no schema changes.
+Changes: Admin Reports Completed instructor hours/pay derived from actual_duration, preserving reserved booking hours and avoiding student double count; Instructor student completed summary uses actual_duration.
+HTTP 500 on Admin student profiles deliberately NOT addressed in this patch.
+QA locally before deploy. No browser integration test executed.

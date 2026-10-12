@@ -10,7 +10,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from pathlib import Path
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "KiteClub v76.5.1 · Instructor Duration Fix"
+APP_VERSION = "KiteClub v76.5.2 · Duration Reports Fix"
 
 # v70: production-ready storage. Locally everything stays inside the project.
 # On Railway mount a persistent volume at /data and set DATA_DIR=/data.
@@ -4387,7 +4387,7 @@ def admin_reports():
     # are two student-hours but only one instructor-hour. Multi-hour bookings use
     # booking_slots (the authoritative occupied slots), including their second hour.
     occupied=con.execute("""
-      SELECT DISTINCT b.id booking_id,b.status booking_status,b.duration booking_duration,
+      SELECT DISTINCT b.id booking_id,b.status booking_status,b.duration booking_duration,b.actual_duration,
              occ.id slot_id,occ.lesson_date,occ.start_time,occ.duration slot_duration,
              occ.instructor_id,bp.student_id,
              COALESCE(bp.attendance_status,b.status) attendance_status,
@@ -4418,6 +4418,7 @@ def admin_reports():
     physical_slots={}
     instructor_intervals={}
     completed_intervals={}
+    completed_bookings={}
     for r in occupied:
         start_min=time_minutes(r['start_time'])
         end_min=start_min+int(round(float(r['slot_duration'] or 1)*60))
@@ -4426,13 +4427,26 @@ def admin_reports():
         instructor_intervals.setdefault(key,set()).add(interval)
         completed=(r['attendance_status']=='completed')
         if completed:
-            completed_intervals.setdefault(key,set()).add(interval)
+            # Collect each physical lesson only once, even for shared students
+            # or multiple booking_slots. Completed teaching time is actual_duration;
+            # booked slots remain unchanged for scheduling statistics.
+            booking_key=(r['booking_id'],r['instructor_id'],r['lesson_date'])
+            teaching=completed_bookings.setdefault(booking_key,{
+                'start':start_min,
+                'minutes':int(round(float(r['actual_duration'] if r['actual_duration'] is not None else r['booking_duration'] or 1)*60))
+            })
+            teaching['start']=min(teaching['start'],start_min)
         slot=physical_slots.setdefault((key,r['slot_id']),{
             'lesson_date':r['lesson_date'],'duration':float(r['slot_duration'] or 1),
             'students':set(),'types':set(),'completed':False})
         slot['students'].add(r['student_id'])
         slot['types'].add(r['lesson_type'])
         slot['completed'] |= completed
+
+    for (booking_id,instructor_id,lesson_date),teaching in completed_bookings.items():
+        start=teaching['start']
+        completed_intervals.setdefault((instructor_id,lesson_date),set()).add(
+            (start,start+teaching['minutes']))
 
     booked_hours=sum(merged_minutes(v) for v in instructor_intervals.values())/60.0
     completed_hours=sum(merged_minutes(v) for v in completed_intervals.values())/60.0
@@ -5327,7 +5341,8 @@ def instructor_student_detail(student_id):
     history=[dict(r, status=(r["participant_status"] or r["status"]),
                   next_skill=(r["participant_next_skill"] or r["next_skill"]),
                   instructor_notes=(r["participant_notes"] or r["instructor_notes"])) for r in history]
-    completed_hours=sum(float(r["duration"] or 0) for r in history if r["status"]=="completed")
+    completed_hours=sum(float(r["actual_duration"] if r["actual_duration"] is not None else r["duration"] or 0)
+                        for r in history if r["status"]=="completed")
     no_show_hours=sum(float(r["duration"] or 0) for r in history if r["status"]=="no_show")
     no_show_count=sum(1 for r in history if r["status"]=="no_show")
     makeup_hours=sum(float(r["duration"] or 0) for r in history if r["status"]=="makeup")

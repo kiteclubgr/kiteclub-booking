@@ -17,7 +17,7 @@
 
     <div class="report-grid">
       <div class="report-card"><span>Booked ώρες</span><b>{{summary.booked_hours|int}}</b></div>
-      <div class="report-card"><span>Completed ώρες</span><b>{{summary.completed_hours|int}}</b></div>
+      <div class="report-card"><span>Completed ώρες</span><b>{{"%g"|format(summary.completed_hours)}}</b></div>
       <div class="report-card"><span>Shared / Group ώρες</span><b>{{summary.shared_hours|int}}</b></div>
       <div class="report-card"><span>Ενεργοί μαθητές</span><b>{{summary.active_students}}</b></div>
       <div class="report-card"><span>No-show μαθητές</span><b>{{summary.no_show}}</b></div>
