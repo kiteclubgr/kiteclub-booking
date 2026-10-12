@@ -10,7 +10,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from pathlib import Path
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "KiteClub v76.6 · Group Packages & Shared Credits"
+APP_VERSION = "KiteClub v76.6.1 · Credit-Only Bookings & Group Fixes"
 
 # v70: production-ready storage. Locally everything stays inside the project.
 # On Railway mount a persistent volume at /data and set DATA_DIR=/data.
@@ -571,7 +571,7 @@ def init_db():
       )
     """)
     # v62 standard services for new students.
-    standard_services=[("1 ώρα",1.0,60.0,"immediate"),("2 ώρες",2.0,110.0,"immediate"),("Πακέτο 8 ωρών",8.0,360.0,"first_payment")]
+    standard_services=[("1 ώρα",1.0,60.0,"immediate"),("2 ώρες",2.0,110.0,"immediate"),("Πακέτο 8 ωρών",8.0,380.0,"first_payment")]
     for pname,phours,pprice,rule in standard_services:
         row=con.execute("SELECT id FROM packages WHERE COALESCE(package_type,'lesson')='lesson' AND hours=? AND price=? LIMIT 1",(phours,pprice)).fetchone()
         if row:
@@ -579,11 +579,23 @@ def init_db():
         else:
             con.execute("INSERT INTO packages(name,hours,price,active,created_at,package_type,activation_rule) VALUES(?,?,?,?,?,?,?)",(pname,phours,pprice,1,datetime.now().isoformat(),"lesson",rule))
 
-    # v76.6 revised: 2P/3P catalog is idempotent and shares standard lesson credits.
-    for kind,name,price in (("group_2p","2P · Πακέτο 8 ωρών",260.0),("group_3p","3P · Πακέτο 8 ωρών",190.0)):
-        exists=con.execute("SELECT id FROM packages WHERE package_type=? AND hours=8 AND price=? LIMIT 1",(kind,price)).fetchone()
+    # v76.6.1: idempotent catalog. Retire old LISTING prices; existing
+    # student purchase snapshots and payments are never changed.
+    con.execute("UPDATE packages SET active=0 WHERE COALESCE(package_type,'lesson')='lesson' AND hours=8 AND price=360")
+    for kind,hours,name,price in (
+        ("group_2p",1.,"2P · 1 ώρα",40.),
+        ("group_2p",2.,"2P · 2 ώρες",80.),
+        ("group_2p",8.,"2P · Πακέτο 8 ωρών",280.),
+        ("group_3p",1.,"3P · 1 ώρα",30.),
+        ("group_3p",2.,"3P · 2 ώρες",55.),
+        ("group_3p",8.,"3P · Πακέτο 8 ωρών",190.),
+    ):
+        exists=con.execute("SELECT id FROM packages WHERE package_type=? AND hours=? AND price=? LIMIT 1",(kind,hours,price)).fetchone()
         if not exists:
-            con.execute("INSERT INTO packages(name,hours,price,active,created_at,package_type,activation_rule) VALUES(?,?,?,?,?,?,?)",(name,8.,price,1,datetime.now().isoformat(),kind,"immediate"))
+            con.execute("INSERT INTO packages(name,hours,price,active,created_at,package_type,activation_rule) VALUES(?,?,?,?,?,?,?)",(name,hours,price,1,datetime.now().isoformat(),kind,"immediate"))
+        else:
+            con.execute("UPDATE packages SET active=1,activation_rule='immediate' WHERE id=?",(exists["id"],))
+    con.execute("UPDATE packages SET active=0 WHERE package_type='group_2p' AND hours=8 AND price=260")
     # v64: lesson-photo gallery per student.
     con.execute("""
       CREATE TABLE IF NOT EXISTS student_photos(
@@ -964,9 +976,29 @@ def _booking_kind(con,booking_id):
     return kind if kind in GROUP_RATES else "private"
 
 
+def _require_booking_credits(con, participant_ids, duration, refundable_booking_id=None):
+    """Verify every participant has enough shared hours; includes refundable hours on edit."""
+    for sid in participant_ids:
+        record=con.execute("SELECT credits FROM students WHERE user_id=?",(sid,)).fetchone()
+        available=float(record["credits"] or 0) if record else 0.0
+        if refundable_booking_id is not None:
+            booked=con.execute("SELECT credit_charged FROM booking_participants WHERE booking_id=? AND student_id=?",(refundable_booking_id,sid)).fetchone()
+            available+=float(booked["credit_charged"] or 0) if booked else 0.0
+        if available+1e-8<float(duration):
+            person=con.execute("SELECT name,surname FROM users WHERE id=?",(sid,)).fetchone()
+            name=" ".join(str(person[k] or "").strip() for k in ("name","surname")).strip() if person else str(sid)
+            return f"Ο/Η {name} χρειάζεται {duration:g} credits πριν γίνει η κράτηση (διαθέσιμα: {available:g})."
+    return None
+
+
 def _charge_booking_participants(con, booking_id, participant_ids, duration, force_pending=False, note_prefix="Booking reservation"):
     """Charge each group member independently while the instructor slot is reserved only once."""
     duration=float(duration or 1)
+    if force_pending:
+        raise ValueError("New bookings require credits; pending payment is not a booking option")
+    missing=_require_booking_credits(con,participant_ids,duration)
+    if missing:
+        raise ValueError(missing)
     kind=_booking_kind(con,booking_id)
     any_pending=False
     total_pending=0.0
@@ -1029,25 +1061,15 @@ def _merge_adjacent_admin_lesson(con, slot, student_id, actor):
         if con.execute("SELECT 1 FROM lesson_payments lp JOIN lesson_debts d ON d.id=lp.debt_id WHERE d.booking_id=? LIMIT 1",(bid,)).fetchone():continue
         person=persons[0]
         mode=person["payment_status"]
-        if mode not in ("credit","pending"):continue
-        if mode=="credit" and float(person["credit_charged"] or 0)!=1:continue
+        if mode!="credit":continue
+        if float(person["credit_charged"] or 0)!=1:continue
         if mode=="pending" and float(person["credit_charged"] or 0)!=0:continue
-        if mode=="credit" and float(student["credits"] or 0)>=1:
+        if float(student["credits"] or 0)<1:continue
+        if mode=="credit":
             con.execute("UPDATE students SET credits=credits-1 WHERE user_id=?",(student_id,))
             con.execute("INSERT INTO credit_ledger(student_id,booking_id,amount,kind,note,created_at) VALUES(?,?,?,?,?,?)",(student_id,bid,-1,"reserve","Auto-merge second hour",datetime.now().isoformat()))
             _consume_package_hours(con,student_id,bid,1)
             con.execute("UPDATE booking_participants SET credit_charged=2 WHERE booking_id=? AND student_id=?",(bid,student_id))
-        else:
-            if mode=="credit":
-                # Insufficient credit for both hours: restore the first hour and
-                # convert the entire merged 2h lesson to one unpaid 110 EUR debt.
-                _refund_booking_participants(con,bid,"merge_credit_refund","Credit returned before 2h pending conversion")
-                mode="pending"
-                con.execute("UPDATE booking_participants SET payment_status='pending' WHERE booking_id=? AND student_id=?",(bid,student_id))
-            con.execute("UPDATE booking_participants SET amount=110 WHERE booking_id=? AND student_id=?",(bid,student_id))
-            con.execute("""INSERT INTO lesson_debts(booking_id,student_id,original_price,price,created_at)
-                VALUES(?,?,?,?,?) ON CONFLICT(booking_id,student_id)
-                DO UPDATE SET original_price=110,price=110""",(bid,student_id,110,110,datetime.now().isoformat()))
         earlier=slot if slot["start_time"]<old["start_time"] else old
         con.execute("UPDATE bookings SET slot_id=?,duration=2,amount=?,status=?,payment_status=? WHERE id=?",
                     (slot["id"] if slot["start_time"]<old["start_time"] else old["existing_slot_id"],
@@ -2108,6 +2130,11 @@ def book(slot_id):
     if len(participant_ids)!=expected:
         con.rollback(); con.close()
         flash("Το group σου δεν είναι σωστά ρυθμισμένο. Επικοινώνησε με τη σχολή.")
+        return redirect(url_for("student",date=slot["lesson_date"]))
+
+    missing=_require_booking_credits(con,participant_ids,duration)
+    if missing:
+        con.rollback(); con.close(); flash(missing)
         return redirect(url_for("student",date=slot["lesson_date"]))
 
     # Need contiguous slot if 2h.
@@ -3201,6 +3228,11 @@ def admin_book_student(slot_id):
         con.rollback(); con.close(); flash("Το group του μαθητή δεν είναι σωστά ρυθμισμένο.")
         return redirect(url_for("admin",date=slot["lesson_date"])+"#day")
 
+    missing=_require_booking_credits(con,participant_ids,1.0)
+    if missing:
+        con.rollback(); con.close(); flash(missing)
+        return redirect(url_for("admin",date=slot["lesson_date"])+"#day")
+
     # Count unique people already assigned to this exact slot.
     existing_ids=set()
     for ab in active_bookings:
@@ -3239,6 +3271,7 @@ def admin_book_student(slot_id):
     # a second financial/booking record. All checks occur under BEGIN IMMEDIATE.
     merged_id=None
     if len(participant_ids)==1 and not existing_ids:
+        # Existing adjacent 1h is already reserved. The new slot needs an extra credit.
         merged_id=_merge_adjacent_admin_lesson(con,slot,student_id,u)
     if merged_id:
         con.commit();con.close()
@@ -3387,6 +3420,10 @@ def admin_edit_booking(booking_id):
     old_participants=_booking_participants(con,booking_id)
     old_participant_ids=[r["student_id"] for r in old_participants] or [b["student_id"]]
     old_duration=float(b["duration"] or 1)
+    missing=_require_booking_credits(con,new_participant_ids,duration,refundable_booking_id=booking_id)
+    if missing:
+        con.rollback(); con.close(); flash(missing)
+        return _admin_booking_action_redirect(lesson_date)
     same_people=set(old_participant_ids)==set(new_participant_ids)
     same_payment_state=((desired=="booked" and b["status"]=="confirmed") or (desired=="pending" and b["status"]=="pending_payment"))
     preserve_payment=same_people and old_duration==duration and same_payment_state and _booking_kind(con,booking_id)==(student["lesson_type"] or "private").lower()
@@ -3396,14 +3433,12 @@ def admin_edit_booking(booking_id):
     else:
         _refund_booking_participants(con,booking_id,"admin_booking_edit_refund","Credit returned before editing booking")
         con.execute("DELETE FROM booking_participants WHERE booking_id=?",(booking_id,))
-        force_pending=(desired=="pending") or (b["payment_status"]=="paid" and (not same_people or old_duration!=duration))
+        force_pending=False  # Credit-only policy: editing must reserve available credits.
         con.execute("UPDATE bookings SET group_lesson_type=? WHERE id=?",((student["lesson_type"] or "private").lower(),booking_id))
         new_status,new_payment,new_amount=_charge_booking_participants(
             con,booking_id,new_participant_ids,duration,force_pending=force_pending,
             note_prefix="Credit reserved after editing booking"
         )
-        if desired=="pending":
-            new_status="pending_payment"; new_payment="pending"
 
     for sid in old_slot_ids-target_ids:
         con.execute("UPDATE slots SET status='open' WHERE id=?",(sid,))
@@ -3424,6 +3459,8 @@ def admin_edit_booking(booking_id):
     for bp in con.execute("SELECT * FROM booking_participants WHERE booking_id=?",(booking_id,)).fetchall():
         debt=con.execute("SELECT * FROM lesson_debts WHERE booking_id=? AND student_id=?",(booking_id,bp["student_id"])).fetchone()
         if not debt: continue
+        if bp["payment_status"]=="credit" and float(debt["paid_amount"] or 0)==0:
+            con.execute("UPDATE lesson_debts SET price=0 WHERE id=?",(debt["id"],))
         if bp["payment_status"]=="pending":
             updated_price=round(float(bp["amount"] or 0),2)
             if updated_price>0:
@@ -3724,16 +3761,15 @@ def admin_instructor_profile(instructor_id):
     completed_report=[r for r in booking_report if r["status"]=="completed"]
     no_show_report=[r for r in booking_report if r["status"]=="no_show"]
 
-    # Group hours: count instructor workload once per occupied slot, even with multiple participants.
+    # Group workload from the authoritative instructor_hours ledger; actual 1.5h,
+    # never a scheduled 2h and never multiplied by participant count.
     group_hours=float(con.execute("""
-      SELECT COALESCE(SUM(x.duration),0) h FROM (
-        SELECT sl.id, MAX(COALESCE(b.duration,1)) duration
-        FROM slots sl JOIN bookings b ON b.slot_id=sl.id
-        WHERE sl.instructor_id=? AND sl.lesson_date BETWEEN ? AND ?
-          AND b.status='completed'
-          AND (SELECT COUNT(*) FROM booking_participants bp WHERE bp.booking_id=b.id)>1
-        GROUP BY sl.id
-      ) x
+      SELECT COALESCE(SUM(ih.hours),0) h
+      FROM instructor_hours ih JOIN bookings b ON b.id=ih.booking_id
+      WHERE ih.instructor_id=? AND ih.lesson_date BETWEEN ? AND ?
+        AND b.status='completed'
+        AND (COALESCE(b.group_lesson_type,'private') IN ('2p','3p')
+          OR (SELECT COUNT(*) FROM booking_participants bp WHERE bp.booking_id=b.id)>1)
     """,(instructor_id,pfrom,pto)).fetchone()["h"] or 0)
     no_show_hours=float(con.execute("""
       SELECT COALESCE(SUM(x.duration),0) h FROM (
