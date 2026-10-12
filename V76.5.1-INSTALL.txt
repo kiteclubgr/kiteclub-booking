@@ -1,0 +1,16 @@
+KiteClub v76.5.1 — Instructor Duration Fix
+
+ΑΙΤΙΑ: Το live screenshot της /instructor/lesson/53/complete δείχνει το παλιό instructor_complete.html χωρίς πεδίο actual_duration. Η v76.5 είχε το πεδίο στο patch, αλλά πρέπει να αντικατασταθεί ΚΑΙ το αρχείο template στο GitHub.
+
+Ανέβασε και τα δύο αρχεία, διατηρώντας ΑΚΡΙΒΩΣ τις διαδρομές:
+  app.py
+  templates/instructor_complete.html
+
+Μη σβήσεις τον φάκελο templates και μην ανεβάσεις μόνο το app.py.
+Επανεκκίνηση/deploy Railway, ανανέωση browser Ctrl+F5.
+Άνοιξε δίωρο QA μάθημα: /instructor/lesson/53/complete.
+Πρέπει να φαίνεται πλαίσιο 'Πραγματική διάρκεια διδασκαλίας' με 1 ώρα, 1 ώρα και 30 λεπτά, 2 ώρες.
+ΜΗΝ πατήσεις Αποθήκευση για πραγματικό μάθημα προτού δοκιμαστεί σε QA κράτηση.
+
+Δεν περιλαμβάνει DB. Η λειτουργία αποθήκευσης actual_duration παραμένει στο app.py.
+Δεν έγινε live browser/Flask test: Python syntax, Jinja parse, zip integrity only.

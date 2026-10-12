@@ -88,6 +88,14 @@
           {% endfor %}
         </div>
       </div>
+      <div class="actual-duration-panel" style="margin:14px 0;padding:18px;border:2px solid #168fd0;border-radius:14px;background:#eef8ff;">
+        <label for="actualDuration"><b style="font-size:16px;">⏱ Πραγματική διάρκεια διδασκαλίας</b></label>
+        <select id="actualDuration" name="actual_duration" required style="display:block;width:100%;max-width:370px;padding:12px;margin-top:9px;font-size:16px;border:1px solid #168fd0;border-radius:10px;background:#fff;">
+          <option value="1" {% if lesson.duration|float == 1 %}selected{% endif %}>1 ώρα</option>
+          {% if lesson.duration|float >= 2 %}<option value="1.5">1 ώρα και 30 λεπτά</option><option value="2" selected>2 ώρες</option>{% endif %}
+        </select>
+        <p class="muted">Η αρχική κράτηση παραμένει δεσμευμένη στο πρόγραμμα. Επίλεξε πόσο διήρκεσε πράγματι το μάθημα. Για 1,5 ώρα καταναλώνονται 1,5 credits ή η χρέωση γίνεται 90€. Οι δύο ώρες παραμένουν δεσμευμένες στο πρόγραμμα.</p>
+      </div>
       <div><label><b>Σημειώσεις για τον μαθητή</b></label><textarea name="instructor_notes" placeholder="π.χ. Καλή πρόοδος στο Waterstart. Να συνεχίσει με Bodydrag Upwind...">{{lesson.instructor_notes or ''}}</textarea></div>
       <button class="btn im-save" type="submit">✓ Ολοκληρώθηκε — Αποθήκευση</button>
     </form>
