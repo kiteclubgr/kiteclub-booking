@@ -720,7 +720,7 @@
                             </div>
                           {% endfor %}
                         </div>
-                        <div class="tiny">{{h.spot}}</div><div class="kc-lesson-meta">{{b.duration|float}}h · {{b.booking_start_time|hm24}}</div>
+                        <div class="tiny">{{h.spot}}</div><div class="kc-lesson-meta">{{booking_list[0].duration|float}}h · {{booking_list[0].booking_start_time|hm24}}</div>
                         <button type="button" class="booking-edit-btn" onclick='openGroupedEditBooking({{ booking_list|map(attribute="booking_id")|list|tojson }})'>Επεξεργασία</button>
                       </div>
                     {% else %}
@@ -759,7 +759,7 @@
                   {% else %}
                     {% if s.status == 'closed' %}
                     <div class="cell cell-closed">
-                      <strong>Closed</strong><div class="tiny">{{h.spot}}</div><div class="kc-lesson-meta">{{b.duration|float}}h · {{b.booking_start_time|hm24}}</div>
+                      <strong>Closed</strong><div class="tiny">{{h.spot}}</div>
                       <form method="post" action="{{url_for('manual_slot_state',slot_id=s.id)}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                         <select class="status-select" name="status" data-current="{{s.status}}" onchange="handleSlotStatus(this, {{s.id}})">
                           <option value="open">Available</option>
@@ -772,7 +772,7 @@
                     </div>
                     {% elif s.status == 'booked' %}
                     <div class="cell cell-manual-booked">
-                      <strong>{{'Confirmed' if b.booking_status=='confirmed' else 'Booked'}}{% if b.payment_status=='pending' %} · Unpaid{% endif %}</strong><div class="tiny">{{h.spot}}</div><div class="kc-lesson-meta">{{b.duration|float}}h · {{b.booking_start_time|hm24}}</div>
+                      <strong>Booked</strong><div class="tiny">{{h.spot}}</div>
                       <button type="button" class="manual-book-link" onclick="openBookingModal({{s.id}})">+ Πρόσθεσε μαθητή</button>
                       <form method="post" action="{{url_for('manual_slot_state',slot_id=s.id)}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                         <select class="status-select" name="status" data-current="{{s.status}}" onchange="handleSlotStatus(this, {{s.id}})">
@@ -786,7 +786,7 @@
                     </div>
                     {% elif s.status == 'standby' %}
                     <div class="cell cell-empty">
-                      <strong>Standby</strong><div class="tiny">{{h.spot}}</div><div class="kc-lesson-meta">{{b.duration|float}}h · {{b.booking_start_time|hm24}}</div>
+                      <strong>Standby</strong><div class="tiny">{{h.spot}}</div>
                       <form method="post" action="{{url_for('manual_slot_state',slot_id=s.id)}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                         <select class="status-select" name="status" data-current="{{s.status}}" onchange="handleSlotStatus(this, {{s.id}})">
                           <option value="standby" selected>Standby (auto)</option>
@@ -799,7 +799,7 @@
                     </div>
                     {% elif s.status == 'pending_payment' %}
                     <div class="cell cell-manual-pending">
-                      <strong>Pending payment</strong><div class="tiny">{{h.spot}}</div><div class="kc-lesson-meta">{{b.duration|float}}h · {{b.booking_start_time|hm24}}</div>
+                      <strong>Pending payment</strong><div class="tiny">{{h.spot}}</div>
                       <form method="post" action="{{url_for('manual_slot_state',slot_id=s.id)}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                         <select class="status-select" name="status" data-current="{{s.status}}" onchange="handleSlotStatus(this, {{s.id}})">
                           <option value="open">Available</option>
@@ -813,7 +813,7 @@
                     {% else %}
                     <div class="cell cell-open">
                       <strong>Available</strong><div class="tiny">{{h.spot}}</div>
-                      <button type="button" class="manual-book-link kc-book-now" onclick="openBookingModal({{s.id}})">＋ Νέα κράτηση</button><div class="kc-lesson-meta">{{b.duration|float}}h · {{b.booking_start_time|hm24}}</div>
+                      <button type="button" class="manual-book-link kc-book-now" onclick="openBookingModal({{s.id}})">＋ Νέα κράτηση</button>
                       <form method="post" action="{{url_for('manual_slot_state',slot_id=s.id)}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                         <select class="status-select" name="status" data-current="{{s.status}}" onchange="handleSlotStatus(this, {{s.id}})">
                           <option value="open" selected>Available</option>
