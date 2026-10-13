@@ -7,7 +7,7 @@
   {% set instructor_nav='students' %}{% include '_instructor_sidebar.html' %}
   <main class="instructor-main">
     <div class="instructor-top"><strong>{{me.name if me else 'Instructor'}}</strong> · <a href="{{url_for('instructor')}}">Πρόγραμμα</a> · <a href="{{url_for('logout')}}">Logout</a></div>
-    <div class="instructor-content"><div class="ip-build-tag">Instructor layout v2</div>
+    <div class="instructor-content">
       <div class="ip-hero-banner"></div>
       <div class="ip-header">
         <div><h1>Οι μαθητές μου</h1><p>Αναζήτηση και γρήγορη πρόσβαση στους ενεργούς μαθητές σου.</p></div>

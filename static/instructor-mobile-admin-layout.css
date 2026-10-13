@@ -1,0 +1,74 @@
+/* Instructor mobile layout – visual-only Admin-inspired refinement. No booking logic. */
+@media (max-width: 760px) {
+  body.instructor-portal-body .im-topbar {display:grid;grid-template-columns:44px 1fr 44px;min-height:62px;padding:6px 13px;position:sticky;top:0;z-index:70;background:#fff;border-bottom:1px solid #dce8f1;box-sizing:border-box}
+  body.instructor-portal-body .im-logo img {height:48px}
+  body.instructor-portal-body .kc-im-mobile-menu {position:relative;justify-self:end;align-self:center}
+  body.instructor-portal-body .kc-im-mobile-menu > summary {display:flex;align-items:center;justify-content:center;width:42px;height:42px;list-style:none;cursor:pointer;font-size:25px;border:1px solid #d9e7f1;border-radius:12px;background:#f3f9fd;color:#0e416b}
+  body.instructor-portal-body .kc-im-mobile-menu > summary::-webkit-details-marker {display:none}
+  body.instructor-portal-body .kc-im-menu-panel {position:absolute;right:0;top:calc(100% + 9px);width:min(270px,calc(100vw - 26px));background:white;border:1px solid #d4e3ee;border-radius:15px;box-shadow:0 16px 38px rgba(12,45,75,.20);padding:7px;display:grid;gap:3px;z-index:80}
+  body.instructor-portal-body .kc-im-menu-panel a {display:block;padding:13px;text-decoration:none;color:#173b58;font-weight:750;border-radius:9px;font-size:14px}
+  body.instructor-portal-body .kc-im-menu-panel a:focus-visible,body.instructor-portal-body .kc-im-menu-panel a:hover {background:#eaf5fc;outline:0}
+  body.instructor-portal-body .kc-im-menu-panel .kc-im-menu-logout {background:#eff5fa;color:#ad3542;border-top:1px solid #e4ebef}
+  body.kc-instructor-schedule .instructor-main {padding:8px 10px 90px!important}
+  body.kc-instructor-schedule .ip-build-tag {display:none!important}
+  body.kc-instructor-schedule .ip-hero-banner {height:66px!important;border-radius:13px!important;background-position:center 49%;margin-bottom:8px;box-shadow:none}
+  body.kc-instructor-schedule .ip-header {display:flex;align-items:center;gap:8px;margin:8px 0 10px}
+  body.kc-instructor-schedule .ip-header h1 {font-size:23px!important;line-height:1.15}
+  body.kc-instructor-schedule .ip-header p {font-size:12px!important;line-height:1.4;margin-top:3px;font-weight:550}
+  body.kc-instructor-schedule .ip-profile-chip {margin:0;padding:5px 8px;border-radius:11px;gap:6px;box-shadow:none}
+  body.kc-instructor-schedule .ip-profile-chip .im-avatar {width:30px;height:30px;font-size:13px}
+  body.kc-instructor-schedule .ip-profile-chip strong {font-size:11px}
+  body.kc-instructor-schedule .ip-profile-chip small {display:none}
+  body.kc-instructor-schedule .ip-stats {display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:7px;margin-bottom:10px}
+  body.kc-instructor-schedule .ip-stat {min-width:0;padding:10px 7px;border-radius:13px;box-shadow:none}
+  body.kc-instructor-schedule .ip-stat .label {font-size:10px;line-height:1.3;min-height:25px}
+  body.kc-instructor-schedule .ip-stat b {font-size:22px;margin:5px 0 3px;overflow-wrap:anywhere}
+  body.kc-instructor-schedule .ip-stat .muted,body.kc-instructor-schedule .ip-stat .money {font-size:9px;line-height:1.3}
+  body.kc-instructor-schedule .ip-grid {display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:10px}
+  body.kc-instructor-schedule .ip-panel {min-width:0;padding:12px!important;border-radius:14px;box-shadow:none;margin:0}
+  body.kc-instructor-schedule .ip-panel .head h2 {font-size:17px}
+  body.kc-instructor-schedule .im-week {display:grid!important;grid-auto-flow:column;grid-auto-columns:minmax(68px,1fr);grid-template-columns:none!important;overflow-x:auto!important;overscroll-behavior-x:contain;scroll-snap-type:x proximity;gap:6px;padding:0 0 5px;scrollbar-width:thin}
+  body.kc-instructor-schedule .im-day {min-width:68px;min-height:64px;box-sizing:border-box;scroll-snap-align:start}
+  body.kc-instructor-schedule .im-day b {font-size:12px}
+  body.kc-instructor-schedule .im-day small,body.kc-instructor-schedule .im-day .count {font-size:10px}
+  body.kc-instructor-schedule .im-week-nav .badge {display:inline-block;font-size:11px;white-space:nowrap}
+  body.kc-instructor-schedule .im-week-nav .btn {min-width:33px;padding:6px}
+  body.kc-instructor-schedule .im-spot {padding:0}
+  body.kc-instructor-schedule .im-lesson {grid-template-columns:44px 36px minmax(0,1fr) auto;gap:6px;min-width:0}
+  body.kc-instructor-schedule .im-lesson .im-name {overflow-wrap:anywhere}
+}
+@media (max-width:390px){body.kc-instructor-schedule .ip-header .ip-profile-chip{display:none}body.kc-instructor-schedule .ip-stat b{font-size:19px}body.kc-instructor-schedule .im-week-nav .badge{font-size:10px}}
+
+/* v76.6.4 — consistent Admin-style compact mobile chrome on Instructor pages. */
+@media (max-width: 760px) {
+  body.instructor-portal-body .instructor-main {padding:8px 10px 92px!important;box-sizing:border-box}
+  body.instructor-portal-body .instructor-content {width:100%;max-width:none;min-width:0}
+  body.instructor-portal-body .ip-build-tag {display:none!important}
+  body.instructor-portal-body .ip-hero-banner {height:52px!important;min-height:0!important;border-radius:12px!important;margin:0 0 9px!important;box-shadow:none!important;background-position:center 50%}
+  body.instructor-portal-body .ip-header {display:flex!important;align-items:center;justify-content:space-between;gap:8px;margin:5px 0 11px!important}
+  body.instructor-portal-body .ip-header h1 {font-size:22px!important;line-height:1.18!important;margin:0}
+  body.instructor-portal-body .ip-header p {font-size:12px!important;line-height:1.4!important;margin-top:4px!important}
+  body.instructor-portal-body .ip-profile-chip {padding:5px 7px!important;margin:0!important;border-radius:11px!important;box-shadow:none!important;flex-shrink:0}
+  body.instructor-portal-body .ip-profile-chip .im-avatar {width:29px;height:29px;font-size:13px}
+  body.instructor-portal-body .ip-profile-chip strong {font-size:11px}
+  body.instructor-portal-body .ip-profile-chip small {display:none}
+  body.instructor-portal-body .ip-panel {min-width:0;padding:12px!important;border-radius:14px!important;box-shadow:none!important}
+  body.instructor-portal-body .ip-panel .head h2 {font-size:17px!important}
+  body.instructor-portal-body .ip-panel .im-search {width:100%;box-sizing:border-box;min-height:44px;border-radius:11px}
+  body.instructor-portal-body .im-student-list {margin-top:0!important}
+  body.instructor-portal-body .im-student {min-width:0;gap:9px;padding:11px 5px}
+  body.instructor-portal-body .im-student-main {min-width:0}
+  body.instructor-portal-body .im-student .im-name {font-size:14px;overflow-wrap:anywhere}
+  body.instructor-portal-body .im-student .im-meta {font-size:11px;line-height:1.45;overflow-wrap:anywhere}
+  body.instructor-portal-body .ip-stats {display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:7px!important;margin-bottom:10px!important}
+  body.instructor-portal-body .ip-stat {min-width:0;padding:9px 6px!important;border-radius:12px!important;box-shadow:none!important}
+  body.instructor-portal-body .ip-stat b {font-size:20px!important;overflow-wrap:anywhere}
+  body.instructor-portal-body .ip-stat .label {font-size:10px!important;min-height:25px}
+  body.instructor-portal-body .ip-stat .muted,body.instructor-portal-body .ip-stat .money {font-size:9px!important}
+  body.instructor-portal-body .im-topbar {align-items:center!important}
+  body.instructor-portal-body .kc-im-mobile-menu[open] > summary {background:#e6f2fa;border-color:#a9cbdf}
+}
+@media (max-width:390px) {
+  body.instructor-portal-body .ip-header .ip-profile-chip {display:none!important}
+  body.instructor-portal-body .ip-stat b {font-size:18px!important}
+}

@@ -1,5 +1,14 @@
 <div class="im-topbar">
   <div class="im-spacer" aria-hidden="true"></div>
-  <a class="im-logo" href="{{url_for('instructor')}}"><img src="{{url_for('static',filename='img/kiteclub-logo.png')}}" alt="KiteClub"></a>
-  <div class="im-menu">☰</div>
+  <a class="im-logo" href="{{url_for('instructor')}}" aria-label="KiteClub - Πρόγραμμα"><img src="{{url_for('static',filename='img/kiteclub-logo.png')}}" alt="KiteClub"></a>
+  <details class="kc-im-mobile-menu">
+    <summary aria-label="Άνοιγμα μενού εκπαιδευτή" title="Μενού">☰</summary>
+    <nav class="kc-im-menu-panel" aria-label="Μενού εκπαιδευτή">
+      <a href="{{url_for('instructor')}}">▣ Πρόγραμμα</a>
+      <a href="{{url_for('instructor_students')}}">♙ Μαθητές</a>
+      <a href="{{url_for('instructor_profile')}}">♙ Προφίλ</a>
+      <a class="kc-im-menu-logout" href="{{url_for('logout')}}">↪ Αποσύνδεση</a>
+    </nav>
+  </details>
 </div>
+<link rel="stylesheet" href="{{url_for('static',filename='instructor-mobile-admin-layout.css',v='76.6.4')}}">
