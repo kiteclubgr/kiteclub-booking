@@ -179,64 +179,11 @@
 
 .shared-student-list{display:flex;flex-direction:column;gap:4px;margin:7px 0}.shared-student-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 7px;border-radius:8px;background:rgba(255,255,255,.5);font-size:12px}.mini-state{font-size:9px;font-weight:800;border-radius:999px;padding:2px 6px;white-space:nowrap}.mini-state.booked{background:#d9edff;color:#0064a8}.mini-state.pending{background:#fff0c9;color:#8a5b00}.mini-state.completed{background:#d9f7e4;color:#0a7c3a}.mini-state.noshow{background:#ffe0dd;color:#a62d24}.shared-booking-card{padding-top:10px;padding-bottom:9px}
 .admin-sidebar-search{margin:-4px 2px 0}.admin-sidebar-search input{width:100%;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.09);color:#fff;border-radius:10px;padding:10px 11px;font-size:12px}.admin-sidebar-search input::placeholder{color:#c7d6e2}.side-badge{float:right;background:#ff6b5c;color:#fff;border-radius:999px;padding:1px 6px;font-size:10px}
-
-  /* v76.7 — Schedule presentation only: preserve all existing booking workflows. */
-  .kc-day-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0 0 12px}
-  .kc-day-stat{border:1px solid #dce9f1;border-radius:13px;padding:12px 14px;background:#f4f9ff;display:flex;flex-direction:column;gap:4px}
-  .kc-day-stat:first-child,.kc-day-stat:last-child{background:#eafaf0}
-  .kc-day-stat b{font-size:21px;color:#09375d}.kc-day-stat span{font-size:12px;color:#526a7c;font-weight:750}
-  .kc-day-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 12px}
-  .kc-day-actions .btn{white-space:nowrap}
-  .kc-day-slotbox{margin-bottom:12px}
-  .kc-day-slotbox summary{font-weight:850;color:#136a9b;cursor:pointer;list-style:none}
-  .kc-day-slotbox summary::before{content:'⚙  ';}
-  .kc-day-slotbox[open] summary{margin-bottom:14px}
-  .kc-timetable .timetable th,.kc-timetable .timetable td{min-width:205px;padding:6px}
-  .kc-timetable .timetable th:first-child,.kc-timetable .timetable td:first-child{min-width:76px}
-  .kc-timetable .cell{min-height:56px;padding:9px;border-radius:10px}
-  .kc-timetable .cell-booked,.kc-timetable .cell-manual-booked{border-left:4px solid #1677d2}
-  .kc-timetable .cell-pending,.kc-timetable .cell-manual-pending{border-left:4px solid #eb9b26}
-  .kc-timetable .cell-completed{border-left:4px solid #8542d5}
-  .kc-timetable .cell-open{background:#e6faed}
-  .kc-timetable .booking-edit-btn,.kc-timetable .manual-book-link{min-height:30px}
-  .kc-lesson-meta{font-size:12px;font-weight:850;margin:3px 0}
-  .kc-lesson-continuation{border-radius:10px;background:#e7f2ff;border-left:4px solid #1677d2;padding:11px 8px;color:#145c96;font-weight:800;font-size:12px}
-  .kc-mobile-bar{display:none}
-  .kc-day-quickbook{display:none}
-  @media(max-width:900px){
-    .admin-shell{display:block!important;padding-top:58px}
-    .kc-mobile-bar{display:flex;align-items:center;justify-content:space-between;position:fixed;top:0;left:0;right:0;z-index:100;background:white;box-shadow:0 3px 14px #09294b20;padding:7px 12px;height:58px;box-sizing:border-box}
-    .kc-mobile-bar img{height:43px;width:78px;object-fit:contain}
-    .kc-mobile-bar button{border:1px solid #d9e6ee;border-radius:10px;background:white;padding:9px 12px;color:#123958;font-weight:850;cursor:pointer}
-    .kc-mobile-bar .kc-mobile-logout{color:#b32632;border-color:#f3ced1;text-decoration:none;padding:10px;border-radius:10px;font-weight:850}
-    .admin-sidebar.kc-sidebar{display:none!important}
-    body.kc-mobile-nav-open .admin-sidebar.kc-sidebar{display:flex!important;position:fixed!important;top:58px!important;left:0!important;bottom:0!important;width:min(310px,87vw)!important;max-width:min(310px,87vw)!important;height:calc(100dvh - 58px)!important;overflow-y:auto!important;z-index:99!important;background:#0a223d!important;box-shadow:6px 0 22px #102d5033}
-    body.kc-mobile-nav-open .admin-sidebar.kc-sidebar .admin-brand{display:flex!important}
-    body.kc-mobile-nav-open .admin-sidebar.kc-sidebar .kc-side-nav{display:flex!important;flex-direction:column!important;min-width:0!important;overflow-y:auto!important}
-    body.kc-mobile-nav-open .admin-sidebar.kc-sidebar .admin-logout{display:flex!important}
-    .admin-main{padding:12px!important}
-    .kc-day-overview{grid-template-columns:repeat(2,minmax(0,1fr))}
-    .kc-day-quickbook{display:flex;position:fixed;right:13px;bottom:18px;z-index:60;background:#087ad8;color:#fff;border:0;padding:14px 18px;border-radius:999px;box-shadow:0 9px 24px #0a639b55;font-weight:900;cursor:pointer}
-    .kc-timetable .timetable{min-width:640px}
-    .kc-timetable .timetable th,.kc-timetable .timetable td{min-width:175px;padding:3px}
-    .kc-timetable .timetable th:first-child,.kc-timetable .timetable td:first-child{min-width:62px}
-    .kc-timetable .cell{padding:6px 5px;min-height:55px;font-size:11px}
-    .kc-timetable .slot-head strong{font-size:12px}
-    .kc-timetable .tiny{font-size:10px}
-    .week-grid{display:flex!important;overflow-x:auto;scroll-snap-type:x proximity;padding-bottom:6px}
-    .week-grid .day-card{min-width:115px;flex:0 0 115px;scroll-snap-align:start}
-    .kc-day-actions{gap:6px}
-  }
 </style>
 <link rel="stylesheet" href="{{url_for('static',filename='admin-dashboard-v75-1.css')}}">
 <link rel="stylesheet" href="{{url_for('static',filename='admin-v4.css')}}">
 
 <div class="admin-shell">
-  <div class="kc-mobile-bar" aria-label="Mobile Admin navigation">
-    <button type="button" id="kcMobileMenuToggle" aria-label="Άνοιγμα μενού" aria-expanded="false">☰ Μενού</button>
-    <img src="{{url_for('static',filename='img/kiteclub-logo.png')}}" alt="KiteClub">
-    <a class="kc-mobile-logout" href="{{url_for('logout')}}">Αποσύνδεση</a>
-  </div>
   {% set sidebar_dashboard=true %}{% include '_admin_sidebar_static.html' %}
 
   <main class="admin-main">
@@ -473,7 +420,7 @@
   </div>
 </div>
 
-<details class="card kc-day-slotbox" id="kcSlotTools"><summary>Προσθήκη / Διαχείριση Slots</summary>
+<div class="card">
   <h2>Προσθήκη Slots</h2>
   <p class="muted">Δημιουργεί αυτόματα ωριαίες γραμμές. Μετά επιλέγεις εκπαιδευτή στην κεφαλίδα κάθε Slot.</p>
   <form method="post" action="{{url_for('generate_hours')}}" class="schedule-row"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
@@ -577,33 +524,12 @@
     <div><label>Spot</label><br><select name="spot_id" style="width:100%">{% for s in spots %}<option value="{{s.id}}" {% if day_spot and day_spot.spot_id==s.id %}selected{% endif %}>{{s.name}}</option>{% endfor %}</select></div>
     <div class="wide"><button class="btn">Δημιουργία slots</button></div>
   </form>
-</details>
+</div>
 
-{% set kc_ns=namespace(ids=[], booked_hours=0.0, free_hours=0) %}
-{% for hh in day_hours %}{% for cc in day_columns %}{% if cc.instructor_id %}
-  {% set dd=slot_lookup.get((hh.start_time,cc.instructor_id)) %}
-  {% if dd %}
-    {% if dd.bookings %}{% for bb in dd.bookings %}{% if bb.booking_id not in kc_ns.ids %}
-      {% set _=kc_ns.ids.append(bb.booking_id) %}
-      {% set kc_ns.booked_hours=kc_ns.booked_hours+(bb.duration|float) %}
-    {% endif %}{% endfor %}
-    {% elif dd.slot.status=='open' %}{% set kc_ns.free_hours=kc_ns.free_hours+1 %}{% endif %}
-  {% endif %}
-{% endif %}{% endfor %}{% endfor %}
-<div class="kc-day-overview" aria-label="Σύνοψη ημερήσιου προγράμματος">
-  <div class="kc-day-stat"><span>Spot ημέρας</span><b>{{day_hours[0].spot if day_hours else '—'}}</b></div>
-  <div class="kc-day-stat"><span>Κρατήσεις μαθητών</span><b>{{kc_ns.ids|length}}</b></div>
-  <div class="kc-day-stat"><span>Προγραμματισμένες ώρες μαθητών</span><b>{{'%g'|format(kc_ns.booked_hours)}}h</b></div>
-  <div class="kc-day-stat"><span>Διαθέσιμες ωριαίες θέσεις</span><b>{{kc_ns.free_hours}}</b></div>
-</div>
-<div class="kc-day-actions">
-  <button type="button" class="btn" onclick="kcStartNewBooking()">＋ Νέα κράτηση</button>
-  <button type="button" class="btn alt" onclick="document.getElementById('kcSlotTools').open=true;document.getElementById('kcSlotTools').scrollIntoView({behavior:'smooth'})">⚙ Δημιουργία Slots</button>
-</div>
 <div class="card">
   <div class="spread">
     <div>
-      <h2 style="margin-bottom:4px">Ημερήσιο πρόγραμμα</h2>
+      <h2 style="margin-bottom:4px">Ημερήσιο timetable</h2>
       <div class="muted">Ώρες αριστερά · Η σειρά Slot 1 → Slot 2 → Slot 3 είναι η σειρά ενεργοποίησης. Ο επόμενος ανοίγει αυτόματα όταν ο προηγούμενος φτάσει 4 booked ώρες. Μπορείς επίσης να κάνεις Manual Activate / Standby. Μόλις ένας instructor ανοίξει αυτόματα, παραμένει ενεργός ακόμη κι αν αργότερα ακυρωθεί κράτηση.</div>
     </div>
     <div class="legend">
@@ -617,7 +543,7 @@
   </div><br>
 
   {% if day_hours %}
-  <div class="timetable-wrap kc-timetable">
+  <div class="timetable-wrap">
     <table class="timetable">
       <thead>
         <tr>
@@ -707,7 +633,7 @@
                     {% if booking_list|length > 1 %}
                       {# v54: multiple independent bookings in the same instructor/hour are shown as ONE visual card. #}
                       {% set active_count = booking_list|length %}
-                      <div data-kc-booking="{{booking_list[0].booking_id}}" data-kc-duration="{{booking_list[0].duration|float}}" class="cell cell-booked shared-booking-card" style="margin-bottom:6px">
+                      <div class="cell cell-booked shared-booking-card" style="margin-bottom:6px">
                         <strong>Booked · {{active_count}} μαθητές</strong>
                         <div class="shared-student-list">
                           {% for b in booking_list %}
@@ -720,35 +646,35 @@
                             </div>
                           {% endfor %}
                         </div>
-                        <div class="tiny">{{h.spot}}</div><div class="kc-lesson-meta">{{booking_list[0].duration|float}}h · {{booking_list[0].booking_start_time|hm24}}</div>
+                        <div class="tiny">{{h.spot}}</div>
                         <button type="button" class="booking-edit-btn" onclick='openGroupedEditBooking({{ booking_list|map(attribute="booking_id")|list|tojson }})'>Επεξεργασία</button>
                       </div>
                     {% else %}
                       {% set b = booking_list[0] %}
                       {% if b.booking_status == 'completed' %}
-                      <div data-kc-booking="{{b.booking_id}}" data-kc-duration="{{b.duration|float}}" class="cell cell-completed" style="margin-bottom:6px">
+                      <div class="cell cell-completed" style="margin-bottom:6px">
                         <strong>Completed</strong>
                         <div class="tiny">{{b.participant_names or (b.student_name ~ (' ' ~ b.student_surname if b.student_surname else ''))}}{% if b.participant_count and b.participant_count>1 %}<br><b>{{b.participant_count}}P Group</b>{% endif %}</div>
-                        <div class="tiny">{{h.spot}}</div><div class="kc-lesson-meta">{{b.duration|float}}h · {{b.booking_start_time|hm24}}</div>
+                        <div class="tiny">{{h.spot}}</div>
                       </div>
                       {% elif b.booking_status == 'no_show' %}
-                      <div data-kc-booking="{{b.booking_id}}" data-kc-duration="{{b.duration|float}}" class="cell cell-noshow" style="margin-bottom:6px">
+                      <div class="cell cell-noshow" style="margin-bottom:6px">
                         <strong>No-show</strong>
                         <div class="tiny">{{b.participant_names or (b.student_name ~ (' ' ~ b.student_surname if b.student_surname else ''))}}{% if b.participant_count and b.participant_count>1 %}<br><b>{{b.participant_count}}P Group</b>{% endif %}</div>
-                        <div class="tiny">{{h.spot}}</div><div class="kc-lesson-meta">{{b.duration|float}}h · {{b.booking_start_time|hm24}}</div>
+                        <div class="tiny">{{h.spot}}</div>
                       </div>
                       {% elif b.booking_status == 'pending_payment' %}
-                      <div data-kc-booking="{{b.booking_id}}" data-kc-duration="{{b.duration|float}}" class="cell cell-pending" style="margin-bottom:6px">
+                      <div class="cell cell-pending" style="margin-bottom:6px">
                         <strong>Pending payment</strong>
                         <div class="tiny">{{b.participant_names or (b.student_name ~ (' ' ~ b.student_surname if b.student_surname else ''))}}{% if b.participant_count and b.participant_count>1 %}<br><b>{{b.participant_count}}P Group</b>{% endif %}</div>
-                        <div class="tiny">{{h.spot}}</div><div class="kc-lesson-meta">{{b.duration|float}}h · {{b.booking_start_time|hm24}}</div>
+                        <div class="tiny">{{h.spot}}</div>
                         <button type="button" class="booking-edit-btn" onclick="openEditBooking({{b.booking_id}},{{b.student_id}},'{{b.booking_lesson_date}}','{{b.booking_start_time}}',{{b.booking_instructor_id}},{{b.duration|float}},'pending')">Επεξεργασία</button>
                       </div>
                       {% else %}
-                      <div data-kc-booking="{{b.booking_id}}" data-kc-duration="{{b.duration|float}}" class="cell cell-booked" style="margin-bottom:6px">
+                      <div class="cell cell-booked" style="margin-bottom:6px">
                         <strong>{{'Confirmed' if b.booking_status=='confirmed' else 'Booked'}}{% if b.payment_status=='pending' %} · Unpaid{% endif %}</strong>
                         <div class="tiny">{{b.participant_names or (b.student_name ~ (' ' ~ b.student_surname if b.student_surname else ''))}}{% if b.participant_count and b.participant_count>1 %}<br><b>{{b.participant_count}}P Group</b>{% endif %}</div>
-                        <div class="tiny">{{h.spot}}</div><div class="kc-lesson-meta">{{b.duration|float}}h · {{b.booking_start_time|hm24}}</div>
+                        <div class="tiny">{{h.spot}}</div>
                         <button type="button" class="booking-edit-btn" onclick="openEditBooking({{b.booking_id}},{{b.student_id}},'{{b.booking_lesson_date}}','{{b.booking_start_time}}',{{b.booking_instructor_id}},{{b.duration|float}},'booked')">Επεξεργασία</button>
                       </div>
                       {% endif %}
@@ -772,7 +698,7 @@
                     </div>
                     {% elif s.status == 'booked' %}
                     <div class="cell cell-manual-booked">
-                      <strong>Booked</strong><div class="tiny">{{h.spot}}</div>
+                      <strong>{{'Confirmed' if b.booking_status=='confirmed' else 'Booked'}}{% if b.payment_status=='pending' %} · Unpaid{% endif %}</strong><div class="tiny">{{h.spot}}</div>
                       <button type="button" class="manual-book-link" onclick="openBookingModal({{s.id}})">+ Πρόσθεσε μαθητή</button>
                       <form method="post" action="{{url_for('manual_slot_state',slot_id=s.id)}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                         <select class="status-select" name="status" data-current="{{s.status}}" onchange="handleSlotStatus(this, {{s.id}})">
@@ -813,7 +739,6 @@
                     {% else %}
                     <div class="cell cell-open">
                       <strong>Available</strong><div class="tiny">{{h.spot}}</div>
-                      <button type="button" class="manual-book-link kc-book-now" onclick="openBookingModal({{s.id}})">＋ Νέα κράτηση</button>
                       <form method="post" action="{{url_for('manual_slot_state',slot_id=s.id)}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                         <select class="status-select" name="status" data-current="{{s.status}}" onchange="handleSlotStatus(this, {{s.id}})">
                           <option value="open" selected>Available</option>
@@ -1132,7 +1057,6 @@
   </main>
 </div>
 
-<button type="button" class="kc-day-quickbook" onclick="kcStartNewBooking()">＋ Νέα κράτηση</button>
 <script>
 (function(){
   const buttons=[...document.querySelectorAll('.admin-tab[data-tab]')];
@@ -1166,37 +1090,6 @@
   const noResults=document.getElementById('studentNoResults');
   let activeSlotId=null;
 
-  const kcMobileMenuToggle=document.getElementById('kcMobileMenuToggle');
-  if(kcMobileMenuToggle){kcMobileMenuToggle.addEventListener('click',()=>{const open=document.body.classList.toggle('kc-mobile-nav-open');kcMobileMenuToggle.setAttribute('aria-expanded',String(open));});}
-  document.querySelectorAll('.admin-sidebar .kc-nav-item').forEach(a=>a.addEventListener('click',()=>document.body.classList.remove('kc-mobile-nav-open')));
-  window.kcStartNewBooking=function(){
-    const bookingButton=document.querySelector('#tab-day .kc-timetable .kc-book-now');
-    if(bookingButton){bookingButton.click();return;}
-    const sharedButton=document.querySelector('#tab-day .kc-timetable .manual-book-link');
-    if(sharedButton){sharedButton.click();return;}
-    const tools=document.getElementById('kcSlotTools');
-    if(tools){tools.open=true;tools.scrollIntoView({behavior:'smooth'});}
-    alert('Δεν υπάρχει διαθέσιμο slot. Δημιούργησε πρώτα Slots και όρισε Instructor.');
-  };
-  // Each 2h booking occupies two hourly slots; second is shown as continuation,
-  // never as Available or a second independent lesson. Keep underlying forms intact.
-  const kcTimetable=document.querySelector('#tab-day .kc-timetable .timetable');
-  if(kcTimetable){
-    const rows=[...kcTimetable.querySelectorAll('tbody tr')];
-    rows.forEach((row,index)=>{
-      if(!index)return;
-      [...row.cells].slice(1).forEach((td,col)=>{
-        const card=td.querySelector('[data-kc-booking]');
-        const previous=rows[index-1].cells[col+1];
-        const prevCard=previous && previous.querySelector('[data-kc-booking]');
-        if(card && prevCard && card.dataset.kcBooking===prevCard.dataset.kcBooking && Number(prevCard.dataset.kcDuration)>=2){
-          card.style.display='none';
-          const continued=document.createElement('div');continued.className='kc-lesson-continuation';continued.textContent='↳ Συνέχεια δίωρου · δεσμευμένο';
-          td.insertBefore(continued,td.firstChild);
-        }
-      });
-    });
-  }
   window.openBookingModal=function(slotId){
     activeSlotId=slotId;
     pickForms.forEach(f=>f.action='/admin/slot/'+slotId+'/book-student');
