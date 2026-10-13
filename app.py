@@ -10,7 +10,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from pathlib import Path
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "KiteClub v76.6.2 · Reports & Student Hours Fix"
+APP_VERSION = "KiteClub v76.6.3 · Group Booking Merge Fix"
 
 # v70: production-ready storage. Locally everything stays inside the project.
 # On Railway mount a persistent volume at /data and set DATA_DIR=/data.
@@ -1030,54 +1030,64 @@ def _charge_booking_participants(con, booking_id, participant_ids, duration, for
     return status,payment,total_pending
 
 
-def _merge_adjacent_admin_lesson(con, slot, student_id, actor):
-    """Merge an adjacent private 1h reservation, preserving its original booking ID.
+def _merge_adjacent_admin_lesson(con, slot, participant_ids, actor):
+    """Merge adjacent Admin-created 1h lessons for an identical 1P/2P/3P group.
 
-    Never merge payments, group lessons, or a slot with other participants.
-    The caller holds BEGIN IMMEDIATE and has checked the new slot's availability.
+    Preserve the original booking and charge only the additional hour per student.
+    Called inside the Admin booking transaction (BEGIN IMMEDIATE).
     """
-    student=con.execute("SELECT credits,lesson_type FROM students WHERE user_id=?",(student_id,)).fetchone()
-    if not student or (student["lesson_type"] or "private").lower()!="private": return None
-    current=datetime.strptime(slot["start_time"],"%H:%M")
-    neighbours=[(current-timedelta(hours=1)).strftime("%H:%M"),(current+timedelta(hours=1)).strftime("%H:%M")]
+    members={int(sid) for sid in participant_ids}
+    if len(members) not in (1, 2, 3):
+        return None
+    kind={1:"private", 2:"2p", 3:"3p"}[len(members)]
+    current=datetime.strptime(slot["start_time"], "%H:%M")
+    neighbours=[(current-timedelta(hours=1)).strftime("%H:%M"),
+                (current+timedelta(hours=1)).strftime("%H:%M")]
     rows=con.execute("""
-      SELECT b.*,s.start_time,s.spot_id,s.id existing_slot_id
+      SELECT b.*, s.start_time, s.spot_id, s.id existing_slot_id
       FROM bookings b JOIN slots s ON s.id=b.slot_id
-      WHERE b.student_id=? AND b.duration=1 AND b.status IN ('confirmed','pending_payment')
+      WHERE b.duration=1 AND b.status='confirmed'
         AND s.lesson_date=? AND s.instructor_id=? AND s.spot_id=?
         AND s.start_time IN (?,?)
       ORDER BY b.id
-    """,(student_id,slot["lesson_date"],slot["instructor_id"],slot["spot_id"],*neighbours)).fetchall()
+    """, (slot["lesson_date"],slot["instructor_id"],slot["spot_id"],*neighbours)).fetchall()
     for old in rows:
         bid=old["id"]
-        linked=con.execute("SELECT COUNT(*) n FROM booking_slots WHERE booking_id=?",(bid,)).fetchone()["n"]
-        persons=con.execute("SELECT * FROM booking_participants WHERE booking_id=?",(bid,)).fetchall()
-        if linked!=1 or len(persons)!=1 or persons[0]["student_id"]!=student_id:continue
-        # Never absorb shared/group hours, historical receipts or attendance.
-        sharing=con.execute("""SELECT COUNT(DISTINCT b.id) n FROM booking_slots bs
-             JOIN bookings b ON b.id=bs.booking_id WHERE bs.slot_id=?
-             AND b.status IN ('confirmed','pending_payment','completed','no_show')""",(old["existing_slot_id"],)).fetchone()["n"]
-        if sharing!=1:continue
-        if con.execute("SELECT 1 FROM lesson_payments lp JOIN lesson_debts d ON d.id=lp.debt_id WHERE d.booking_id=? LIMIT 1",(bid,)).fetchone():continue
-        person=persons[0]
-        mode=person["payment_status"]
-        if mode!="credit":continue
-        if float(person["credit_charged"] or 0)!=1:continue
-        if mode=="pending" and float(person["credit_charged"] or 0)!=0:continue
-        if float(student["credits"] or 0)<1:continue
-        if mode=="credit":
-            con.execute("UPDATE students SET credits=credits-1 WHERE user_id=?",(student_id,))
-            con.execute("INSERT INTO credit_ledger(student_id,booking_id,amount,kind,note,created_at) VALUES(?,?,?,?,?,?)",(student_id,bid,-1,"reserve","Auto-merge second hour",datetime.now().isoformat()))
-            _consume_package_hours(con,student_id,bid,1)
-            con.execute("UPDATE booking_participants SET credit_charged=2 WHERE booking_id=? AND student_id=?",(bid,student_id))
-        earlier=slot if slot["start_time"]<old["start_time"] else old
-        con.execute("UPDATE bookings SET slot_id=?,duration=2,amount=?,status=?,payment_status=? WHERE id=?",
-                    (slot["id"] if slot["start_time"]<old["start_time"] else old["existing_slot_id"],
-                     110 if mode=="pending" else 0,(old["status"] if mode=="pending" and old["payment_status"]=="pending" else ("pending_payment" if mode=="pending" else "confirmed")),
-                     "pending" if mode=="pending" else "credit",bid))
+        if _booking_kind(con,bid)!=kind:
+            continue
+        persons=con.execute("SELECT student_id,payment_status,credit_charged FROM booking_participants WHERE booking_id=?",(bid,)).fetchall()
+        if {int(r["student_id"]) for r in persons}!=members or len(persons)!=len(members):
+            continue
+        if any(r["payment_status"]!="credit" or abs(float(r["credit_charged"] or 0)-1)>1e-8 for r in persons):
+            continue
+        links=con.execute("SELECT slot_id FROM booking_slots WHERE booking_id=?",(bid,)).fetchall()
+        if len(links)!=1 or links[0]["slot_id"]!=old["existing_slot_id"]:
+            continue
+        # Neither hour may be shared with another booking (including legacy shared lessons).
+        overlaps=con.execute("""SELECT DISTINCT b.id FROM booking_slots bs
+          JOIN bookings b ON b.id=bs.booking_id
+          WHERE bs.slot_id IN (?,?) AND b.status IN ('confirmed','pending_payment','completed','no_show')""",
+          (old["existing_slot_id"],slot["id"])).fetchall()
+        if {r["id"] for r in overlaps}!={bid}:
+            continue
+        if con.execute("SELECT 1 FROM lesson_payments lp JOIN lesson_debts d ON d.id=lp.debt_id WHERE d.booking_id=? LIMIT 1",(bid,)).fetchone():
+            continue
+        if _require_booking_credits(con,sorted(members),1.0):
+            continue
+        # All participants passed the check: reserve one *additional* shared credit each.
+        now=datetime.now().isoformat()
+        for sid in sorted(members):
+            con.execute("UPDATE students SET credits=credits-1 WHERE user_id=?",(sid,))
+            con.execute("INSERT INTO credit_ledger(student_id,booking_id,amount,kind,note,created_at) VALUES(?,?,?,?,?,?)",
+                        (sid,bid,-1,"reserve","Auto-merge second hour",now))
+            _consume_package_hours(con,sid,bid,1)
+            con.execute("UPDATE booking_participants SET credit_charged=2 WHERE booking_id=? AND student_id=?",(bid,sid))
+        first_id=slot["id"] if slot["start_time"]<old["start_time"] else old["existing_slot_id"]
+        con.execute("UPDATE bookings SET slot_id=?,duration=2,amount=0,status='confirmed',payment_status='credit' WHERE id=?",(first_id,bid))
         con.execute("INSERT OR IGNORE INTO booking_slots(booking_id,slot_id) VALUES(?,?)",(bid,slot["id"]))
         con.execute("UPDATE slots SET status='booked',manual_override=NULL WHERE id=?",(slot["id"],))
-        log_booking_audit(con,bid,"merged","Δύο συνεχόμενες ώρες συγχωνεύτηκαν αυτόματα σε δίωρο.",actor["id"],actor["role"],f"added_slot={slot['id']}; price={'110' if mode=='pending' else 'credits 2'}")
+        log_booking_audit(con,bid,"merged","Δύο συνεχόμενες ώρες συγχωνεύτηκαν αυτόματα σε δίωρο.",
+                          actor["id"],actor["role"],f"added_slot={slot['id']}; members={len(members)}; credits 2 each")
         return bid
     return None
 
@@ -3268,12 +3278,11 @@ def admin_book_student(slot_id):
         con.rollback(); con.close(); flash("Ο instructor έχει ήδη άλλη κράτηση αυτή την ώρα.")
         return redirect(url_for("admin",date=slot["lesson_date"])+"#day")
 
-    # v76.5: auto-merge two adjacent private one-hour lessons before creating
-    # a second financial/booking record. All checks occur under BEGIN IMMEDIATE.
+    # v76.6.3: merge identical 1P/2P/3P consecutive Admin 1h bookings.
+    # All participant credits are reserved atomically, with no second booking.
     merged_id=None
-    if len(participant_ids)==1 and not existing_ids:
-        # Existing adjacent 1h is already reserved. The new slot needs an extra credit.
-        merged_id=_merge_adjacent_admin_lesson(con,slot,student_id,u)
+    if not existing_ids:
+        merged_id=_merge_adjacent_admin_lesson(con,slot,participant_ids,u)
     if merged_id:
         con.commit();con.close()
         rebalance_instructors(slot["lesson_date"])
