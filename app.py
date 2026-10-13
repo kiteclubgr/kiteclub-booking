@@ -10,7 +10,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from pathlib import Path
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "KiteClub v76.6.1 · Credit-Only Bookings & Group Fixes"
+APP_VERSION = "KiteClub v76.6.2 · Reports & Student Hours Fix"
 
 # v70: production-ready storage. Locally everything stays inside the project.
 # On Railway mount a persistent volume at /data and set DATA_DIR=/data.
@@ -2008,7 +2008,8 @@ def student_profile():
         item["instructor_notes"]=row["participant_notes"] or row["instructor_notes"]
         duration=float(row["duration"] or 0)
         if status=="completed":
-            completed_hours+=duration; completed.append(item)
+            completed_hours+=float(row["actual_duration"] if row["actual_duration"] is not None else duration)
+            completed.append(item)
         elif status=="no_show":
             no_show_hours+=duration; no_shows.append(item)
         elif status=="makeup":
@@ -4447,12 +4448,11 @@ def admin_reports():
              occ.id slot_id,occ.lesson_date,occ.start_time,occ.duration slot_duration,
              occ.instructor_id,bp.student_id,
              COALESCE(bp.attendance_status,b.status) attendance_status,
-             COALESCE(st.lesson_type,'private') lesson_type
+             COALESCE(b.group_lesson_type,'private') lesson_type
       FROM bookings b
       JOIN booking_participants bp ON bp.booking_id=b.id
       JOIN booking_slots bs ON bs.booking_id=b.id
       JOIN slots occ ON occ.id=bs.slot_id
-      LEFT JOIN students st ON st.user_id=bp.student_id
       WHERE occ.lesson_date BETWEEN ? AND ? AND b.status NOT LIKE 'cancelled%'
     """,(date_from,date_to)).fetchall()
 
