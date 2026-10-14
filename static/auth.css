@@ -2,7 +2,7 @@
 *{box-sizing:border-box}
 :root{color-scheme:light;--ink:#111d49;--muted:#8590b0;--teal:#009bad;--line:#dfe5f0}
 body{margin:0;color:var(--ink);font-family:Arial,'Segoe UI',sans-serif;background:#91c2e5}
-.kc-auth-body{background-image:linear-gradient(180deg,transparent 55%,#06466e66),url('img/kiteclub-auth-lesson.jpg');background-position:center bottom;background-size:cover;background-repeat:no-repeat;background-attachment:fixed}
+.kc-auth-body{background-image:linear-gradient(180deg,transparent 55%,#06466e66),url('img/kiteclub-auth-background.png');background-position:center center;background-size:cover;background-repeat:no-repeat;background-attachment:fixed}
 .kc-auth{min-height:100svh;display:grid;grid-template-columns:minmax(0,53fr) minmax(0,47fr)}
 .kc-auth-hero{min-height:100svh;padding:28px 5vw 34px;display:flex;flex-direction:column;justify-content:space-between;color:#fff;background:transparent}
 /* Preserve the original artwork and mask its rectangular outer backdrop. */
