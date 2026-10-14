@@ -1,85 +1,44 @@
-@font-face{font-family:KiteClubScript;src:url("fonts/Caveat.ttf") format("truetype");font-weight:400 700;font-display:swap}
+@font-face{font-family:KiteClubScript;src:url('fonts/Caveat.ttf') format('truetype');font-weight:400 700;font-display:swap}
 *{box-sizing:border-box}
-:root{color-scheme:light;--ink:#101e49;--muted:#64738e;--teal:#009bad;--line:#dce3ee}
-body{margin:0;color:var(--ink);font-family:Arial,"Segoe UI",sans-serif;background:#b8ddeb}
-.kc-auth{min-height:100svh;display:grid;grid-template-columns:minmax(0,53fr) minmax(0,47fr);width:100%}
-.kc-auth-hero{position:relative;min-height:100svh;padding:30px 6.1vw;display:flex;flex-direction:column;justify-content:space-between;color:white;background:linear-gradient(180deg,#0000 45%,#06466e80),url("img/kiteclub-auth-lesson.jpg") center/cover no-repeat,url("img/kiteclub-sea-banner.jpg") center/cover no-repeat;background-color:#84bbd7}
-.kc-auth-hero>div{position:relative;z-index:1}
-.kc-hero-logo{width:245px;height:190px;object-fit:contain;display:block;mix-blend-mode:multiply}
-.kc-auth-slogan{font-family:KiteClubScript,"Segoe Script","Bradley Hand","Brush Script MT",cursive;font-style:normal;font-size:clamp(60px,7.2vw,108px);font-weight:600;line-height:.89;margin:24px 0 0;letter-spacing:-2px;transform:rotate(-8deg);text-shadow:none;max-width:380px}
-.kc-auth-slogan em{display:block;font-style:inherit}.kc-auth-slogan em+em{margin-top:20px}
-.kc-auth-slogan:after{content:"";display:block;height:20px;width:88%;margin-top:16px;background:#ff850f;clip-path:polygon(0 96%,20% 40%,75% 0,100% 0,45% 53%);transform:rotate(-9deg)}
-.kc-auth-hero-bottom{display:grid;gap:22px;font-size:22px;line-height:1.3;text-shadow:0 1px 4px #16496b; padding-top:40px}
+:root{color-scheme:light;--ink:#111d49;--muted:#8590b0;--teal:#009bad;--line:#dfe5f0}
+body{margin:0;color:var(--ink);font-family:Arial,'Segoe UI',sans-serif;background:#91c2e5}
+.kc-auth{min-height:100svh;display:grid;grid-template-columns:minmax(0,53fr) minmax(0,47fr)}
+.kc-auth-hero{min-height:100svh;padding:28px 5vw 34px;display:flex;flex-direction:column;justify-content:space-between;color:#fff;background:linear-gradient(180deg,transparent 55%,#06466e88),url('img/kiteclub-auth-lesson.jpg') center bottom/auto 145% no-repeat;background-color:#91c2e5}
+/* Preserve the original artwork and mask its rectangular outer backdrop. */
+.kc-hero-logo,.kc-auth-card>img{object-fit:contain;-webkit-mask-image:radial-gradient(ellipse 36% 35% at 50% 50%,#000 99%,transparent 100%),linear-gradient(#000,#000);mask-image:radial-gradient(ellipse 36% 35% at 50% 50%,#000 99%,transparent 100%),linear-gradient(#000,#000);-webkit-mask-size:100% 100%,87% 24%;mask-size:100% 100%,87% 24%;-webkit-mask-position:center,center 58%;mask-position:center,center 58%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
+.kc-hero-logo{display:block;width:clamp(170px,16vw,245px);height:auto;margin:-18px 0 -8px}
+.kc-auth-slogan{font-family:KiteClubScript,'Segoe Script',cursive;font-size:clamp(64px,7.1vw,108px);font-weight:600;line-height:.88;letter-spacing:-2px;transform:rotate(-8deg);max-width:330px;margin:14px 0 0}
+.kc-auth-slogan em{display:block;font-style:normal}.kc-auth-slogan em+em{margin-top:22px}
+.kc-auth-slogan:after{content:'';display:block;width:95%;height:22px;margin-top:20px;background:#ff850f;clip-path:polygon(0 100%,22% 40%,100% 0,68% 40%);transform:rotate(-9deg)}
+.kc-auth-hero-bottom{display:grid;gap:18px;padding-top:48px;font-size:clamp(16px,1.55vw,23px);line-height:1.4;text-shadow:0 1px 5px #16496b}
 .kc-auth-hero-bottom>div{display:flex;align-items:center;gap:18px}
 .kc-auth-hero-bottom svg{width:34px;height:34px;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.kc-auth-panel{min-width:0;display:flex;justify-content:center;align-items:center;padding:42px 3.8vw 42px 12px;background:linear-gradient(180deg,#a4d0ed,#bbdeed)}
-.kc-auth-card{width:100%;max-width:none;background:white;border-radius:16px;padding:38px 34px 44px;box-shadow:0 12px 45px #123e6225}
-.kc-auth-card>img{width:330px;height:230px;object-fit:contain;display:block;margin:0 auto 20px;mix-blend-mode:multiply}
-.kc-auth-card h1{text-align:center;font-size:clamp(28px,2.7vw,42px);line-height:1.15;margin:0 0 14px;letter-spacing:-1px}
-.hint{text-align:center;font-size:21px;color:var(--muted);line-height:1.6;margin:0 0 28px}
-.kc-auth-card label{display:block;font-size:18px;font-weight:600;margin:26px 0 10px}
-.kc-auth-card input:not([type=checkbox]):not([type=hidden]){display:block;min-width:0;width:100%;height:58px;padding:14px 18px;border:1px solid var(--line);border-radius:8px;font:inherit;background:#fff;color:var(--ink)}
-.kc-auth-card input:focus-visible,.kc-auth-card button:focus-visible,.kc-auth-card a:focus-visible,summary:focus-visible{outline:3px solid #00899b;outline-offset:3px}
-.kc-auth-card input::placeholder{color:#8493b0}
-.kc-primary{display:block;width:100%;border:0;border-radius:8px;padding:17px;background:var(--teal);color:white;font:600 20px Arial,sans-serif;cursor:pointer;text-align:center;text-decoration:none;margin-top:26px;min-height:56px}
-.kc-primary:hover{background:#008797}
-.kc-auth-card a:not(.kc-primary){color:#00899b;text-underline-offset:3px}
-.kc-auth-card>p:last-child{text-align:center;font-size:18px;line-height:1.6;margin:30px 0 0}
-.kc-auth-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 16px}
-.kc-auth-grid .wide{grid-column:1/-1}
-.kc-step{font-size:14px;text-align:center;color:#00899b;line-height:1.6;margin-bottom:8px}
-.kc-auth-card .kc-check{display:flex;gap:12px;font-size:14px;line-height:1.6;font-weight:400;margin:18px 0;cursor:pointer}
-.kc-check input{width:19px;height:19px;margin:2px 0 0;flex-shrink:0;accent-color:var(--teal)}
-details{margin:24px 0;border:1px solid var(--line);border-radius:8px;padding:16px;font-size:14px;line-height:1.65}
-summary{font-weight:600;cursor:pointer}details p{margin:12px 0}
-.kc-note,.kc-info{color:#5b6c80;font-size:13px;line-height:1.6}.kc-info{background:#edf8fc;border-radius:8px;padding:12px;margin-top:18px}
-.kc-messages{background:#fff3d8;color:#684507;padding:14px 24px;line-height:1.5;border-bottom:1px solid #edd69b}.kc-messages p{margin:4px 0}
-[hidden]{display:none!important}
-@media(min-width:901px){.kc-auth:has(#register-form) .kc-auth-hero{position:sticky;top:0;height:100svh}.kc-auth:has(#register-form) .kc-auth-panel{align-items:flex-start}.kc-auth:has(#register-form) .kc-auth-card>img{height:215px;width:310px;margin-bottom:18px}.kc-auth:has(#register-form) .hint{font-size:19px;margin-bottom:22px}}
-@media(max-width:1100px){.kc-auth-panel{padding:28px 22px}.kc-auth-card{padding:28px}.kc-auth-card>img{height:170px;width:220px}.kc-auth-hero{padding:30px}.kc-auth-hero-bottom{font-size:17px}}
-@media(max-width:900px){.kc-auth{grid-template-columns:1fr}.kc-auth-hero{min-height:320px;padding:22px 28px;background-size:cover;background-position:center 55%}.kc-hero-logo{height:90px;width:110px}.kc-auth-slogan{font-size:43px;letter-spacing:-1px;margin:16px 0 22px;max-width:none}.kc-auth-slogan em{display:inline}.kc-auth-slogan br{display:none}.kc-auth-slogan em+em:before{content:" / "}.kc-auth-slogan em+em{margin-top:0}.kc-auth-slogan:after{width:150px;height:5px;margin-top:8px}.kc-auth-hero-bottom{display:none}.kc-auth-panel{padding:24px 18px 36px}.kc-auth-card{max-width:610px}.kc-auth-card>img{height:150px;width:200px;margin-bottom:16px}.hint{font-size:16px}.kc-auth-card h1{font-size:30px}}
-@media(max-width:480px){.kc-auth-hero{min-height:235px;padding:16px 22px}.kc-auth-slogan{font-size:34px}.kc-auth-slogan em{display:block}.kc-auth-slogan em+em:before{content:none}.kc-auth-panel{padding:16px 12px 28px}.kc-auth-card{padding:24px 20px;border-radius:12px}.kc-auth-card h1{font-size:27px}.kc-auth-card>img{height:125px;width:170px}.kc-auth-card label{font-size:14px}.kc-auth-grid{gap:0 12px}.kc-auth-card .kc-check{font-size:13px}}
-
-/* Keep the original logo pixels. Mask only the rectangular outer backdrop. */
-.kc-hero-logo,.kc-auth-card>img{object-fit:contain;mix-blend-mode:normal;-webkit-mask-image:radial-gradient(ellipse 36% 35% at 50% 50%,#000 99%,transparent 100%),linear-gradient(#000,#000);mask-image:radial-gradient(ellipse 36% 35% at 50% 50%,#000 99%,transparent 100%),linear-gradient(#000,#000);-webkit-mask-size:100% 100%,87% 24%;mask-size:100% 100%,87% 24%;-webkit-mask-position:center,center 58%;mask-position:center,center 58%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
-.kc-password{position:relative}.kc-auth-card .kc-password input{padding-right:58px!important}
+.kc-auth-panel{min-width:0;display:flex;align-items:center;justify-content:center;padding:42px 3.8vw 42px 12px;background:linear-gradient(180deg,#91c2e5ee,#91c2e555),url('img/kiteclub-sea-banner.jpg') center bottom/cover no-repeat}
+.kc-auth-card{width:100%;max-width:660px;padding:28px 34px 38px;background:#fff;border-radius:16px;box-shadow:0 14px 45px #123e6230}
+.kc-auth-card>img{display:block;width:clamp(240px,21vw,310px);height:auto;max-width:100%;margin:-28px auto -12px}
+.kc-auth-card h1{text-align:center;font-size:clamp(28px,2.9vw,43px);line-height:1.2;letter-spacing:-1px;margin:0 0 12px}
+.hint{text-align:center;color:var(--muted);font-size:clamp(16px,1.5vw,22px);line-height:1.5;margin:0 0 32px}
+.kc-auth-card label{display:block;font-size:18px;font-weight:600;margin:25px 0 8px}
+.kc-auth-card input:not([type=checkbox]):not([type=hidden]){display:block;width:100%;min-width:0;height:58px;padding:14px 18px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font:inherit;font-size:18px;box-shadow:0 0 0 1px #dfe5f033}
+.kc-auth-card input::placeholder{color:#98a3c0}
+.kc-auth-card :is(input,button,a,summary):focus-visible{outline:3px solid var(--teal);outline-offset:3px}
+.kc-password{position:relative}.kc-auth-card .kc-password input{padding-right:58px}
 .kc-password-toggle{position:absolute;right:6px;top:7px;width:44px;height:44px;display:grid;place-items:center;border:0;background:transparent;color:#566589;border-radius:6px;cursor:pointer}
 .kc-password-toggle svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.kc-auth-card form+.kc-auth-divider{display:flex;align-items:center;gap:16px;color:#687997;margin:30px 0 0}.kc-auth-divider:before,.kc-auth-divider:after{content:"";height:1px;background:#e8edf5;flex:1}
-@media(min-width:1400px){.kc-auth-card{padding:44px 40px 48px}.kc-auth-card h1{font-size:44px}.kc-auth-card>img{width:370px;height:260px}.kc-auth:has(#register-form) .kc-auth-card>img{width:345px;height:240px}}
-@media(max-width:1100px) and (min-width:901px){.kc-auth-slogan{font-size:72px;max-width:310px}.kc-hero-logo{width:200px;height:155px}.kc-auth-panel{padding-right:24px;padding-left:12px}.kc-auth-card h1{font-size:30px}.hint{font-size:17px}}
-@media(max-width:900px){.kc-auth-card{max-width:650px}.kc-auth-card>img,.kc-auth:has(#register-form) .kc-auth-card>img{width:250px;height:175px}.kc-hero-logo{width:150px;height:110px}.kc-auth-slogan{line-height:1.1;transform:rotate(-5deg)}.kc-auth-slogan:after{clip-path:polygon(0 100%,25% 30%,100% 0,65% 55%);height:10px}}
-@media(max-width:480px){.kc-auth-slogan{line-height:1.05;margin:8px 0 16px}.kc-auth-slogan em+em{margin-top:8px}.kc-auth-card>img,.kc-auth:has(#register-form) .kc-auth-card>img{width:230px;height:160px}.kc-auth-card label{font-size:14px;margin-top:20px}.kc-auth-card>p:last-child{font-size:15px}.hint{font-size:16px}.kc-auth-card h1{font-size:27px}.kc-hero-logo{width:120px;height:90px}}
-
-/* Square intrinsic ratio preserves the supplied brand artwork. */
-.kc-hero-logo{width:clamp(210px,16vw,330px);height:auto;margin:-22px 0 -15px}
-.kc-auth-card>img,.kc-auth:has(#register-form) .kc-auth-card>img{width:clamp(260px,21vw,430px);height:auto;margin:-32px auto -16px;max-width:100%}
-@media(max-width:900px){.kc-hero-logo{width:135px;margin:-18px 0 -20px}.kc-auth-card>img,.kc-auth:has(#register-form) .kc-auth-card>img{width:250px;margin:-28px auto -18px}}
-@media(max-width:480px){.kc-hero-logo{width:120px;margin:-18px 0 -20px}.kc-auth-card>img,.kc-auth:has(#register-form) .kc-auth-card>img{width:230px;margin:-28px auto -18px}}
-
-/* v76.7.17.3: bounded form dimensions on large desktop displays. */
-.kc-auth-panel{padding:28px 32px;justify-content:center}
-.kc-auth-card{max-width:680px;padding:24px 28px 28px}
-.kc-auth-card>img,.kc-auth:has(#register-form) .kc-auth-card>img{width:220px;height:auto;margin:-28px auto -20px}
-.kc-auth-card h1{font-size:30px;letter-spacing:-.6px;margin-bottom:10px}
-.kc-auth .hint,.kc-auth:has(#register-form) .hint{font-size:16px;line-height:1.5;margin-bottom:16px}
-.kc-auth-card label{font-size:14px;margin:15px 0 7px}
-.kc-auth-card input:not([type=checkbox]):not([type=hidden]){height:48px;padding:11px 13px;font-size:16px}
-.kc-password-toggle{top:2px}
-.kc-auth-card .kc-check{font-size:13px;line-height:1.5;margin:12px 0}
-.kc-auth-card details{margin:18px 0;padding:12px;font-size:13px}
-.kc-step{font-size:12px;margin-bottom:3px}
-.kc-primary{font-size:17px;min-height:48px;padding:13px;margin-top:18px}
-.kc-auth-card>p:last-child{font-size:15px;margin-top:18px}
-.kc-auth-card form+.kc-auth-divider{margin-top:20px}
-.kc-hero-logo{width:190px;height:auto;margin:-20px 0 -16px}
-.kc-auth-slogan{font-size:clamp(54px,5.4vw,82px);max-width:320px}
-.kc-auth-hero-bottom{font-size:18px;gap:18px}
-@media(max-width:900px){.kc-auth-panel{padding:20px 16px}.kc-auth-card{max-width:600px}.kc-hero-logo{width:135px}.kc-auth-slogan{font-size:40px;max-width:none}.kc-auth-card h1{font-size:28px}}
-@media(max-width:600px){.kc-auth-grid{grid-template-columns:minmax(0,1fr)}.kc-auth-grid>div{grid-column:1/-1}.kc-auth-panel{padding:16px 12px}.kc-auth-card{padding:20px}.kc-auth-card>img,.kc-auth:has(#register-form) .kc-auth-card>img{width:190px;margin:-24px auto -18px}.kc-auth-card h1{font-size:25px}.kc-auth-hero{min-height:210px}.kc-auth-slogan{font-size:34px}.kc-hero-logo{width:120px}}
-
-/* v76.7.17.4: frame the real lesson photo from the water upwards.
-   Keep its aspect ratio and the existing form/logo dimensions. */
-@media(min-width:901px){
-  .kc-auth-hero{background-position:center bottom;background-size:cover}
-}
+.kc-primary{display:flex;align-items:center;justify-content:center;gap:20px;width:100%;min-height:58px;margin-top:28px;padding:15px;border:0;border-radius:8px;background:var(--teal);color:white;font:600 20px Arial,sans-serif;text-align:center;text-decoration:none;cursor:pointer;transition:background .15s}
+.kc-primary:hover{background:#008797}.kc-primary svg{width:25px;height:25px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.kc-auth-card a:not(.kc-primary){color:#00899b;text-underline-offset:3px}
+.kc-auth-divider{display:flex;align-items:center;gap:16px;color:#687997;margin:34px 0 0}.kc-auth-divider:before,.kc-auth-divider:after{content:'';height:1px;background:#e8edf5;flex:1}
+.kc-auth-card>p:last-child{text-align:center;font-size:18px;line-height:1.6;margin:24px 0 0}
+.kc-auth-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 16px}.kc-auth-grid .wide{grid-column:1/-1}
+.kc-step{text-align:center;color:#00899b;font-size:14px;line-height:1.6;margin-bottom:8px}
+.kc-auth-card .kc-check{display:flex;align-items:flex-start;gap:12px;font-size:14px;line-height:1.6;font-weight:400;margin:18px 0;cursor:pointer}
+.kc-check input{width:20px;height:20px;margin:2px 0 0;flex-shrink:0;accent-color:var(--teal)}
+details{margin:24px 0;border:1px solid var(--line);border-radius:8px;padding:16px;font-size:14px;line-height:1.65}summary{font-weight:600;cursor:pointer}details p{margin:12px 0}
+.kc-note,.kc-info{color:#5b6c80;font-size:14px;line-height:1.6}.kc-info{background:#edf8fc;border-radius:8px;padding:12px;margin-top:18px}
+.kc-messages{background:#fff3d8;color:#684507;padding:14px 24px;line-height:1.5;border-bottom:1px solid #edd69b}.kc-messages p{margin:4px 0}
+[hidden]{display:none!important}
+@media(min-width:901px){.kc-auth:has(#register-form) .kc-auth-hero{position:sticky;top:0;height:100svh}.kc-auth:has(#register-form) .kc-auth-panel{align-items:flex-start}.kc-auth:has(#register-form) .kc-auth-card>img{width:250px}.kc-auth:has(#register-form) .hint{font-size:18px;margin-bottom:20px}.kc-auth:has(#register-form) h1{font-size:34px}}
+@media(max-width:1100px) and (min-width:901px){.kc-auth-panel{padding:28px 22px 28px 12px}.kc-auth-card{padding:24px}.kc-auth-card label{font-size:16px}.kc-auth-card>img{width:240px}.kc-auth-slogan{font-size:76px}}
+@media(max-width:900px){.kc-auth{grid-template-columns:1fr}.kc-auth-hero{min-height:300px;padding:20px 28px;background-size:cover;background-position:center 65%}.kc-hero-logo{width:145px;margin:-18px 0 -16px}.kc-auth-slogan{font-size:44px;line-height:1;letter-spacing:-1px;margin:8px 0 0;max-width:230px;transform:rotate(-5deg)}.kc-auth-slogan em+em{margin-top:10px}.kc-auth-slogan:after{height:12px;margin-top:12px;width:175px}.kc-auth-hero-bottom{display:none}.kc-auth-panel{padding:24px 18px 36px}.kc-auth-card{max-width:650px;padding:26px}.kc-auth-card>img{width:250px}.kc-auth-card h1{font-size:30px}.hint{font-size:17px;margin-bottom:24px}}
+@media(max-width:600px){.kc-auth-hero{min-height:245px;padding:16px 22px}.kc-hero-logo{width:120px}.kc-auth-slogan{font-size:36px;max-width:190px}.kc-auth-panel{padding:16px 12px 28px}.kc-auth-card{padding:22px 20px;border-radius:12px}.kc-auth-card>img{width:230px;margin-top:-25px}.kc-auth-card h1{font-size:27px}.hint{font-size:16px}.kc-auth-card label{font-size:15px;margin-top:20px}.kc-auth-card input:not([type=checkbox]):not([type=hidden]){font-size:16px;height:54px}.kc-password-toggle{top:5px}.kc-auth-grid{grid-template-columns:minmax(0,1fr)}.kc-auth-grid>div{grid-column:1/-1}.kc-auth-card>p:last-child{font-size:16px}.kc-primary{font-size:18px}.kc-step{font-size:13px}}
