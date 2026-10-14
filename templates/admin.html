@@ -963,7 +963,7 @@
       <div class="muted">{{b.duration}} ώρες{% if b.participant_count and b.participant_count>1 %} · {{b.participant_count}}P Group{% endif %} · {% if b.lesson_final_price is not none %}{{"%.2f"|format(b.lesson_final_price)}}€{% if b.lesson_original_price and b.lesson_original_price>b.lesson_final_price+0.009 %} (αρχική {{"%.2f"|format(b.lesson_original_price)}}€){% endif %}{% else %}{{b.amount}}€{% endif %}</div>
     </div>
     <div class="row">
-      <span class="badge {{'off' if b.status=='no_show' else ('ok' if b.status in ['confirmed','completed'] else 'wait')}}">{{'No-show' if b.status=='no_show' else b.status}}</span>
+      <span class="badge {{'off' if b.status=='no_show' else ('ok' if b.status in ['confirmed','completed'] else 'wait')}}">{{'Cancel' if b.status.startswith('cancelled') else ('No-show' if b.status=='no_show' else b.status)}}</span>
 
     </div>
   </div>
