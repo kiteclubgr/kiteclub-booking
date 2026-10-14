@@ -10,7 +10,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from pathlib import Path
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "KiteClub v76.6.4 · Instructor Mobile Admin Style"
+APP_VERSION = "KiteClub v76.7.7 · Equipment Save Fix"
 
 # v70: production-ready storage. Locally everything stays inside the project.
 # On Railway mount a persistent volume at /data and set DATA_DIR=/data.
@@ -4427,6 +4427,166 @@ def admin_booking_history(booking_id):
     con.close()
     return render_template("booking_history.html",booking=booking,history=history,back_url=url_for("admin_bookings"),back_label="‹ Επιστροφή στις κρατήσεις",page_title="Ιστορικό κράτησης")
 
+
+
+# v76.7.0 — School equipment inventory, independent of lesson finances.
+EQUIPMENT_CATEGORIES = ("Kites", "Bars", "Boards", "Harnesses", "Wetsuits", "Vests", "Helmets")
+EQUIPMENT_STATUSES = ("available", "in_use", "service", "out_of_service", "sold", "destroyed")
+
+def ensure_equipment_schema(con):
+    con.executescript("""
+      CREATE TABLE IF NOT EXISTS equipment_items (
+        id INTEGER PRIMARY KEY,
+        item_code TEXT NOT NULL UNIQUE,
+        category TEXT NOT NULL,
+        brand TEXT NOT NULL,
+        model TEXT NOT NULL,
+        item_size TEXT,
+        item_year INTEGER,
+        purchase_price REAL,
+        sale_price REAL,
+        sale_date TEXT,
+        destruction_date TEXT,
+        destruction_reason TEXT,
+        rental_eligible INTEGER NOT NULL DEFAULT 0,
+        status TEXT NOT NULL DEFAULT 'available',
+        notes TEXT,
+        photo_path TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS equipment_history (
+        id INTEGER PRIMARY KEY,
+        equipment_id INTEGER NOT NULL,
+        event_type TEXT NOT NULL,
+        previous_status TEXT,
+        new_status TEXT,
+        amount REAL,
+        detail TEXT,
+        actor_id INTEGER,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY(equipment_id) REFERENCES equipment_items(id)
+      );
+      CREATE INDEX IF NOT EXISTS idx_equipment_category ON equipment_items(category,status);
+      CREATE INDEX IF NOT EXISTS idx_equipment_history ON equipment_history(equipment_id,id);
+    """)
+
+def equipment_input(form, old=None):
+    category=(form.get('category') or '').strip()
+    if category not in EQUIPMENT_CATEGORIES:
+        raise ValueError('Επίλεξε έγκυρη κατηγορία.')
+    status=(form.get('status') or 'available').strip()
+    if status not in EQUIPMENT_STATUSES[:4]:
+        raise ValueError('Μη έγκυρη κατάσταση. Πώληση και καταστροφή γίνονται από τις ξεχωριστές ενέργειες.')
+    code=(form.get('item_code') or '').strip().upper()
+    brand=(form.get('brand') or '').strip()
+    model=(form.get('model') or '').strip()
+    if not code or len(code)>40 or not brand or not model or len(brand)>120 or len(model)>120:
+        raise ValueError('Συμπλήρωσε κωδικό, μάρκα και μοντέλο.')
+    year_raw=(form.get('item_year') or '').strip()
+    year=int(year_raw) if year_raw else None
+    if year is not None and not (1950<=year<=2100):
+        raise ValueError('Η χρονιά πρέπει να είναι μεταξύ 1950 και 2100.')
+    raw=(form.get('purchase_price') or '').strip().replace(',','.')
+    price=float(raw) if raw else None
+    if price is not None and (not math.isfinite(price) or price<0 or price>1e8):
+        raise ValueError('Μη έγκυρη τιμή αγοράς.')
+    return (code,category,brand,model,(form.get('item_size') or '').strip()[:90],year,price,status,1 if form.get('rental_eligible')=='1' else 0,(form.get('notes') or '').strip()[:4000])
+
+def equipment_photo(file, item_id):
+    if not file or not file.filename:
+        return None
+    ext=Path(secure_filename(file.filename)).suffix.lower()
+    if ext not in ('.jpg','.jpeg','.png','.webp'):
+        raise ValueError('Επιτρέπονται μόνο JPG, PNG και WebP φωτογραφίες.')
+    # Verify magic bytes so user-controlled uploads cannot execute as HTML or script.
+    head=file.stream.read(16)
+    file.stream.seek(0)
+    if not (head.startswith(b'\xff\xd8\xff') or head.startswith(b'\x89PNG\r\n\x1a\n') or (head.startswith(b'RIFF') and head[8:12]==b'WEBP')):
+        raise ValueError('Μη έγκυρο αρχείο εικόνας.')
+    directory=UPLOAD_ROOT/'equipment'
+    directory.mkdir(parents=True,exist_ok=True)
+    filename=f'equipment-{item_id}-{secrets.token_hex(8)}{ext}'
+    file.save(str(directory/filename))
+    return f'uploads/equipment/{filename}'
+
+@app.route('/admin/equipment',methods=['GET'])
+def admin_equipment():
+    u=current_user()
+    if not u or u['role']!='admin':
+        return redirect(url_for('login'))
+    con=db()
+    ensure_equipment_schema(con)
+    rows=con.execute('SELECT * FROM equipment_items ORDER BY category,brand,model,id').fetchall()
+    histories=con.execute('SELECT * FROM equipment_history ORDER BY id DESC').fetchall()
+    con.close()
+    history_by_id={}
+    for h in histories:
+        history_by_id.setdefault(h['equipment_id'],[]).append(dict(h))
+    stats={cat:sum(1 for r in rows if r['category']==cat) for cat in EQUIPMENT_CATEGORIES}
+    return render_template('admin_equipment.html',items=rows,categories=EQUIPMENT_CATEGORIES,statuses=EQUIPMENT_STATUSES,history_by_id=history_by_id,stats=stats,items_json=[dict(r) for r in rows])
+
+@app.route('/admin/equipment/save',methods=['POST'])
+def admin_equipment_save():
+    u=current_user()
+    if not u or u['role']!='admin':
+        return redirect(url_for('login'))
+    con=db()
+    try:
+        ensure_equipment_schema(con)
+        con.execute('BEGIN IMMEDIATE')
+        vals=equipment_input(request.form)
+        item_id=int(request.form.get('item_id') or 0)
+        now=datetime.now().isoformat(timespec='seconds')
+        if item_id:
+            old=con.execute('SELECT * FROM equipment_items WHERE id=?',(item_id,)).fetchone()
+            if not old: raise ValueError('Το αντικείμενο δεν βρέθηκε.')
+            if old['status'] in ('sold','destroyed'): raise ValueError('Δεν μπορεί να τροποποιηθεί πωλημένος ή κατεστραμμένος εξοπλισμός.')
+            con.execute("""UPDATE equipment_items SET item_code=?,category=?,brand=?,model=?,item_size=?,item_year=?,purchase_price=?,status=?,rental_eligible=?,notes=?,updated_at=? WHERE id=?""",(*vals,now,item_id))
+            previous=old['status']; event='edit'
+        else:
+            cur=con.execute("""INSERT INTO equipment_items(item_code,category,brand,model,item_size,item_year,purchase_price,status,rental_eligible,notes,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)""",(*vals,now,now))
+            item_id=cur.lastrowid; previous=None; event='create'
+        photo=equipment_photo(request.files.get('photo'),item_id)
+        if photo: con.execute('UPDATE equipment_items SET photo_path=? WHERE id=?',(photo,item_id))
+        con.execute('INSERT INTO equipment_history(equipment_id,event_type,previous_status,new_status,detail,actor_id,created_at) VALUES(?,?,?,?,?,?,?)',(item_id,event,previous,vals[7],vals[9],u['id'],now))
+        con.commit(); flash('Ο εξοπλισμός αποθηκεύτηκε.')
+    except (ValueError,sqlite3.IntegrityError) as exc:
+        con.rollback(); flash('Σφάλμα: '+str(exc))
+    finally: con.close()
+    return redirect(url_for('admin_equipment'))
+
+@app.route('/admin/equipment/<int:item_id>/retire',methods=['POST'])
+def admin_equipment_retire(item_id):
+    u=current_user()
+    if not u or u['role']!='admin': return redirect(url_for('login'))
+    action=(request.form.get('action') or '').strip()
+    con=db()
+    try:
+        ensure_equipment_schema(con)
+        con.execute('BEGIN IMMEDIATE')
+        old=con.execute('SELECT * FROM equipment_items WHERE id=?',(item_id,)).fetchone()
+        if not old: raise ValueError('Το αντικείμενο δεν βρέθηκε.')
+        if old['status'] in ('sold','destroyed'): raise ValueError('Το αντικείμενο έχει ήδη αποσυρθεί.')
+        today=datetime.now().date().isoformat(); now=datetime.now().isoformat(timespec='seconds')
+        detail=(request.form.get('reason') or '').strip()[:2000]
+        if action=='sold':
+            raw=(request.form.get('sale_price') or '').strip().replace(',','.')
+            if not raw: raise ValueError('Συμπλήρωσε ποσό πώλησης.')
+            amount=float(raw)
+            if not math.isfinite(amount) or amount<0 or amount>1e8: raise ValueError('Μη έγκυρη τιμή πώλησης.')
+            con.execute('UPDATE equipment_items SET status=?,sale_price=?,sale_date=?,updated_at=? WHERE id=?',('sold',amount,today,now,item_id))
+        elif action=='destroyed':
+            if not detail: raise ValueError('Συμπλήρωσε αιτία καταστροφής.')
+            amount=None
+            con.execute('UPDATE equipment_items SET status=?,destruction_date=?,destruction_reason=?,updated_at=? WHERE id=?',('destroyed',today,detail,now,item_id))
+        else: raise ValueError('Μη έγκυρη ενέργεια.')
+        con.execute('INSERT INTO equipment_history(equipment_id,event_type,previous_status,new_status,amount,detail,actor_id,created_at) VALUES(?,?,?,?,?,?,?,?)',(item_id,action,old['status'],action,amount,detail,u['id'],now))
+        con.commit(); flash('Η καταχώριση ενημερώθηκε και διατηρείται στο ιστορικό.')
+    except ValueError as exc:
+        con.rollback();flash('Σφάλμα: '+str(exc))
+    finally:con.close()
+    return redirect(url_for('admin_equipment'))
 
 @app.route("/admin/reports")
 def admin_reports():
