@@ -151,3 +151,8 @@ details{margin:24px 0;border:1px solid var(--line);border-radius:8px;padding:16p
 .kc-auth-login .kc-auth-slogan,.kc-auth-register .kc-auth-slogan{font-size:26px}
 .kc-auth-login .kc-auth-slogan em+em,.kc-auth-register .kc-auth-slogan em+em{margin-left:10px}
 }
+
+.kc-auth-card .kc-google-form{margin:18px 0!important}
+.kc-google-button{width:100%;min-height:48px;display:flex;align-items:center;justify-content:center;gap:12px;border:1px solid var(--line);border-radius:8px;background:white;color:var(--ink);font:500 16px Arial,sans-serif;cursor:pointer}
+.kc-google-button:hover{background:#f4f7fb}
+.kc-google-mark{font:bold 24px Arial,sans-serif;color:#4285f4}

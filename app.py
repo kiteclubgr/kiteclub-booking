@@ -10,6 +10,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from pathlib import Path
 from PIL import Image, ImageOps, UnidentifiedImageError
 from io import BytesIO
+from google_auth import setup_google, pending_google
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 APP_VERSION = "KiteClub v76.7.17.4 · Lesson Photo Framing"
@@ -174,6 +175,8 @@ def db():
     con.execute("PRAGMA busy_timeout=15000")
     con.row_factory = sqlite3.Row
     return con
+
+google_client = setup_google(app, db, csrf_token)
 
 # v71: Beginner curriculum and automatic Beginner -> Kiter progression.
 # The higher categories (Intermediate / Expert) are intentionally left manual
@@ -359,6 +362,10 @@ def init_db():
     CREATE TABLE IF NOT EXISTS users(
       id INTEGER PRIMARY KEY, name TEXT, email TEXT UNIQUE, phone TEXT,
       role TEXT NOT NULL, password_hash TEXT NOT NULL, active INTEGER DEFAULT 1
+    );
+    CREATE TABLE IF NOT EXISTS oauth_identities(
+      provider TEXT NOT NULL, subject TEXT NOT NULL, user_id INTEGER NOT NULL REFERENCES users(id),
+      PRIMARY KEY(provider,subject), UNIQUE(provider,user_id)
     );
     CREATE TABLE IF NOT EXISTS students(
       user_id INTEGER PRIMARY KEY, credits REAL DEFAULT 0, level TEXT DEFAULT 'Beginner'
@@ -1731,6 +1738,17 @@ def login():
         if u and check_password_hash(u["password_hash"], request.form.get("password", "")):
             con.execute("DELETE FROM login_attempts WHERE identity=?", (key,))
             con.commit(); con.close()
+            identity = pending_google()
+            if identity and identity['email'] == u['email'].lower():
+                con = db()
+                try:
+                    con.execute("INSERT INTO oauth_identities(provider,subject,user_id) VALUES('google',?,?)", (identity['sub'], u['id']))
+                    con.commit()
+                except sqlite3.IntegrityError:
+                    con.rollback()
+                    flash("Το Google έχει ήδη συνδεθεί με λογαριασμό. Δοκιμάστε σύνδεση Google.")
+                finally:
+                    con.close()
             session.clear()
             session["uid"]=u["id"]
             session["role"]=u["role"]
@@ -1754,9 +1772,12 @@ def register():
     if request.method == "GET":
         return render_template("register.html", waiver_version=WAIVER_VERSION)
     form = request.form
+    identity = pending_google()
     name = (form.get("name") or "").strip()
     surname = (form.get("surname") or "").strip()
     email = (form.get("email") or "").strip().lower()
+    if identity:
+        email = identity["email"]
     phone = (form.get("phone") or "").strip()
     password = form.get("password") or ""
     dob = (form.get("birth_date") or "").strip()
@@ -1776,7 +1797,7 @@ def register():
     if not name or len(name)>100 or not surname or len(surname)>100 or not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+",email) or len(email)>254 or not 7<=len(phone)<=30:
         flash("Συμπληρώστε σωστά όνομα, επώνυμο, email και τηλέφωνο.")
         return redirect(url_for("register"))
-    if not password_meets_policy(password) or password != form.get("confirm_password"):
+    if not identity and (not password_meets_policy(password) or password != form.get("confirm_password")):
         flash("Ο κωδικός πρέπει να έχει τουλάχιστον 8 χαρακτήρες, γράμματα και αριθμούς και να ταιριάζει με την επιβεβαίωση.")
         return redirect(url_for("register"))
     if form.get("terms")!="yes" or form.get("waiver")!="yes":
@@ -1799,7 +1820,7 @@ def register():
             return redirect(url_for("register"))
         now=datetime.now().isoformat(timespec="seconds")
         uid=con.execute("""INSERT INTO users(name,surname,email,phone,role,password_hash,active)
-                       VALUES(?,?,?,?,?,?,0)""",(name,surname,email,phone,"student",generate_password_hash(password))).lastrowid
+                       VALUES(?,?,?,?,?,?,0)""",(name,surname,email,phone,"student",generate_password_hash(secrets.token_urlsafe(48) if identity else password))).lastrowid
         con.execute("""INSERT INTO students(user_id,credits,level,student_code,lesson_type)
                        VALUES(?,0,'Beginner',?,'private')""",(uid,_next_student_code(con)))
         # For minors this acknowledgment by a minor is never treated as guardian approval.
@@ -1811,8 +1832,11 @@ def register():
           WAIVER_VERSION,None if minor else now,now,
           1 if form.get("lesson_emails")=="yes" else 0,
           1 if form.get("marketing_emails")=="yes" else 0,now))
+        if identity:
+            con.execute("INSERT INTO oauth_identities(provider,subject,user_id) VALUES('google',?,?)", (identity['sub'],uid))
         record_login_failure(con,k)
         con.commit()
+        session.pop('google_identity', None)
         return render_template("register_success.html")
     except sqlite3.IntegrityError:
         con.rollback()
