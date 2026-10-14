@@ -956,7 +956,7 @@
 </div>
 
 <div class="card">
-  <h2>Πρόσφατες κρατήσεις</h2>
+  <h2>Πρόσφατες κρατήσεις</h2><p style="margin:8px 0"><a href="{{url_for('admin_registrations')}}" class="btn alt">Νέες εγγραφές μαθητών →</a></p>
   {% for b in bookings %}
   <div class="item spread">
     <div><b>{{b.participant_names or (b.student ~ (' ' ~ b.student_surname if b.student_surname else ''))}}</b> — {{b.instructor}}{% if b.instructor_surname %} {{b.instructor_surname}}{% endif %} · {{b.start_time|hm24}}
