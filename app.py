@@ -12,7 +12,7 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 from io import BytesIO
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "KiteClub v76.7.17 · Student Registration"
+APP_VERSION = "KiteClub v76.7.17.1 · Auth Design Preview"
 
 # v70: production-ready storage. Locally everything stays inside the project.
 # On Railway mount a persistent volume at /data and set DATA_DIR=/data.

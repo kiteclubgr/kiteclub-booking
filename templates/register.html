@@ -1,30 +1,6 @@
-{% extends "base.html" %}{% block content %}
-<style>
-body:has(.kc-auth){background:#b8ddeb}body:has(.kc-auth) nav,body:has(.kc-auth) footer{display:none!important}
-body:has(.kc-auth) main{max-width:none!important;padding:0!important;margin:0!important}
-.kc-auth{min-height:100vh;display:grid;grid-template-columns:53% 47%;background:#d2edfa;color:#112645;font-family:Inter,system-ui,sans-serif}
-.kc-auth-hero{background:linear-gradient(90deg,rgba(0,55,91,.30),rgba(0,65,92,.04)),url("{{url_for('static',filename='img/kiteclub-sea-banner.jpg')}}") center /cover;min-height:100vh;padding:26px 5vw;color:white;display:flex;flex-direction:column;justify-content:space-between}
-.kc-auth-slogan{font-family:cursive;font-weight:700;font-size:clamp(34px,5.2vw,83px);line-height:1.02;text-shadow:0 3px 14px #143a5c;margin:40px 0;transform:rotate(-5deg)}
-.kc-auth-slogan em{display:block;font-style:normal}.kc-auth-hero-bottom{display:grid;gap:16px;font-size:17px;font-weight:700;text-shadow:0 2px 8px #073b4d}
-.kc-auth-panel{padding:34px 5vw;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#c4e4f8,#f0fcff)}
-.kc-auth-card{background:white;border-radius:17px;box-shadow:0 20px 65px #083b5c25;padding:32px;max-width:610px;width:100%}
-.kc-auth-card img{width:165px;max-height:125px;object-fit:contain;display:block;margin:0 auto 10px}
-.kc-auth-card h1{text-align:center;font-size:30px;margin:7px 0 10px}.kc-auth-card .hint{text-align:center;color:#64758b;line-height:1.5;margin:0 0 22px}
-.kc-auth-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.kc-auth-grid .wide{grid-column:1/-1}
-.kc-auth-card label{font-weight:700;font-size:13px;display:block;margin:7px 0}
-.kc-auth-card input:not([type=checkbox]){width:100%;padding:13px;border:1px solid #cad6e3;border-radius:9px;font:inherit;min-width:0}
-.kc-auth-card input:focus{outline:2px solid #00a8b4;outline-offset:1px}
-.kc-auth-card .kc-check{display:flex;align-items:flex-start;gap:11px;font-size:13px;font-weight:500;line-height:1.45;margin:13px 0}
-.kc-auth-card .kc-check input{margin-top:3px;flex:0 0 auto}
-.kc-auth-card .kc-primary{width:100%;border:0;border-radius:9px;padding:14px;background:#0098a9;color:white;font-weight:750;font-size:16px;cursor:pointer;margin-top:12px}
-.kc-auth-card a{color:#008a9c}.kc-auth-card .kc-secondary{display:flex;justify-content:center;gap:16px;margin:17px 0}
-.kc-auth-card .kc-step{text-align:center;font-size:13px;font-weight:700;color:#008998;margin:9px 0 22px}
-.kc-auth-card details{border:1px solid #cbdce4;border-radius:9px;padding:12px;margin:15px 0;max-height:240px;overflow:auto;font-size:13px;line-height:1.5}
-.kc-auth-card details summary{font-weight:800;cursor:pointer}.kc-auth-card .kc-note{font-size:12px;color:#586f83;line-height:1.4}
-.kc-auth-card .kc-info{background:#eaf7fc;padding:10px;border-radius:8px;font-size:12px;color:#31566f;margin-top:12px}
-@media(max-width:850px){.kc-auth{display:block}.kc-auth-hero{min-height:220px;padding:20px;background-position:center 57%}.kc-auth-slogan{font-size:38px;margin:10px 0}.kc-auth-hero-bottom{display:none}.kc-auth-panel{padding:15px}.kc-auth-card{padding:23px}.kc-auth-card h1{font-size:25px}}
-</style>
-<div class="kc-auth"><section class="kc-auth-hero"><div><img src="{{url_for('static',filename='img/kiteclub-logo.png')}}" alt="KiteClub" style="width:130px;max-height:120px;object-fit:contain"><div class="kc-auth-slogan"><em>Learn with us</em><em>Ride with us</em></div></div><div class="kc-auth-hero-bottom"><div>▣ &nbsp; Κλείστε τα μαθήματά σας</div><div>♧ &nbsp; Ενημερώσεις & νέα</div><div>♧ &nbsp; Γίνετε μέλος της κοινότητας</div></div></section><section class="kc-auth-panel"><div class="kc-auth-card">
+{% extends "auth_base.html" %}{% block content %}
+
+<div class="kc-auth"><section class="kc-auth-hero"><div><img src="{{url_for('static',filename='img/kiteclub-logo.png')}}" alt="KiteClub" class="kc-hero-logo"><div class="kc-auth-slogan"><em>Learn with us</em><em>Ride with us</em></div></div><div class="kc-auth-hero-bottom">{% include "_auth_features.html" %}</div></section><section class="kc-auth-panel"><div class="kc-auth-card">
 <img src="{{url_for('static',filename='img/kiteclub-logo.png')}}" alt="KiteClub logo"><h1>Εγγραφή στο KiteClub</h1><p class="hint">Δημιουργήστε τον λογαριασμό σας για μαθήματα και κρατήσεις.</p>
 <div class="kc-step">1. Στοιχεία → 2. Όροι & συγκατάθεση → 3. Έγκριση</div>
 <form method="post" action="{{url_for('register')}}" id="register-form"><input type="hidden" name="_csrf_token" value="{{csrf_token()}}">
@@ -33,7 +9,7 @@ body:has(.kc-auth) main{max-width:none!important;padding:0!important;margin:0!im
 <div class="wide"><label for="reg-email">Email *</label><input type="email" id="reg-email" name="email" maxlength="254" autocomplete="email" required></div>
 <div class="wide"><label for="reg-phone">Τηλέφωνο *</label><input id="reg-phone" type="tel" name="phone" minlength="7" maxlength="30" autocomplete="tel" required></div>
 <div class="wide"><label for="reg-birth">Ημερομηνία γέννησης * (για γονική συναίνεση αν χρειάζεται)</label><input id="reg-birth" type="date" name="birth_date" required></div>
-<div class="wide" id="guardian-fields" hidden><div class="kc-info">Για ανηλίκους η σχολή θα επαληθεύσει την υπογραφή γονέα/κηδεμόνα πριν την ενεργοποίηση.</div><label>Ονοματεπώνυμο κηδεμόνα *</label><input name="guardian_name" maxlength="180"><label>Email κηδεμόνα *</label><input name="guardian_email" type="email"><label>Τηλέφωνο κηδεμόνα *</label><input name="guardian_phone" type="tel"></div>
+<div class="wide" id="guardian-fields" hidden><div class="kc-info">Για ανηλίκους η σχολή θα επαληθεύσει την υπογραφή γονέα/κηδεμόνα πριν την ενεργοποίηση.</div><label for="guardian-name">Ονοματεπώνυμο κηδεμόνα *</label><input name="guardian_name" maxlength="180" id="guardian-name"><label for="guardian-email">Email κηδεμόνα *</label><input name="guardian_email" id="guardian-email" type="email"><label for="guardian-phone">Τηλέφωνο κηδεμόνα *</label><input name="guardian_phone" id="guardian-phone" type="tel"></div>
 <div class="wide"><label for="reg-pass">Κωδικός πρόσβασης *</label><input id="reg-pass" name="password" type="password" minlength="8" autocomplete="new-password" required></div>
 <div class="wide"><label for="reg-confirm">Επιβεβαίωση κωδικού *</label><input id="reg-confirm" name="confirm_password" type="password" minlength="8" autocomplete="new-password" required></div></div>
 <details><summary>Kitesurfing Release of Liability, Waiver of Legal Rights and Assumption of Risk (English)</summary>
@@ -47,7 +23,7 @@ body:has(.kc-auth) main{max-width:none!important;padding:0!important;margin:0!im
 <label class="kc-check"><input type="checkbox" name="waiver" value="yes" required><span>Έχω διαβάσει την ενημέρωση κινδύνων του kitesurfing. Η πλήρης δήλωση συμμετοχής θα επιβεβαιωθεί από τη σχολή. *</span></label>
 <label class="kc-check"><input type="checkbox" name="lesson_emails" value="yes"><span>Θέλω email όταν ανοίγουν διαθέσιμα μαθήματα. (Προαιρετικό)</span></label>
 <label class="kc-check"><input type="checkbox" name="marketing_emails" value="yes"><span>Θέλω email για προσφορές και νέα της σχολής. (Προαιρετικό)</span></label>
-<p class="kc-note">Η εγγραφή ξεκινά με 0 credits και απαιτεί έγκριση της σχολής. Google και Apple sign-in θα ενεργοποιηθούν όταν ρυθμιστούν ασφαλώς οι πάροχοι.</p>
+<p class="kc-note">Η εγγραφή ξεκινά με 0 credits και απαιτεί έγκριση της σχολής.</p>
 <button class="kc-primary" type="submit">Δημιουργία λογαριασμού →</button></form>
 <p style="text-align:center">Έχετε ήδη λογαριασμό; <a href="{{url_for('login')}}">Σύνδεση εδώ</a></p>
 </div></section></div>
