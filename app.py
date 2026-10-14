@@ -12,7 +12,7 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 from io import BytesIO
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "KiteClub v76.7.16 · Logout Fix"
+APP_VERSION = "KiteClub v76.7.17 · Student Registration"
 
 # v70: production-ready storage. Locally everything stays inside the project.
 # On Railway mount a persistent volume at /data and set DATA_DIR=/data.
@@ -445,6 +445,18 @@ def init_db():
     ensure_column(con,"users","profile_photo","TEXT")
     ensure_column(con,"users","surname","TEXT")
     ensure_column(con,"users","instagram","TEXT")
+    # v76.7.17: independent registration records, no changes to existing credits.
+    con.execute("""CREATE TABLE IF NOT EXISTS student_registrations (
+      user_id INTEGER PRIMARY KEY, birth_date TEXT NOT NULL, guardian_name TEXT,
+      guardian_email TEXT, guardian_phone TEXT, guardian_approved_at TEXT,
+      waiver_version TEXT NOT NULL, waiver_accepted_at TEXT,
+      terms_accepted_at TEXT, lesson_emails INTEGER NOT NULL DEFAULT 0,
+      marketing_emails INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL,
+      approved_at TEXT, approved_by INTEGER
+    )""")
+    con.execute("""CREATE INDEX IF NOT EXISTS idx_student_registrations_approved
+       ON student_registrations(approved_at)""")
+    con.commit()
     # v50: stable visible Student ID + fixed 2P/3P group links.
     ensure_column(con,"students","student_code","TEXT")
     ensure_column(con,"students","lesson_type","TEXT DEFAULT 'private'")
@@ -1730,6 +1742,144 @@ def login():
         con.close()
         flash("Λάθος email ή password")
     return render_template("login.html")
+
+
+# Public sign-up: the account is inactive until reviewed by school admin.
+WAIVER_VERSION = "kiteclub-original-en-2026-10"
+def _registration_ip_key():
+    return "register-ip:" + (request.remote_addr or "unknown")
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    if request.method == "GET":
+        return render_template("register.html", waiver_version=WAIVER_VERSION)
+    form = request.form
+    name = (form.get("name") or "").strip()
+    surname = (form.get("surname") or "").strip()
+    email = (form.get("email") or "").strip().lower()
+    phone = (form.get("phone") or "").strip()
+    password = form.get("password") or ""
+    dob = (form.get("birth_date") or "").strip()
+    guardian_name = (form.get("guardian_name") or "").strip()
+    guardian_email = (form.get("guardian_email") or "").strip().lower()
+    guardian_phone = (form.get("guardian_phone") or "").strip()
+    try:
+        birth = datetime.strptime(dob, "%Y-%m-%d").date()
+        today = datetime.now().date()
+        age = today.year - birth.year - ((today.month,today.day)<(birth.month,birth.day))
+        if age < 6 or age > 110:
+            raise ValueError("age")
+    except ValueError:
+        flash("Συμπληρώστε έγκυρη ημερομηνία γέννησης.")
+        return redirect(url_for("register"))
+    minor = age < 18
+    if not name or len(name)>100 or not surname or len(surname)>100 or not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+",email) or len(email)>254 or not 7<=len(phone)<=30:
+        flash("Συμπληρώστε σωστά όνομα, επώνυμο, email και τηλέφωνο.")
+        return redirect(url_for("register"))
+    if not password_meets_policy(password) or password != form.get("confirm_password"):
+        flash("Ο κωδικός πρέπει να έχει τουλάχιστον 8 χαρακτήρες, γράμματα και αριθμούς και να ταιριάζει με την επιβεβαίωση.")
+        return redirect(url_for("register"))
+    if form.get("terms")!="yes" or form.get("waiver")!="yes":
+        flash("Διαβάστε και αποδεχτείτε τους όρους και τη δήλωση κινδύνων.")
+        return redirect(url_for("register"))
+    if minor and (not guardian_name or len(guardian_name)>180 or not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+",guardian_email) or len(guardian_email)>254 or not 7<=len(guardian_phone)<=30):
+        flash("Για ανήλικο απαιτούνται τα στοιχεία γονέα/κηδεμόνα. Η σχολή θα ζητήσει επαληθευμένη υπογραφή πριν από το μάθημα.")
+        return redirect(url_for("register"))
+    con=db()
+    try:
+        con.execute("BEGIN IMMEDIATE")
+        k=_registration_ip_key()
+        if login_locked(con,k,5):
+            con.rollback()
+            flash("Έχουν γίνει πολλές εγγραφές. Δοκιμάστε ξανά αργότερα.")
+            return render_template("register.html",waiver_version=WAIVER_VERSION),429
+        if con.execute("SELECT id FROM users WHERE lower(email)=?",(email,)).fetchone():
+            con.rollback()
+            flash("Το email χρησιμοποιείται ήδη. Δοκιμάστε σύνδεση.")
+            return redirect(url_for("register"))
+        now=datetime.now().isoformat(timespec="seconds")
+        uid=con.execute("""INSERT INTO users(name,surname,email,phone,role,password_hash,active)
+                       VALUES(?,?,?,?,?,?,0)""",(name,surname,email,phone,"student",generate_password_hash(password))).lastrowid
+        con.execute("""INSERT INTO students(user_id,credits,level,student_code,lesson_type)
+                       VALUES(?,0,'Beginner',?,'private')""",(uid,_next_student_code(con)))
+        # For minors this acknowledgment by a minor is never treated as guardian approval.
+        con.execute("""INSERT INTO student_registrations(
+          user_id,birth_date,guardian_name,guardian_email,guardian_phone,waiver_version,
+          waiver_accepted_at,terms_accepted_at,lesson_emails,marketing_emails,created_at)
+          VALUES(?,?,?,?,?,?,?,?,?,?,?)""",(uid,dob,guardian_name if minor else None,
+          guardian_email if minor else None,guardian_phone if minor else None,
+          WAIVER_VERSION,None if minor else now,now,
+          1 if form.get("lesson_emails")=="yes" else 0,
+          1 if form.get("marketing_emails")=="yes" else 0,now))
+        record_login_failure(con,k)
+        con.commit()
+        return render_template("register_success.html")
+    except sqlite3.IntegrityError:
+        con.rollback()
+        flash("Δεν ήταν δυνατή η εγγραφή. Ελέγξτε τα στοιχεία.")
+        return redirect(url_for("register"))
+    finally:
+        con.close()
+
+@app.route("/admin/registrations")
+def admin_registrations():
+    user=current_user()
+    if not user or user["role"]!="admin":
+        return redirect(url_for("login"))
+    con=db()
+    rows=con.execute("""SELECT r.*,u.name,u.surname,u.email,u.phone,u.active,
+      u.id FROM student_registrations r JOIN users u ON u.id=r.user_id
+      ORDER BY r.created_at DESC LIMIT 200""").fetchall()
+    con.close()
+    return render_template("admin_registrations.html",registrations=rows)
+
+@app.post("/admin/registrations/<int:user_id>/approve")
+def admin_approve_registration(user_id):
+    user=current_user()
+    if not user or user["role"]!="admin":
+        abort(403)
+    con=db()
+    try:
+        con.execute("BEGIN IMMEDIATE")
+        row=con.execute("SELECT * FROM student_registrations WHERE user_id=?",(user_id,)).fetchone()
+        if not row:
+            abort(404)
+        birth=datetime.strptime(row["birth_date"],"%Y-%m-%d").date()
+        now=datetime.now().date()
+        age=now.year-birth.year-((now.month,now.day)<(birth.month,birth.day))
+        if age<18 and not row["guardian_approved_at"]:
+            con.rollback()
+            flash("Ανήλικος: απαιτείται πρώτα έλεγχος και έγκυρη υπογραφή του γονέα/κηδεμόνα.")
+            return redirect(url_for("admin_registrations"))
+        stamp=datetime.now().isoformat(timespec="seconds")
+        con.execute("UPDATE users SET active=1 WHERE id=? AND role='student'",(user_id,))
+        con.execute("UPDATE student_registrations SET approved_at=?,approved_by=? WHERE user_id=?",
+                    (stamp,user["id"],user_id))
+        con.commit()
+        flash("Ο μαθητής εγκρίθηκε και μπορεί να συνδεθεί.")
+    finally:
+        con.close()
+    return redirect(url_for("admin_registrations"))
+
+@app.post("/admin/registrations/<int:user_id>/guardian-verified")
+def admin_guardian_verified(user_id):
+    user=current_user()
+    if not user or user["role"]!="admin":
+        abort(403)
+    con=db()
+    try:
+        con.execute("BEGIN IMMEDIATE")
+        row=con.execute("SELECT guardian_name,guardian_email FROM student_registrations WHERE user_id=?",
+                        (user_id,)).fetchone()
+        if not row or not row["guardian_name"] or not row["guardian_email"]:
+            abort(400)
+        con.execute("UPDATE student_registrations SET guardian_approved_at=? WHERE user_id=?",
+                    (datetime.now().isoformat(timespec="seconds"),user_id))
+        con.commit()
+        flash("Καταγράφηκε έλεγχος γονικής υπογραφής από Admin.")
+    finally:
+        con.close()
+    return redirect(url_for("admin_registrations"))
 
 @app.post("/logout")
 def logout():
