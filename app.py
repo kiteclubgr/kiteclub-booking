@@ -10,7 +10,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from pathlib import Path
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "KiteClub v76.7.8 · Equipment Assets Deployment Fix"
+APP_VERSION = "KiteClub v76.7.11 · Cancel"
 
 # v70: production-ready storage. Locally everything stays inside the project.
 # On Railway mount a persistent volume at /data and set DATA_DIR=/data.
@@ -319,7 +319,7 @@ def booking_state_meta(status, payment_status=None):
     if status=="no_show":
         return {"label":"No-show","class":"noshow"}
     if status.startswith("cancelled"):
-        return {"label":"Cancelled","class":"cancelled"}
+        return {"label":"Cancel","class":"cancelled"}
     if status=="pending_payment":
         return {"label":"Pending payment","class":"pending"}
     if status=="confirmed":
@@ -3156,8 +3156,9 @@ def manual_slot_state(slot_id):
     if not u or u["role"]!="admin": return redirect(url_for("login"))
 
     new_status=request.form.get("status","open")
-    if new_status not in ("open","standby","closed","pending_payment","booked"):
-        new_status="open"
+    if new_status not in ("open","closed","booked"):
+        flash("Μη επιτρεπτή χειροκίνητη κατάσταση slot.")
+        return redirect(request.referrer or url_for("admin"))
 
     con=db()
     active=con.execute("""
@@ -3490,39 +3491,65 @@ def admin_edit_booking(booking_id):
     return _admin_booking_action_redirect(lesson_date)
 
 
+def _cancel_by_staff(booking_id, actor, role):
+    """Atomic staff Cancel: refund each charged participant, close every occupied hour.
+
+    Status retains the `cancelled` prefix for existing reports, filtering and debt logic;
+    the UI shows only `Cancel`.
+    """
+    con=db()
+    try:
+        con.execute("BEGIN IMMEDIATE")
+        booking=con.execute("""
+          SELECT b.*, s.lesson_date, s.instructor_id
+          FROM bookings b JOIN slots s ON s.id=b.slot_id WHERE b.id=?
+        """,(booking_id,)).fetchone()
+        if not booking:
+            con.rollback(); return None,"Η κράτηση δεν βρέθηκε."
+        day=booking["lesson_date"]
+        if role=="instructor" and booking["instructor_id"]!=actor["id"]:
+            con.rollback(); return day,"Δεν έχεις δικαίωμα ακύρωσης αυτού του μαθήματος."
+        if booking["status"] not in ("confirmed","pending_payment"):
+            con.rollback(); return day,"Το μάθημα δεν είναι πλέον ενεργό και δεν μπορεί να ακυρωθεί."
+        linked=con.execute("SELECT slot_id FROM booking_slots WHERE booking_id=?",(booking_id,)).fetchall()
+        if not linked:
+            linked=[{"slot_id":booking["slot_id"]}]
+        participant_count=con.execute("SELECT COUNT(*) n FROM booking_participants WHERE booking_id=?",(booking_id,)).fetchone()["n"]
+        refunded=_refund_booking_participants(con,booking_id,"staff_cancel_refund","Cancel lesson - credit refund")
+        con.execute("UPDATE bookings SET status='cancelled_staff' WHERE id=?",(booking_id,))
+        _cancel_lesson_debts(con,booking_id)
+        # A manual override is essential: automatic instructor rebalance must not reopen a weather-closed hour.
+        for item in linked:
+            con.execute("UPDATE slots SET status='closed',manual_override='closed' WHERE id=?",(item["slot_id"],))
+        log_booking_audit(con,booking_id,"cancelled","Cancel μαθήματος.",actor["id"],role,
+                          f"refunded_hours={refunded:g}; participants={participant_count}; slots_closed={len(linked)}")
+        con.commit()
+        return day,f"Cancel ολοκληρώθηκε. Επιστράφηκαν {refunded:g}h credits συνολικά και έκλεισαν {len(linked)} slots."
+    except Exception:
+        con.rollback()
+        raise
+    finally:
+        con.close()
+
+
 @app.post("/admin/booking/<int:booking_id>/cancel")
 def admin_cancel_booking(booking_id):
-    """Admin cancellation has no 6-hour restriction and refunds charged participants."""
     u=current_user()
-    if not u or u["role"]!="admin":
-        return redirect(url_for("login"))
+    if not u or u["role"]!="admin": return redirect(url_for("login"))
+    day,message=_cancel_by_staff(booking_id,u,"admin")
+    flash(message)
+    if day: rebalance_instructors(day)
+    return _admin_booking_action_redirect(day)
 
-    con=db(); con.execute("BEGIN IMMEDIATE")
-    b=con.execute("""
-      SELECT b.*,s.lesson_date FROM bookings b JOIN slots s ON s.id=b.slot_id WHERE b.id=?
-    """,(booking_id,)).fetchone()
-    if not b:
-        con.rollback(); con.close(); flash("Η κράτηση δεν βρέθηκε.")
-        return _admin_booking_action_redirect()
-    lesson_date=b["lesson_date"]
-    if b["status"] not in ("confirmed","pending_payment"):
-        con.rollback(); con.close(); flash("Η κράτηση δεν είναι πλέον ενεργή.")
-        return _admin_booking_action_redirect(lesson_date)
 
-    participant_count=con.execute("SELECT COUNT(*) n FROM booking_participants WHERE booking_id=?",(booking_id,)).fetchone()["n"]
-    refunded=_refund_booking_participants(con,booking_id,"admin_booking_cancel_refund","Admin cancellation refund")
-    linked=con.execute("SELECT slot_id FROM booking_slots WHERE booking_id=?",(booking_id,)).fetchall()
-    con.execute("UPDATE bookings SET status='cancelled_admin' WHERE id=?",(booking_id,))
-    _cancel_lesson_debts(con,booking_id)
-    for r in linked:
-        con.execute("UPDATE slots SET status='open' WHERE id=?",(r["slot_id"],))
-    log_booking_audit(con,booking_id,"cancelled","Ακύρωση κράτησης από Admin.",u["id"],u["role"],f"refunded_hours={refunded}; participants={participant_count}")
-    con.commit(); con.close()
-    rebalance_instructors(lesson_date)
-
-    label="group κράτηση" if participant_count>1 else "κράτηση"
-    flash(f"Η {label} ακυρώθηκε από τον Admin" + (" και επιστράφηκαν οι χρεωμένες ώρες." if refunded else "."))
-    return _admin_booking_action_redirect(lesson_date)
+@app.post("/instructor/lesson/<int:booking_id>/cancel")
+def instructor_cancel_lesson(booking_id):
+    u=current_user()
+    if not u or u["role"]!="instructor": return redirect(url_for("login"))
+    day,message=_cancel_by_staff(booking_id,u,"instructor")
+    flash(message)
+    if day: rebalance_instructors(day)
+    return redirect(url_for("instructor",date=day) if day else url_for("instructor"))
 
 
 @app.post("/admin/day-spot")
@@ -5798,13 +5825,35 @@ def complete_group(booking_id):
             return redirect(url_for("instructor_complete_lesson",booking_id=booking_id))
         skill=(request.form.get(f"skill_{sid}") or "").strip()
         notes=(request.form.get(f"notes_{sid}") or "").strip()
-        if status=="completed" and not skill: skill="Water Start"
         if status!="completed": skill=""
         any_completed = any_completed or status=="completed"
         results.append((sid,status,skill,notes,person))
 
+    # Validate EACH completed student's worked curriculum before any writes.
+    # A Make-up or No-show never updates progress or requires a skill selection.
+    worked_by_student={}
+    for sid,status,skill,notes,person in results:
+        if status != "completed":
+            continue
+        submitted=request.form.getlist(f"worked_skill_{sid}")
+        worked=list(dict.fromkeys(key for key in submitted if key in BEGINNER_SKILL_LOOKUP))
+        if not worked:
+            con.rollback(); con.close()
+            flash(f"Επίλεξε τουλάχιστον μία τεχνική για τον/την {person['name']} (Completed).")
+            return redirect(url_for("instructor_complete_lesson",booking_id=booking_id))
+        progress_updates=[]
+        for key in worked:
+            progress_status=(request.form.get(f"progress_status_{sid}_{key}") or "practicing").strip().lower()
+            if progress_status not in ("practicing", "mastered"):
+                con.rollback(); con.close(); flash("Μη έγκυρη κατάσταση προόδου.")
+                return redirect(url_for("instructor_complete_lesson",booking_id=booking_id))
+            progress_updates.append((key,progress_status))
+        worked_by_student[sid]=progress_updates
+
     makeup_refunded=0.0
     for sid,status,skill,notes,person in results:
+        if status=="completed":
+            skill=BEGINNER_SKILL_LOOKUP[worked_by_student[sid][0][0]]
         con.execute("""
           UPDATE booking_participants
           SET attendance_status=?,attendance_at=?,participant_next_skill=?,participant_notes=?
@@ -5813,11 +5862,16 @@ def complete_group(booking_id):
         # v52: Make-up does not consume the lesson hour. Return only this member's
         # already-reserved credit/package hour so it can be used later for Private or Group.
         if status=="completed":
+            for key,progress_status in worked_by_student[sid]:
+                set_student_skill_progress(con,sid,key,progress_status,u["id"])
             _adjust_group_member_actual(con,b,sid,actual)
         if status=="makeup":
             makeup_refunded += _refund_one_booking_participant(
                 con,booking_id,sid,"makeup_refund","Make-up hour returned"
             )
+
+    results=[(sid,status,BEGINNER_SKILL_LOOKUP[worked_by_student[sid][0][0]] if status=="completed" else "",notes,person)
+             for sid,status,skill,notes,person in results]
 
     # The instructor works one shared slot, no matter how many group members attended.
     overall_status="completed" if any_completed else "no_show"

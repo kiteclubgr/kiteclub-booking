@@ -116,7 +116,7 @@
         </div>
         <div class="edit-actions"><button class="btn alt" type="button" id="modalCancel">Κλείσιμο</button><button class="btn" type="submit">Αποθήκευση</button></div>
       </form>
-      <form id="cancelBookingForm" method="post" style="margin-top:10px"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="return_to" value="bookings"><button class="small-btn danger" type="submit" style="width:100%;padding:10px">Ακύρωση κράτησης & επιστροφή credits όπου ισχύει</button></form>
+      <form id="cancelBookingForm" method="post" style="margin-top:10px"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="return_to" value="bookings"><button class="small-btn danger" type="submit" style="width:100%;padding:10px">Cancel · Επιστροφή credits · Closed slots</button></form>
     </div>
   </div>
 </div>
@@ -134,7 +134,7 @@
   document.querySelectorAll('.edit-booking').forEach(btn=>btn.addEventListener('click',()=>{const d=btn.dataset,day=scheduleData[d.date]||{instructors:[],times:[]};fill(instructorEl,day.instructors,d.instructor);fill(timeEl,day.times,d.time);dateEl.value=displayDate(d.date);durationEl.value=Number(d.duration)>=2?'2':'1';stateEl.value=d.state==='pending'?'pending':'booked';const st=students.find(s=>String(s.id)===String(d.student));studentSearch.value=st?st.display:'';studentId.value=st?String(st.id):String(d.student||'');picked.textContent=st?'Επιλεγμένος μαθητής: '+st.display:'';form.action='/admin/booking/'+d.id+'/edit';cancelForm.action='/admin/booking/'+d.id+'/cancel';modal.classList.add('open');modal.setAttribute('aria-hidden','false');}));
   studentSearch.addEventListener('input',resolveStudent);studentSearch.addEventListener('change',resolveStudent);
   form.addEventListener('submit',e=>{if(!resolveStudent()){e.preventDefault();alert('Επίλεξε μαθητή από την αναζήτηση.');}});
-  cancelForm.addEventListener('submit',e=>{if(!confirm('Να ακυρωθεί η κράτηση; Αν είχε χρεωθεί από πακέτο, οι ώρες θα επιστραφούν.'))e.preventDefault();});
+  cancelForm.addEventListener('submit',e=>{if(!confirm('Cancel της κράτησης για ΟΛΟΥΣ τους μαθητές; Τα credits θα επιστραφούν και ΟΛΑ τα slots θα γίνουν Closed.'))e.preventDefault();});
   document.getElementById('modalClose').addEventListener('click',close);document.getElementById('modalCancel').addEventListener('click',close);modal.addEventListener('click',e=>{if(e.target===modal)close();});document.addEventListener('keydown',e=>{if(e.key==='Escape')close();});
 })();
 </script>
