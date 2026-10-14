@@ -196,7 +196,7 @@
             <div class="kc-user-card">
               <div class="kc-user-avatar">{% if me.profile_photo %}<img src="{{url_for('static',filename=me.profile_photo)}}" alt="{{me.name}}">{% else %}{{ (me.name or 'A')[:1]|upper }}{% endif %}</div>
               <div class="kc-user-copy"><strong>{{me.name}}{% if me.surname %} {{me.surname}}{% endif %}</strong><small>Administrator</small></div>
-              <a class="kc-user-logout" title="Αποσύνδεση" href="{{url_for('logout')}}">Έξοδος</a>
+              <form action="{{url_for('logout')}}" method="post" style="display:inline"><input type="hidden" name="_csrf_token" value="{{csrf_token()}}"><button class="kc-user-logout" type="submit" title="Αποσύνδεση" style="font:inherit;cursor:pointer">Έξοδος</button></form>
             </div>
           </div>
         </div>
