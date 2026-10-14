@@ -377,7 +377,7 @@
         {% endif %}
       </div>
       <div class="row">
-        <span class="badge {{'off' if b.status=='no_show' else ('ok' if b.status in ['confirmed','completed'] else 'wait')}}">{{'No-show' if b.status=='no_show' else ('Make-up' if b.status=='makeup' else b.status)}}</span>
+        <span class="badge {{'off' if b.status=='no_show' else ('ok' if b.status in ['confirmed','completed'] else 'wait')}}">{{'Cancel' if b.status.startswith('cancelled') else ('No-show' if b.status=='no_show' else ('Make-up' if b.status=='makeup' else b.status))}}</span>
         {% if b.can_cancel %}
         <form method="post" action="{{url_for('cancel_student_booking',booking_id=b.id)}}" onsubmit="return confirm('{{ 'Η ακύρωση θα ακυρώσει την κοινή κράτηση για όλο το group. Συνέχεια;' if b.participant_count and b.participant_count > 1 else 'Θέλεις να ακυρώσεις την κράτηση; Οι ώρες θα επιστραφούν στο πακέτο σου.' }}')">
           <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
