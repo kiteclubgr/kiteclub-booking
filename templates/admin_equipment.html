@@ -5,7 +5,7 @@
 <div class="admin-shell">
 {% set admin_active='equipment' %}{% include '_admin_sidebar_static.html' %}
 <main class="admin-main equipment-page">
-  <div class="admin-page-head"><div><h1>📦 Αποθήκη εξοπλισμού</h1><div class="admin-page-sub">Διαχείριση εξοπλισμού σχολής · KiteClub v76.7.7</div></div><button class="btn" type="button" onclick="equipmentNew()">+ Νέος εξοπλισμός</button></div>
+  <div class="admin-page-head"><div><h1>📦 Αποθήκη εξοπλισμού</h1><div class="admin-page-sub">Διαχείριση εξοπλισμού σχολής · KiteClub v76.7.8</div></div><button class="btn" type="button" onclick="equipmentNew()">+ Νέος εξοπλισμός</button></div>
   {% set active_items=items|rejectattr('status','in',['sold','destroyed'])|list %}
   <div class="eq-overview">
     <div class="eq-metric"><small>Σύνολο εξοπλισμού</small><strong>{{items|length}}</strong></div>

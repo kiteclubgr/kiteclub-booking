@@ -7,6 +7,7 @@
 {% if sidebar_dashboard %}<button class="admin-tab kc-nav-item " type="button" data-tab="students"><svg class="kc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Μαθητές</span></button>{% else %}<a class="admin-tab kc-nav-item {{'active' if admin_active=='students' else ''}}" href="{{url_for('admin')}}#students"><svg class="kc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Μαθητές</span></a>{% endif %}
 {% if sidebar_dashboard %}<button class="admin-tab kc-nav-item " type="button" data-tab="instructors"><svg class="kc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m2 10 10-5 10 5-10 5-10-5Z"/><path d="M6 12v5c4 3 8 3 12 0v-5M22 10v7"/></svg><span>Εκπαιδευτές</span></button>{% else %}<a class="admin-tab kc-nav-item {{'active' if admin_active=='instructors' else ''}}" href="{{url_for('admin')}}#instructors"><svg class="kc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m2 10 10-5 10 5-10 5-10-5Z"/><path d="M6 12v5c4 3 8 3 12 0v-5M22 10v7"/></svg><span>Εκπαιδευτές</span></a>{% endif %}
 <a class="admin-tab kc-nav-item {{'active' if admin_active=='bookings' else ''}}" href="{{url_for('admin_bookings')}}"><svg class="kc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4" width="14" height="18" rx="2"/><path d="M9 4.5h6M9 11h6M9 15h6"/></svg><span>Κρατήσεις</span>{% if false %}<span class="side-badge">{{message_unread_count}}</span>{% endif %}</a>
+<a class="admin-tab kc-nav-item {{'active' if admin_active=='equipment' else ''}}" href="{{url_for('admin_equipment')}}"><svg class="kc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 7 9-4 9 4v10l-9 4-9-4zM3 7l9 5 9-5M12 12v9"/></svg><span>Εξοπλισμός</span></a>
 <a class="admin-tab kc-nav-item {{'active' if admin_active=='packages' else ''}}" href="{{url_for('admin_packages')}}"><svg class="kc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="7" width="16" height="14" rx="2"/><path d="m4 10 8 4 8-4M12 14v7M9 3h6"/></svg><span>Πακέτα</span>{% if false %}<span class="side-badge">{{message_unread_count}}</span>{% endif %}</a>
 <a class="admin-tab kc-nav-item {{'active' if admin_active=='debts' else ''}}" href="{{url_for('admin_debts')}}"><svg class="kc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M16 15h2"/></svg><span>Οφειλές</span></a>
 <a class="admin-tab kc-nav-item {{'active' if admin_active=='reports' else ''}}" href="{{url_for('admin_reports')}}"><svg class="kc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V12M10 20V8M16 20V13M22 20V3"/></svg><span>Αναφορές</span>{% if false %}<span class="side-badge">{{message_unread_count}}</span>{% endif %}</a>
@@ -17,4 +18,17 @@
 <div class="admin-side-spacer"></div>
 <div class="kc-admin-version" aria-label="Έκδοση εφαρμογής">{{app_version}}</div>
 <a class="admin-logout kc-nav-item" href="{{url_for('logout')}}"><svg class="kc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg><span>Αποσύνδεση</span></a>
+<style>
+/* Mobile-only logout access for every Admin page; desktop sidebar unchanged. */
+.kc-admin-mobile-logout{display:none}
+@media(max-width:900px){
+  .kc-admin-mobile-logout{
+    display:inline-flex!important;position:fixed;right:14px;bottom:16px;z-index:1000;
+    align-items:center;gap:7px;padding:12px 15px;border:1px solid #f2b8b2;
+    border-radius:13px;background:#fff5f3;color:#b12e20;text-decoration:none;
+    font-size:14px;font-weight:850;box-shadow:0 4px 20px rgba(15,35,60,.16);
+  }
+}
+</style>
+<a class="kc-admin-mobile-logout" href="{{url_for('logout')}}" aria-label="Αποσύνδεση από το KiteClub">↪ Αποσύνδεση</a>
 </aside>
