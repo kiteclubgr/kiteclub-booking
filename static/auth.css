@@ -58,6 +58,24 @@ details{margin:24px 0;border:1px solid var(--line);border-radius:8px;padding:16p
 .kc-auth:has(#register-form) h1{font-size:min(2.7vw,3.8svh)}
 .kc-auth-hero-bottom{font-size:min(1.55vw,2.2svh)}
 }
+/* Registration has more fields; keep its typography and spacing bounded. */
+@media(min-width:901px){
+.kc-auth-register .kc-auth-panel{padding:32px 3.8vw 32px 12px;align-items:flex-start}
+.kc-auth-register .kc-auth-card{max-width:900px;min-height:0;padding:24px 32px 28px}
+.kc-auth-register:has(#register-form) .kc-auth-card>img{width:200px;margin:-28px auto -12px}
+.kc-auth-register:has(#register-form) h1{font-size:32px;margin:0 0 10px}
+.kc-auth-register:has(#register-form) .hint{font-size:16px;margin:0 0 12px}
+.kc-auth-register .kc-step{font-size:13px;margin-bottom:6px}
+.kc-auth-register .kc-auth-card label{font-size:14px;margin:14px 0 7px}
+.kc-auth-register .kc-auth-card input:not([type=checkbox]):not([type=hidden]){height:48px;min-height:48px;font-size:16px;padding:11px 13px}
+.kc-auth-register .kc-auth-card .kc-password input{padding-right:58px}
+.kc-auth-register .kc-password-toggle{top:2px;right:6px;transform:none}
+.kc-auth-register .kc-auth-card .kc-check{font-size:14px;margin:12px 0;line-height:1.5}
+.kc-auth-register .kc-auth-card details{font-size:13px;padding:12px;margin:18px 0}
+.kc-auth-register .kc-note{font-size:13px;margin:14px 0}
+.kc-auth-register .kc-primary{font-size:18px;min-height:50px;padding:13px;margin-top:18px}
+.kc-auth-register .kc-auth-card>p:last-child{font-size:16px;margin-top:18px}
+}
 @media(max-width:1100px) and (min-width:901px){.kc-auth-panel{padding:28px 22px 28px 12px}.kc-auth-card{padding:24px}.kc-auth-card label{font-size:16px}.kc-auth-card>img{width:240px}.kc-auth-slogan{font-size:76px}}
 @media(max-width:900px){.kc-auth{grid-template-columns:1fr}.kc-auth-hero{min-height:300px;padding:20px 28px;background-size:cover;background-position:center 65%}.kc-hero-logo{width:145px;margin:-18px 0 -16px}.kc-auth-slogan{font-size:44px;line-height:1;letter-spacing:-1px;margin:8px 0 0;max-width:230px;transform:rotate(-5deg)}.kc-auth-slogan em+em{margin-top:10px}.kc-auth-slogan:after{height:12px;margin-top:12px;width:175px}.kc-auth-hero-bottom{display:none}.kc-auth-panel{padding:24px 18px 36px}.kc-auth-card{max-width:650px;padding:26px}.kc-auth-card>img{width:250px}.kc-auth-card h1{font-size:30px}.hint{font-size:17px;margin-bottom:24px}}
 @media(max-width:600px){.kc-auth-hero{min-height:245px;padding:16px 22px}.kc-hero-logo{width:120px}.kc-auth-slogan{font-size:36px;max-width:190px}.kc-auth-panel{padding:16px 12px 28px}.kc-auth-card{padding:22px 20px;border-radius:12px}.kc-auth-card>img{width:230px;margin-top:-25px}.kc-auth-card h1{font-size:27px}.hint{font-size:16px}.kc-auth-card label{font-size:15px;margin-top:20px}.kc-auth-card input:not([type=checkbox]):not([type=hidden]){font-size:16px;height:54px}.kc-password-toggle{top:5px}.kc-auth-grid{grid-template-columns:minmax(0,1fr)}.kc-auth-grid>div{grid-column:1/-1}.kc-auth-card>p:last-child{font-size:16px}.kc-primary{font-size:18px}.kc-step{font-size:13px}}
