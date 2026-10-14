@@ -8,9 +8,11 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
 from pathlib import Path
+from PIL import Image, ImageOps, UnidentifiedImageError
+from io import BytesIO
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "KiteClub v76.7.14 · Dashboard Cancel Label Fix"
+APP_VERSION = "KiteClub v76.7.15 · Security Hardening"
 
 # v70: production-ready storage. Locally everything stays inside the project.
 # On Railway mount a persistent volume at /data and set DATA_DIR=/data.
@@ -108,10 +110,10 @@ def security_headers(response):
     return response
 
 # Login throttling in SQLite, shared between gunicorn workers and restarts.
-def login_locked(con, key):
+def login_locked(con, key, limit=8):
     cutoff = int(time.time()) - 900
     row = con.execute("SELECT attempts, first_at FROM login_attempts WHERE identity=?", (key,)).fetchone()
-    return bool(row and row["first_at"] >= cutoff and row["attempts"] >= 8)
+    return bool(row and row["first_at"] >= cutoff and row["attempts"] >= limit)
 
 def record_login_failure(con, key):
     cutoff = int(time.time()) - 900
@@ -278,7 +280,7 @@ def set_student_skill_progress(con, student_id, skill_key, status, changed_by):
 def send_email(to_email, subject, body):
     host=os.getenv("SMTP_HOST")
     if not host:
-        print("EMAIL PREVIEW:", to_email, subject, body)
+        app.logger.warning("Email delivery skipped: SMTP_HOST is not configured.")
         return
     msg=EmailMessage()
     msg["From"]=os.getenv("SMTP_FROM","booking@kiteclub.gr")
@@ -1627,19 +1629,39 @@ def sync_day_spot(lesson_date):
 
 
 
+def save_verified_image(file_obj, output_base, max_bytes=10*1024*1024):
+    data = file_obj.stream.read(max_bytes + 1)
+    if not data or len(data) > max_bytes:
+        raise ValueError("Η φωτογραφία είναι κενή ή υπερβαίνει τα 10 MB.")
+    try:
+        with Image.open(BytesIO(data)) as check:
+            if check.format not in ("JPEG", "PNG", "WEBP"):
+                raise ValueError("Επιτρέπονται μόνο JPG, PNG και WebP.")
+            check.verify()
+        with Image.open(BytesIO(data)) as image:
+            if image.width * image.height > 24000000:
+                raise ValueError("Υπερβολικά μεγάλες διαστάσεις εικόνας.")
+            photo = ImageOps.exif_transpose(image)
+            photo.load()
+            if photo.mode in ("RGBA", "LA") or (photo.mode == "P" and "transparency" in photo.info):
+                photo = photo.convert("RGBA")
+                ext, fmt = ".png", "PNG"
+            else:
+                photo = photo.convert("RGB")
+                ext, fmt = ".jpg", "JPEG"
+            target = output_base.with_suffix(ext)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            photo.save(target, format=fmt, quality=88)
+            return target
+    except (UnidentifiedImageError, OSError, Image.DecompressionBombError) as exc:
+        raise ValueError("Μη έγκυρο αρχείο εικόνας.") from exc
+
+
 def save_profile_photo(file_storage, user_id):
     if not file_storage or not file_storage.filename:
         return None
-    filename=secure_filename(file_storage.filename)
-    ext=Path(filename).suffix.lower()
-    if ext not in (".jpg",".jpeg",".png",".webp"):
-        raise ValueError("Επίτρεπονται μόνο JPG, PNG ή WEBP.")
-    final_name=f"user_{user_id}_{datetime.now().strftime('%Y%m%d%H%M%S%f')}{ext}"
-    target=UPLOAD_ROOT/final_name
-    target.parent.mkdir(parents=True,exist_ok=True)
-    file_storage.save(target)
-    return f"uploads/{final_name}"
-
+    target = save_verified_image(file_storage, UPLOAD_ROOT / f"user_{user_id}_{secrets.token_hex(8)}")
+    return f"uploads/{target.name}"
 
 def current_user():
     if not session.get("uid"): return None
@@ -1685,9 +1707,11 @@ def login():
             return redirect(url_for("home"))
     if request.method=="POST":
         email = request.form.get("email", "").strip().lower()
-        key = email[:254]  # Shared failure counter per account; avoids logging passwords.
+        client_ip = request.remote_addr or 'unknown'
+        key = 'acctip:' + email[:254] + ':' + client_ip
+        ip_key = 'ip:' + client_ip
         con=db()
-        if login_locked(con, key):
+        if login_locked(con, key, 8) or login_locked(con, ip_key, 30):
             con.close()
             flash("Πολλές αποτυχημένες προσπάθειες. Δοκίμασε ξανά σε 15 λεπτά.")
             return render_template("login.html"), 429
@@ -1702,11 +1726,12 @@ def login():
             csrf_token()  # Rotate token with newly authenticated session.
             return redirect(url_for("home"))
         record_login_failure(con, key)
+        record_login_failure(con, ip_key)
         con.close()
         flash("Λάθος email ή password")
     return render_template("login.html")
 
-@app.route("/logout")
+@app.post("/logout")
 def logout():
     session.clear(); return redirect(url_for("login"))
 
@@ -1959,24 +1984,10 @@ ALLOWED_GALLERY_EXTENSIONS={"jpg","jpeg","png","webp"}
 def save_student_gallery_photo(file_obj, student_id):
     if not file_obj or not file_obj.filename:
         return None
-    filename=secure_filename(file_obj.filename)
-    if "." not in filename or filename.rsplit(".",1)[1].lower() not in ALLOWED_GALLERY_EXTENSIONS:
-        raise ValueError("Επιτρέπονται μόνο JPG, PNG και WEBP φωτογραφίες.")
-    try:
-        pos=file_obj.stream.tell()
-        file_obj.stream.seek(0,2)
-        size=file_obj.stream.tell()
-        file_obj.stream.seek(pos)
-    except Exception:
-        size=0
-    if size and size>10*1024*1024:
-        raise ValueError("Κάθε φωτογραφία μπορεί να είναι έως 10MB.")
-    ext=filename.rsplit(".",1)[1].lower()
-    folder=UPLOAD_ROOT/"student_gallery"/str(student_id)
-    folder.mkdir(parents=True,exist_ok=True)
-    unique=f"{datetime.now().strftime('%Y%m%d%H%M%S%f')}.{ext}"
-    file_obj.save(folder/unique)
-    return f"uploads/student_gallery/{student_id}/{unique}"
+    folder = UPLOAD_ROOT / "student_gallery" / str(student_id)
+    target = save_verified_image(file_obj, folder / secrets.token_hex(12))
+    return f"uploads/student_gallery/{student_id}/{target.name}"
+
 
 @app.route("/student/profile")
 def student_profile():
@@ -4523,19 +4534,9 @@ def equipment_input(form, old=None):
 def equipment_photo(file, item_id):
     if not file or not file.filename:
         return None
-    ext=Path(secure_filename(file.filename)).suffix.lower()
-    if ext not in ('.jpg','.jpeg','.png','.webp'):
-        raise ValueError('Επιτρέπονται μόνο JPG, PNG και WebP φωτογραφίες.')
-    # Verify magic bytes so user-controlled uploads cannot execute as HTML or script.
-    head=file.stream.read(16)
-    file.stream.seek(0)
-    if not (head.startswith(b'\xff\xd8\xff') or head.startswith(b'\x89PNG\r\n\x1a\n') or (head.startswith(b'RIFF') and head[8:12]==b'WEBP')):
-        raise ValueError('Μη έγκυρο αρχείο εικόνας.')
-    directory=UPLOAD_ROOT/'equipment'
-    directory.mkdir(parents=True,exist_ok=True)
-    filename=f'equipment-{item_id}-{secrets.token_hex(8)}{ext}'
-    file.save(str(directory/filename))
-    return f'uploads/equipment/{filename}'
+    target = save_verified_image(file, UPLOAD_ROOT / "equipment" / f"equipment-{item_id}-{secrets.token_hex(8)}")
+    return f"uploads/equipment/{target.name}"
+
 
 @app.route('/admin/equipment',methods=['GET'])
 def admin_equipment():
