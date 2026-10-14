@@ -77,3 +77,9 @@ summary{font-weight:600;cursor:pointer}details p{margin:12px 0}
 .kc-auth-hero-bottom{font-size:18px;gap:18px}
 @media(max-width:900px){.kc-auth-panel{padding:20px 16px}.kc-auth-card{max-width:600px}.kc-hero-logo{width:135px}.kc-auth-slogan{font-size:40px;max-width:none}.kc-auth-card h1{font-size:28px}}
 @media(max-width:600px){.kc-auth-grid{grid-template-columns:minmax(0,1fr)}.kc-auth-grid>div{grid-column:1/-1}.kc-auth-panel{padding:16px 12px}.kc-auth-card{padding:20px}.kc-auth-card>img,.kc-auth:has(#register-form) .kc-auth-card>img{width:190px;margin:-24px auto -18px}.kc-auth-card h1{font-size:25px}.kc-auth-hero{min-height:210px}.kc-auth-slogan{font-size:34px}.kc-hero-logo{width:120px}}
+
+/* v76.7.17.4: frame the real lesson photo from the water upwards.
+   Keep its aspect ratio and the existing form/logo dimensions. */
+@media(min-width:901px){
+  .kc-auth-hero{background-position:center bottom;background-size:cover}
+}
