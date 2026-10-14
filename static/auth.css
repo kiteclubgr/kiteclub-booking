@@ -132,3 +132,22 @@ details{margin:24px 0;border:1px solid var(--line);border-radius:8px;padding:16p
 .kc-auth-login .kc-auth-card>img{width:140px}
 .kc-auth-login .kc-auth-panel{padding-top:12px;padding-bottom:12px}
 }
+
+/* Keep the campaign slogan visible above the mobile form. */
+@media(max-width:900px){
+.kc-auth-login .kc-auth-hero,.kc-auth-register .kc-auth-hero{display:flex;min-height:0;padding:14px 24px 4px}
+.kc-auth-login .kc-hero-logo,.kc-auth-register .kc-hero-logo{display:none}
+.kc-auth-login .kc-auth-slogan,.kc-auth-register .kc-auth-slogan{font-size:30px;line-height:1.1;letter-spacing:0;max-width:none;margin:0;transform:rotate(-3deg);text-shadow:0 1px 5px #16496b}
+.kc-auth-login .kc-auth-slogan em,.kc-auth-register .kc-auth-slogan em{display:inline}
+.kc-auth-login .kc-auth-slogan br,.kc-auth-register .kc-auth-slogan br{display:none}
+.kc-auth-login .kc-auth-slogan em+em,.kc-auth-register .kc-auth-slogan em+em{margin:0 0 0 16px}
+.kc-auth-login .kc-auth-slogan em+em:before,.kc-auth-register .kc-auth-slogan em+em:before{content:none}
+.kc-auth-login .kc-auth-slogan:after,.kc-auth-register .kc-auth-slogan:after{height:7px;width:150px;margin-top:5px;transform:none}
+.kc-auth-login .kc-auth-panel,.kc-auth-register .kc-auth-panel{min-height:0;padding-top:12px}
+.kc-auth-login .kc-auth-card>img{width:150px}
+.kc-auth-login .kc-auth-card{padding-top:14px;padding-bottom:18px}
+}
+@media(max-width:350px){
+.kc-auth-login .kc-auth-slogan,.kc-auth-register .kc-auth-slogan{font-size:26px}
+.kc-auth-login .kc-auth-slogan em+em,.kc-auth-register .kc-auth-slogan em+em{margin-left:10px}
+}
