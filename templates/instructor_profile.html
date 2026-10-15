@@ -6,7 +6,7 @@
 <div class="instructor-portal-shell">
   {% set instructor_nav='profile' %}{% include '_instructor_sidebar.html' %}
   <main class="instructor-main">
-    <div class="instructor-top"><strong>{{instructor.name}}{% if instructor.surname %} {{instructor.surname}}{% endif %}</strong> · <a href="{{url_for('instructor')}}">Πρόγραμμα</a> · <a href="{{url_for('logout')}}">Logout</a></div>
+    <div class="instructor-top"><strong>{{instructor.name}}{% if instructor.surname %} {{instructor.surname}}{% endif %}</strong> · <a href="{{url_for('instructor')}}">Πρόγραμμα</a> · <form action="{{url_for('logout')}}" method="post" class="kc-instructor-top-logout" style="margin:0"><input type="hidden" name="_csrf_token" value="{{csrf_token()}}"><button type="submit" style="padding:0;border:0;background:transparent;color:#577089;font:inherit;cursor:pointer">Logout</button></form></div>
     <div class="instructor-content"><div class="ip-build-tag">Instructor layout v2</div>
       <div class="ip-hero-banner"></div>
       <div class="ip-header">
@@ -33,7 +33,7 @@
             <a class="im-menu-item" href="{{url_for('instructor_students')}}"><span>👥 Οι μαθητές μου</span><span>›</span></a>
             <div class="im-menu-item"><span>💶 Αμοιβή / ώρα</span><b>{{instructor.hourly_rate}}€</b></div>
             <a class="im-menu-item" href="{{url_for('instructor')}}"><span>📅 Πρόγραμμα</span><span>›</span></a>
-            <a class="im-menu-item" href="{{url_for('logout')}}"><span>↪ Αποσύνδεση</span><span>›</span></a>
+            <form action="{{url_for('logout')}}" method="post" class="kc-instructor-menu-logout" style="margin:0"><input type="hidden" name="_csrf_token" value="{{csrf_token()}}"><button type="submit" class="im-menu-item" style="width:100%;font:inherit;text-align:left;cursor:pointer"><span>↪ Αποσύνδεση</span><span>›</span></button></form>
           </div>
         </section>
         <section class="ip-panel">

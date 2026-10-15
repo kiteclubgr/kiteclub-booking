@@ -6,7 +6,7 @@
 <div class="instructor-portal-shell">
   {% set instructor_nav='schedule' %}{% include '_instructor_sidebar.html' %}
   <main class="instructor-main">
-    <div class="instructor-top"><strong>{{me.name if me else 'Instructor'}}</strong> · <a href="{{url_for('instructor_profile')}}">Προφίλ</a> · <a href="{{url_for('logout')}}">Logout</a></div>
+    <div class="instructor-top"><strong>{{me.name if me else 'Instructor'}}</strong> · <a href="{{url_for('instructor_profile')}}">Προφίλ</a> · <form action="{{url_for('logout')}}" method="post" class="kc-instructor-top-logout" style="margin:0"><input type="hidden" name="_csrf_token" value="{{csrf_token()}}"><button type="submit" style="padding:0;border:0;background:transparent;color:#577089;font:inherit;cursor:pointer">Logout</button></form></div>
     <div class="instructor-content">
       <div class="ip-hero-banner"></div>
       <div class="ip-header">

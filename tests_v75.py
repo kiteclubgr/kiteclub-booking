@@ -12,6 +12,9 @@ ast.parse(source)
 forms=0
 for path in (root/'templates').glob('*.html'):
     body=path.read_text()
+    # Logout is POST-only: reject links that would send GET and keep a session alive.
+    assert not re.search(r"""<a\b[^>]*url_for\(\s*['"]logout['"]""", body, re.I), path.name
+    assert not re.search(r"""<a\b[^>]*href\s*=\s*['"]/logout(?:[?'"])""", body, re.I), path.name
     for match in re.finditer(r'<form\b(?=[^>]*\bmethod\s*=\s*["\']post["\'])[^>]*>',body,re.I):
         forms+=1
         assert 'name="_csrf_token"' in body[match.end():match.end()+500], (path.name,match.group())
