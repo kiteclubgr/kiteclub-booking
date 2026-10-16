@@ -1004,7 +1004,7 @@
           <button class="booking-modal-close" type="button" onclick="closeEditBookingModal()">×</button>
         </div>
         <div class="booking-modal-body">
-          <form id="editBookingForm" method="post"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <form id="editBookingForm" method="post"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="original_duration" id="editOriginalDuration">
             <div class="edit-booking-grid">
               <label class="full">Ημερομηνία
                 <input id="editBookingDate" type="text" readonly>
@@ -1186,6 +1186,7 @@
     editStudentSearch.value=st ? st.display : '';
     editStudentId.value=st ? String(st.id) : String(data.studentId||'');
     editStudentPicked.textContent='Επεξεργάζεσαι: '+(data.studentName || (st ? st.display : 'μαθητή'));
+    document.getElementById('editOriginalDuration').value=String(data.duration);
     editForm.action='/admin/booking/'+data.bookingId+'/edit';
     cancelForm.action='/admin/booking/'+data.bookingId+'/cancel';
   }

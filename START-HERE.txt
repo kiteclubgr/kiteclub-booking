@@ -1,38 +1,35 @@
-KiteClub v76.7.17.17 — Package Cancel Button and Mobile Logout
+KiteClub v76.7.17.18 — LOCAL TEST: MERGE AFTER EDIT
+Source: kiteclubgr/kiteclub-booking @ 749124e8cd52013a601a03c36dc4407c2f2ff853
+Based on GitHub v76.7.17.17, with the local changes described in RELEASE-v76.7.17.18.md.
 
-WINDOWS LOCAL DEMO
-Extract/clone to a new folder and run START-WINDOWS.bat.
+WINDOWS
+1. Extract this ZIP into a NEW folder.
+2. Run START-WINDOWS.bat (Python 3.12 and internet for dependencies required).
+3. Open http://127.0.0.1:5000
 Mac/Linux: bash START-MAC-LINUX.sh
-Open http://127.0.0.1:5000/register
-Local demo only: Admin admin@kiteclub.gr / admin123;
-Student student@kiteclub.gr / student123; Instructor angelos@kiteclub.gr / teacher123.
-These accounts are created only for the isolated local launcher, never as a production reset.
 
-Emails are saved under _local_data/mail-preview; no real mail is sent locally.
-Open the .eml, copy the localhost confirmation link and confirm it in the browser.
-New students activate after email verification, starting with zero credits.
-Country prefix defaults to +30; flags change with the selected country.
-Full English waiver text at /waiver; Terms /terms; Privacy /privacy-policy.
-No supplied document photographs are included. Guardian paperwork is manual.
-Terms/Privacy remain review drafts. See LEGAL-REVIEW.md.
+Admin: admin@kiteclub.gr / admin123
+Student: student@kiteclub.gr / student123
+Instructor: angelos@kiteclub.gr / teacher123
 
-RAILWAY / PRODUCTION
-Use the existing gunicorn start command, existing persistent /data volume and secrets.
-Do NOT run run_local.py, seed/repair scripts or replace a production database.
-Nothing in this release resets existing bookings, credits, finance or users.
-New registration/verification/legal tables are created additively on startup.
-See EMAIL-SETUP.md for verified sender DNS and Railway email Variables.
-Real inbox delivery remains unverified until a provider is configured and tested.
-This is a tested functional update, not a claim of complete stable production QA.
+Fresh demo: 1 Admin, 3 instructors, 7 students, zero credits/bookings/payments.
+The database is created locally under _local_data. No live customers, bookings,
+photos, payments, credentials or production database are included.
+If testing multiple versions, stop the previous server first (Ctrl+C).
 
-PACKAGE CANCELLATION (LOCAL QA)
-Admin > Students > Student profile > Payments > Cancel purchase.
-Preview first; unpaid lesson purchases only. See RELEASE-v76.7.17.15.md.
-No GitHub publish or production correction has been performed for this release.
+INCLUDED
+Email-confirmed registration and country flags; legal pages and English waiver;
+package purchase cancellation with audit and manual-correction reconciliation;
+red cancellation button beside settlement; Student/Instructor mobile logout.
 
-MOBILE LOGOUT
-At mobile widths the top header contains Αποσύνδεση for Student/Instructor.
-See RELEASE-v76.7.17.16.md. Local candidate; not uploaded or deployed.
+EMAIL
+Local launcher saves .eml previews under _local_data/mail-preview; no actual
+emails are sent. Google OAuth is disabled locally. Production secrets are cleared
+from the local app process; no Railway connection or production reset is made.
 
-Release v76.7.17.17 approved for publication 16 October 2026.
-See RELEASE-v76.7.17.17.md for final scope and validation.
+APPROVAL
+This is the current functional release, not a complete stable QA certification.
+The real booking schedule is not included. Check LOCAL-QA.txt for test coverage.
+
+v76.7.17.18 publication approved 16 October 2026.
+Existing bookings are not automatically changed by deployment.

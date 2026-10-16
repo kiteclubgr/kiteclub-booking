@@ -12,13 +12,14 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 from io import BytesIO
 from google_auth import setup_google, pending_google
 from email_delivery import deliver_message, email_from
+from booking_merge import ensure_merge_schema, merge_after_admin_edit
 from package_cancellation import setup_package_cancellation
 from registration_phone import PHONE_COUNTRIES, registration_mobile
 from legal_pages import setup_legal_pages, record_registration_legal, TERMS_VERSION, PRIVACY_VERSION, WAIVER_VERSION
 from registration_email import setup_registration_email, issue_confirmation, send_confirmation, activate_verified_registration
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "KiteClub v76.7.17.17 · Package Cancel Button"
+APP_VERSION = "KiteClub v76.7.17.18 · Merge After Booking Edit"
 
 # v70: production-ready storage. Locally everything stays inside the project.
 # On Railway mount a persistent volume at /data and set DATA_DIR=/data.
@@ -349,10 +350,10 @@ def get_booking_audit(con, booking_id, limit=100):
       SELECT ba.*,u.name actor_name,u.surname actor_surname
       FROM booking_audit ba
       LEFT JOIN users u ON u.id=ba.actor_id
-      WHERE ba.booking_id=?
+      WHERE ba.booking_id=? OR ba.booking_id IN (SELECT source_booking_id FROM booking_merges WHERE surviving_booking_id=?)
       ORDER BY ba.created_at DESC, ba.id DESC
       LIMIT ?
-    """,(booking_id,limit)).fetchall()
+    """,(booking_id,booking_id,limit)).fetchall()
 
 
 def ensure_column(con, table, column, definition):
@@ -3560,6 +3561,17 @@ def admin_edit_booking(booking_id):
         con.rollback(); con.close(); flash("Μόνο ενεργές κρατήσεις μπορούν να αλλάξουν. Completed / No-show παραμένουν στο ιστορικό.")
         return _admin_booking_action_redirect(lesson_date)
 
+    expected_duration=request.form.get("original_duration")
+    try:
+        stale=(expected_duration is not None and float(expected_duration)!=float(b["duration"]))
+    except (TypeError,ValueError):
+        stale=True
+    if expected_duration is None and duration!=float(b["duration"]) and con.execute("SELECT 1 FROM booking_merges WHERE surviving_booking_id=?",(booking_id,)).fetchone():
+        stale=True
+    if stale:
+        con.rollback(); con.close(); flash("Η κράτηση έχει αλλάξει ή συγχωνευτεί. Ανανέωσε τη σελίδα και άνοιξε ξανά την επεξεργασία.")
+        return _admin_booking_action_redirect(lesson_date)
+
     student=con.execute("""
       SELECT u.id,u.name,u.surname,st.credits,st.lesson_type,st.group_id
       FROM users u JOIN students st ON st.user_id=u.id
@@ -3674,8 +3686,16 @@ def admin_edit_booking(booking_id):
         # A debt that is paid or partially paid must not be silently erased by a credit change.
     participants=_booking_participants(con,booking_id)
     log_booking_audit(con,booking_id,"edited",f"Ο Admin ενημέρωσε την κράτηση σε {start_time} ({duration:g}h).",u["id"],u["role"],f"student_id={student_id}; instructor_id={instructor_id}; status={new_status}; payment={new_payment}")
+    try:
+        merged_id=merge_after_admin_edit(con,booking_id,u,_booking_kind,log_booking_audit)
+    except Exception:
+        con.rollback(); con.close()
+        raise
     con.commit(); con.close()
     rebalance_instructors(lesson_date)
+    if merged_id:
+        flash(f"Οι συνεχόμενες ώρες ενώθηκαν σε δίωρη κράτηση #{merged_id}, χωρίς επιπλέον χρέωση credits.")
+        return _admin_booking_action_redirect(lesson_date)
 
     names=", ".join((r["name"] or "") + ((" " + r["surname"]) if r["surname"] else "") for r in participants)
     if new_status=="pending_payment" and desired=="booked":
@@ -4641,6 +4661,10 @@ def admin_booking_history(booking_id):
       WHERE b.id=?
     """,(booking_id,)).fetchone()
     if not booking:
+        merged=con.execute("SELECT surviving_booking_id FROM booking_merges WHERE source_booking_id=?",(booking_id,)).fetchone()
+        if merged:
+            con.close()
+            return redirect(url_for("admin_booking_history",booking_id=merged["surviving_booking_id"]))
         con.close()
         flash("Η κράτηση δεν βρέθηκε.")
         return redirect(url_for("admin_bookings"))
@@ -6209,6 +6233,12 @@ def _v76_initialize_clean_demo():
 
 
 init_db()
+_merge_con=db()
+try:
+    ensure_merge_schema(_merge_con)
+    _merge_con.commit()
+finally:
+    _merge_con.close()
 if _V76_FRESH_DATABASE and DEMO_MODE:
     _v76_initialize_clean_demo()
 

@@ -1,3 +1,20 @@
+v76.7.17.18 — Offline QA, publication approved 16 October 2026
+PASS tests_merge_after_edit.py: real edit route for 1P/2P/3P both directions;
+unchanged money/credits; history/archive; refund and actual-duration completion;
+repeat/stale edit guards; unsafe candidates; archive failure rollback; ID reuse.
+PASS tests_reports_hours.py, tests_package_cancellation.py, tests_v75.py.
+No production records accessed or modified for tests. No real email delivery.
+Browser/mobile visual QA for this change remains pending.
+
+Historical checks:
+FINAL LOCAL PACKAGE — v76.7.17.17, 16 October 2026
+133 runtime Python/template/static files match GitHub commit
+749124e8cd52013a601a03c36dc4407c2f2ff853 by Git blob SHA1.
+PASS isolated run_local.py --check; fresh seed 1 admin/3 instructors/7 students,
+zero credits/bookings/slots/student and instructor payments, SQLite integrity OK.
+PASS tests_mobile_logout.py and tests_package_cancellation.py on final package.
+No production database, uploads or real customer records included.
+
 2026-10-16 — v76.7.17.17 Package Cancel Button and Mobile Logout
 Approved for publication. Local Chromium verified red action after settlement,
 same row and height, and mobile Student/Instructor logout at 320/390/430/900px.
