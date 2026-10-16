@@ -1,4 +1,4 @@
-KiteClub v76.7.17.15 — Package Purchase Cancellation
+KiteClub v76.7.17.17 — Package Cancel Button and Mobile Logout
 
 WINDOWS LOCAL DEMO
 Extract/clone to a new folder and run START-WINDOWS.bat.
@@ -28,4 +28,11 @@ This is a tested functional update, not a claim of complete stable production QA
 PACKAGE CANCELLATION (LOCAL QA)
 Admin > Students > Student profile > Payments > Cancel purchase.
 Preview first; unpaid lesson purchases only. See RELEASE-v76.7.17.15.md.
-Publication authorized 16 October 2026. No automatic production data correction.
+No GitHub publish or production correction has been performed for this release.
+
+MOBILE LOGOUT
+At mobile widths the top header contains Αποσύνδεση for Student/Instructor.
+See RELEASE-v76.7.17.16.md. Local candidate; not uploaded or deployed.
+
+Release v76.7.17.17 approved for publication 16 October 2026.
+See RELEASE-v76.7.17.17.md for final scope and validation.

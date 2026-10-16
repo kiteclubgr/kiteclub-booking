@@ -6,6 +6,16 @@
 @media(max-width:980px){.gallery-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.gallery-upload{grid-template-columns:1fr 1fr}.gallery-upload .wide{grid-column:1/-1}}
 @media(max-width:1200px){.overview-grid{grid-template-columns:1fr 1fr}.stats-card{grid-column:1/-1}.metrics{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:760px){.profile-hero{grid-template-columns:1fr;text-align:center}.avatar-box{margin:auto}.hero-name,.hero-meta,.hero-badges{justify-content:center}.hero-actions{justify-content:center}.overview-grid{grid-template-columns:1fr}.edit-grid{grid-template-columns:1fr}.edit-grid .full{grid-column:auto}.metrics{grid-template-columns:repeat(2,1fr)}.credit-add,.package-buy,.package-row{grid-template-columns:1fr}.package-row>div:first-child{grid-column:auto}.admin-main{padding:10px}.profile-tabs{top:0}}
+
+/* Purchase actions share one row; cancellation stays after settlement. */
+.package-payment-actions {align-items:center;justify-content:flex-end;flex-wrap:nowrap}
+.package-payment-actions form.flexible-payment-form {display:contents}
+.package-payment-actions .btn {display:inline-flex;align-items:center;justify-content:center;min-height:38px;font-size:13px;line-height:20px;white-space:nowrap}
+.package-payment-actions .package-cancel-button {background:#d92d20;color:#fff;border:1px solid #d92d20}
+.package-payment-actions .package-cancel-button:hover {background:#b42318;border-color:#b42318}
+.package-payment-actions .package-cancel-button:focus-visible {outline:3px solid #0788c8;outline-offset:2px}
+@media(min-width:761px){.package-row:has(.package-payment-actions){grid-template-columns:minmax(110px,1.2fr) minmax(55px,.4fr) minmax(90px,.65fr) minmax(90px,.65fr) max-content}}
+@media(max-width:760px){.package-payment-actions{justify-content:flex-start;flex-wrap:wrap}}
 </style>
 <div class="admin-shell">
   {% set admin_active='students' %}{% include '_admin_sidebar_static.html' %}
@@ -152,7 +162,7 @@
               <div>{% if (p.package_type or 'lesson')=='crew' %}<b>Crew</b><div class="package-stat">membership</div>{% else %}<b>{{p.hours_total}}h</b><div class="package-stat">{{p.hours_remaining}}h διαθέσιμες</div>{% endif %}</div>
               <div><b class="money-paid">{{'%.2f'|format(paid)}}€</b><div class="package-stat">πληρωμένα / {{'%.2f'|format(p.price)}}€</div><b class="money-due">{{'%.2f'|format(due if due>0 else 0)}}€</b><div class="package-stat">υπόλοιπο</div></div>
               <div>{% if p.payment_status=='cancelled' %}<span class="badge off">Ακυρωμένο</span>{% elif p.payment_status=='paid' %}<span class="badge ok">PAID</span>{% elif p.payment_status=='partial' %}<span class="badge status-partial">PARTIALLY PAID</span>{% else %}<span class="badge status-unpaid">UNPAID</span>{% endif %}<div class="package-stat" style="margin-top:6px">{% if p.payment_status=='cancelled' %}Ώρες ακυρωμένες{% elif p.credits_activated %}Ώρες ενεργές{% else %}Ώρες μη ενεργές{% endif %}</div></div>
-              <div class="pay-actions">
+              <div class="pay-actions package-payment-actions">
                 {% if p.payment_status!='cancelled' and due > 0.009 %}
                   <form method="post" action="{{url_for('admin_package_purchase_add_payment',purchase_id=p.id)}}" class="flexible-payment-form">
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
@@ -164,7 +174,7 @@
                     <button class="btn" name="payment_action" value="settle" type="submit" title="Κλείσιμο οφειλής με το ποσό που εισήγαγες. Αν είναι μικρότερο από το υπόλοιπο, η διαφορά καταγράφεται ως συμφωνημένη έκπτωση.">Εξόφληση</button>
                   </form>
                 {% elif p.payment_status!='cancelled' %}<span class="badge ok">Εξοφλημένο</span>{% endif %}
-                <a class="btn alt" href="{{url_for('admin_package_purchase_cancel',purchase_id=p.id)}}">{{'Στοιχεία ακύρωσης' if p.payment_status=='cancelled' else 'Ακύρωση αγοράς'}}</a>
+                <a class="btn {{'alt' if p.payment_status=='cancelled' else 'package-cancel-button'}}" href="{{url_for('admin_package_purchase_cancel',purchase_id=p.id)}}">{{'Στοιχεία ακύρωσης' if p.payment_status=='cancelled' else 'Ακύρωση αγοράς'}}</a>
               </div>
             </div>
             {% endfor %}

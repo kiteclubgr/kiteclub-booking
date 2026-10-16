@@ -1,5 +1,21 @@
+2026-10-16 — v76.7.17.17 Package Cancel Button and Mobile Logout
+Approved for publication. Local Chromium verified red action after settlement,
+same row and height, and mobile Student/Instructor logout at 320/390/430/900px.
+Desktop hides the new mobile control. Tap after scroll logs out; protected URL
+requires login. Offline HTTP role/logout and cancellation regression tests pass.
+No live customer changes or email tests. Physical device QA remains pending.
+
+Historical checks:
+2026-10-16 — v76.7.17.16 Mobile Logout
+LOCAL ONLY: not pushed or deployed. No live data modified.
+PASS tests_mobile_logout.py: actual POST/CSRF logout form on 11 role pages;
+real password logins, missing/invalid token rejection, GET 405, session clear,
+protected refresh, no new Admin/public controls, business rows unchanged.
+Physical Android/iOS and visual viewport QA pending. No stable claim.
+
+Previous checks:
 2026-10-16 — v76.7.17.15 Package Purchase Cancellation
-Offline QA record. Publication authorized 16 October 2026. No real data modified by QA.
+LOCAL ONLY. Not published to GitHub or production. No real data modified.
 PASS tests_package_cancellation.py: HTTP admin/CSRF guards; safe GET; mandatory
 reason; preview/confirm HMAC and stale-state rejection; repeat cancellation;
 unpaid/inactive cancellations; exact manual correction scenario and package

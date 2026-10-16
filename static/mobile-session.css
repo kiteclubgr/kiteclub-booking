@@ -1,0 +1,23 @@
+/* Shared mobile session control; outside role sidebars hidden on small screens. */
+.kc-mobile-session-bar {display:none}
+@media (max-width:900px) {
+  .kc-mobile-session-bar {
+    display:flex;position:sticky;top:0;z-index:70;height:64px;
+    align-items:center;justify-content:space-between;gap:8px;
+    padding:8px max(12px,env(safe-area-inset-right)) 8px max(12px,env(safe-area-inset-left));
+    box-sizing:border-box;background:#fff;border-bottom:1px solid #d9e6ee;
+    color:#0b2340;
+  }
+  .kc-mobile-session-role {min-width:0;font-size:14px;font-weight:800}
+  .kc-mobile-logout-form {display:block;margin:0;flex:0 0 auto}
+  .kc-mobile-logout-button {
+    display:flex;align-items:center;justify-content:center;gap:7px;
+    min-height:44px;min-width:44px;padding:10px 12px;border:1px solid #f1c8bf;
+    border-radius:11px;background:#fff3ed;color:#a73320;
+    font:inherit;font-size:14px;font-weight:800;line-height:1.25;
+    cursor:pointer;white-space:nowrap;touch-action:manipulation;
+  }
+  .kc-mobile-logout-button:focus-visible {outline:3px solid #0788c8;outline-offset:2px}
+  body.instructor-portal-body .im-topbar,
+  body.student-portal-body .mobile-topbar {top:64px!important}
+}
