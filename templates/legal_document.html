@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="el"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{document.title}} — KiteClub Booking</title>
+{% if document.status in ['draft','transcription'] %}<meta name="robots" content="noindex, nofollow">{% endif %}
+<link rel="stylesheet" href="{{url_for('static',filename='legal.css',v='76.7.17.14')}}"></head>
+<body><a class="skip" href="#legal-content">Μετάβαση στο κείμενο</a>
+<header><a href="{{url_for('login')}}" aria-label="KiteClub — σύνδεση"><img src="{{url_for('static',filename='img/kiteclub-logo.png')}}" alt="KiteClub.gr Since 2007"></a>
+<nav aria-label="Σελίδες εφαρμογής"><a href="{{url_for('login')}}">Σύνδεση</a><a href="{{url_for('register')}}">Εγγραφή</a></nav></header>
+<main id="legal-content"><div class="eyebrow">KiteClub Booking</div><h1>{{document.title}}</h1>
+<p class="meta">{{'Ημερομηνία ψηφιακής μεταγραφής:' if document.document_key == 'waiver' else 'Ημερομηνία κειμένου:'}} {{document.document_date}} · Έκδοση {{document.version}}</p>
+{% if document.status == 'draft' %}<aside class="draft" role="note"><strong>Προσχέδιο για τοπική δοκιμή.</strong> Πριν από δημοσίευση χρειάζεται επιβεβαίωση του φορέα λειτουργίας, των παρόχων/διαβιβάσεων και του προγράμματος τήρησης δεδομένων.</aside>{% endif %}
+{% if document.document_key == 'waiver' %}<aside class="draft" role="note"><strong>Μεταγραφή του πρωτότυπου εντύπου.</strong> Το κείμενο διατηρεί την αγγλική διατύπωση του εντύπου. Τα κενά είναι πεδία του χαρτιού και δεν συμπληρώνονται εδώ. Η καταγραφή ανάγνωσης δεν πιστοποιεί ενηλικίωση, υπογραφή ή συναίνεση κηδεμόνα.</aside>{% endif %}
+<nav class="documents" aria-label="Νομικά κείμενα"><a href="{{url_for('terms_page')}}" {% if document.document_key == 'terms' %}aria-current="page"{% endif %}>Όροι Χρήσης</a><a href="{{url_for('privacy_page')}}" {% if document.document_key == 'privacy' %}aria-current="page"{% endif %}>Πολιτική Απορρήτου</a><a href="{{url_for('waiver_page')}}" {% if document.document_key == 'waiver' %}aria-current="page"{% endif %}>Συμφωνητικό συμμετοχής</a></nav>
+<article>{{body}}</article><p class="back"><a href="{{url_for('register')}}">← Επιστροφή στην εγγραφή</a> · <button type="button" onclick="window.print()">Εκτύπωση / PDF</button></p>
+</main><footer>KiteClub.gr · <a href="mailto:sales@kiteclub.gr">sales@kiteclub.gr</a> · {{app_version}}</footer></body></html>

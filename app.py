@@ -11,9 +11,13 @@ from pathlib import Path
 from PIL import Image, ImageOps, UnidentifiedImageError
 from io import BytesIO
 from google_auth import setup_google, pending_google
+from email_delivery import deliver_message, email_from
+from registration_phone import PHONE_COUNTRIES, registration_mobile
+from legal_pages import setup_legal_pages, record_registration_legal, TERMS_VERSION, PRIVACY_VERSION, WAIVER_VERSION
+from registration_email import setup_registration_email, issue_confirmation, send_confirmation, activate_verified_registration
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "KiteClub v76.7.17.5 · Instructor Logout Fix"
+APP_VERSION = "KiteClub v76.7.17.14 · Registration and Email Delivery"
 
 # v70: production-ready storage. Locally everything stays inside the project.
 # On Railway mount a persistent volume at /data and set DATA_DIR=/data.
@@ -49,7 +53,7 @@ app = Flask(__name__)
 # Demo-ready build: automatically seed a new, empty database unless explicitly disabled.
 # Never use this public-demo configuration with real customer information.
 IS_PRODUCTION = bool(os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("PRODUCTION", "").lower() in ("1", "true", "yes"))
-DEMO_MODE = os.getenv("ENABLE_DEMO_DATA", "1").lower() in ("1", "true", "yes")
+DEMO_MODE = os.getenv("ENABLE_DEMO_DATA", "0" if IS_PRODUCTION else "1").lower() in ("1", "true", "yes")
 secret = os.getenv("SECRET_KEY", "").strip()
 if not secret:
     # On Railway, keep the generated signing key on the persistent volume when available.
@@ -81,6 +85,9 @@ app.config.update(
 )
 
 
+app.config["IS_KITECLUB_PRODUCTION"] = IS_PRODUCTION
+app.config["REGISTRATION_DATA_DIR"] = str(DATA_ROOT if DATA_DIR_ENV else Path(BASE))
+
 # v75: server-side CSRF protection for all state-changing browser requests.
 # Tokens belong to the signed session and are embedded into every POST form.
 def csrf_token():
@@ -106,6 +113,9 @@ def security_headers(response):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
     response.headers["Cache-Control"] = "no-store" if session.get("uid") else "no-cache"
+    if request.endpoint in ("confirm_registration_email", "resend_registration_email"):
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["Referrer-Policy"] = "no-referrer"
     if request.is_secure:
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     return response
@@ -281,20 +291,14 @@ def set_student_skill_progress(con, student_id, skill_key, status, changed_by):
     return before,after,progress
 
 def send_email(to_email, subject, body):
-    host=os.getenv("SMTP_HOST")
-    if not host:
-        app.logger.warning("Email delivery skipped: SMTP_HOST is not configured.")
-        return
     msg=EmailMessage()
-    msg["From"]=os.getenv("SMTP_FROM","booking@kiteclub.gr")
+    msg["From"]=email_from()
     msg["To"]=to_email
     msg["Subject"]=subject
+    if os.getenv("EMAIL_REPLY_TO"):
+        msg["Reply-To"]=os.environ["EMAIL_REPLY_TO"]
     msg.set_content(body)
-    with smtplib.SMTP(host, int(os.getenv("SMTP_PORT","587"))) as s:
-        s.starttls()
-        if os.getenv("SMTP_USER"):
-            s.login(os.getenv("SMTP_USER"), os.getenv("SMTP_PASS"))
-        s.send_message(msg)
+    return deliver_message(msg)
 
 
 def password_meets_policy(password):
@@ -1762,15 +1766,14 @@ def login():
     return render_template("login.html")
 
 
-# Public sign-up: the account is inactive until reviewed by school admin.
-WAIVER_VERSION = "kiteclub-original-en-2026-10"
+# Public sign-up: inactive until email confirmation; no manual signup approval.
 def _registration_ip_key():
     return "register-ip:" + (request.remote_addr or "unknown")
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "GET":
-        return render_template("register.html", waiver_version=WAIVER_VERSION)
+        return render_template("register.html", waiver_version=WAIVER_VERSION, phone_countries=PHONE_COUNTRIES)
     form = request.form
     identity = pending_google()
     name = (form.get("name") or "").strip()
@@ -1778,33 +1781,23 @@ def register():
     email = (form.get("email") or "").strip().lower()
     if identity:
         email = identity["email"]
-    phone = (form.get("phone") or "").strip()
-    password = form.get("password") or ""
-    dob = (form.get("birth_date") or "").strip()
-    guardian_name = (form.get("guardian_name") or "").strip()
-    guardian_email = (form.get("guardian_email") or "").strip().lower()
-    guardian_phone = (form.get("guardian_phone") or "").strip()
     try:
-        birth = datetime.strptime(dob, "%Y-%m-%d").date()
-        today = datetime.now().date()
-        age = today.year - birth.year - ((today.month,today.day)<(birth.month,birth.day))
-        if age < 6 or age > 110:
-            raise ValueError("age")
-    except ValueError:
-        flash("Συμπληρώστε έγκυρη ημερομηνία γέννησης.")
+        phone = registration_mobile(form.get("phone_prefix"), form.get("phone"))
+    except ValueError as error:
+        flash(str(error))
         return redirect(url_for("register"))
-    minor = age < 18
+    password = form.get("password") or ""
     if not name or len(name)>100 or not surname or len(surname)>100 or not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+",email) or len(email)>254 or not 7<=len(phone)<=30:
         flash("Συμπληρώστε σωστά όνομα, επώνυμο, email και τηλέφωνο.")
         return redirect(url_for("register"))
     if not identity and (not password_meets_policy(password) or password != form.get("confirm_password")):
         flash("Ο κωδικός πρέπει να έχει τουλάχιστον 8 χαρακτήρες, γράμματα και αριθμούς και να ταιριάζει με την επιβεβαίωση.")
         return redirect(url_for("register"))
-    if form.get("terms")!="yes" or form.get("waiver")!="yes":
-        flash("Διαβάστε και αποδεχτείτε τους όρους και τη δήλωση κινδύνων.")
+    if form.get("terms")!="yes" or form.get("privacy")!="yes" or form.get("waiver")!="yes":
+        flash("Αποδεχτείτε τους Όρους Χρήσης, επιβεβαιώστε την ενημέρωση για το Απόρρητο και διαβάστε την ενημέρωση κινδύνων.")
         return redirect(url_for("register"))
-    if minor and (not guardian_name or len(guardian_name)>180 or not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+",guardian_email) or len(guardian_email)>254 or not 7<=len(guardian_phone)<=30):
-        flash("Για ανήλικο απαιτούνται τα στοιχεία γονέα/κηδεμόνα. Η σχολή θα ζητήσει επαληθευμένη υπογραφή πριν από το μάθημα.")
+    if form.get("terms_version") != TERMS_VERSION or form.get("privacy_version") != PRIVACY_VERSION or form.get("waiver_version") != WAIVER_VERSION:
+        flash("Τα νομικά κείμενα ενημερώθηκαν. Ανανεώστε τη φόρμα και διαβάστε τις τρέχουσες εκδόσεις.")
         return redirect(url_for("register"))
     con=db()
     try:
@@ -1813,7 +1806,7 @@ def register():
         if login_locked(con,k,5):
             con.rollback()
             flash("Έχουν γίνει πολλές εγγραφές. Δοκιμάστε ξανά αργότερα.")
-            return render_template("register.html",waiver_version=WAIVER_VERSION),429
+            return render_template("register.html",waiver_version=WAIVER_VERSION, phone_countries=PHONE_COUNTRIES),429
         if con.execute("SELECT id FROM users WHERE lower(email)=?",(email,)).fetchone():
             con.rollback()
             flash("Το email χρησιμοποιείται ήδη. Δοκιμάστε σύνδεση.")
@@ -1823,21 +1816,25 @@ def register():
                        VALUES(?,?,?,?,?,?,0)""",(name,surname,email,phone,"student",generate_password_hash(secrets.token_urlsafe(48) if identity else password))).lastrowid
         con.execute("""INSERT INTO students(user_id,credits,level,student_code,lesson_type)
                        VALUES(?,0,'Beginner',?,'private')""",(uid,_next_student_code(con)))
-        # For minors this acknowledgment by a minor is never treated as guardian approval.
+        # Preserve an empty legacy DOB field; no age or guardian claim is inferred.
         con.execute("""INSERT INTO student_registrations(
           user_id,birth_date,guardian_name,guardian_email,guardian_phone,waiver_version,
           waiver_accepted_at,terms_accepted_at,lesson_emails,marketing_emails,created_at)
-          VALUES(?,?,?,?,?,?,?,?,?,?,?)""",(uid,dob,guardian_name if minor else None,
-          guardian_email if minor else None,guardian_phone if minor else None,
-          WAIVER_VERSION,None if minor else now,now,
+          VALUES(?,?,?,?,?,?,?,?,?,?,?)""",(uid,"",None,None,None,
+          WAIVER_VERSION,None,now,
           1 if form.get("lesson_emails")=="yes" else 0,
           1 if form.get("marketing_emails")=="yes" else 0,now))
         if identity:
             con.execute("INSERT INTO oauth_identities(provider,subject,user_id) VALUES('google',?,?)", (identity['sub'],uid))
+        record_registration_legal(con, uid)
+        token = issue_confirmation(con, uid, already_verified=bool(identity))
+        if identity:
+            activate_verified_registration(con, uid)
         record_login_failure(con,k)
         con.commit()
+        delivery = send_confirmation(email, name, token) if token else "already_verified"
         session.pop('google_identity', None)
-        return render_template("register_success.html")
+        return render_template("register_success.html", confirmation_pending=bool(token), mail_delivery=delivery)
     except sqlite3.IntegrityError:
         con.rollback()
         flash("Δεν ήταν δυνατή η εγγραφή. Ελέγξτε τα στοιχεία.")
@@ -1852,10 +1849,15 @@ def admin_registrations():
         return redirect(url_for("login"))
     con=db()
     rows=con.execute("""SELECT r.*,u.name,u.surname,u.email,u.phone,u.active,
-      u.id FROM student_registrations r JOIN users u ON u.id=r.user_id
+      u.id,e.user_id AS email_confirmation_required,e.verified_at AS email_verified_at
+      FROM student_registrations r JOIN users u ON u.id=r.user_id
+      LEFT JOIN registration_email_confirmations e ON e.user_id=r.user_id
       ORDER BY r.created_at DESC LIMIT 200""").fetchall()
+    legal_acceptances = {}
+    for acceptance in con.execute("SELECT * FROM registration_legal_acceptances ORDER BY recorded_at"):
+        legal_acceptances.setdefault(acceptance["user_id"], []).append(acceptance)
     con.close()
-    return render_template("admin_registrations.html",registrations=rows)
+    return render_template("admin_registrations.html",registrations=rows,legal_acceptances=legal_acceptances)
 
 @app.post("/admin/registrations/<int:user_id>/approve")
 def admin_approve_registration(user_id):
@@ -1868,13 +1870,19 @@ def admin_approve_registration(user_id):
         row=con.execute("SELECT * FROM student_registrations WHERE user_id=?",(user_id,)).fetchone()
         if not row:
             abort(404)
-        birth=datetime.strptime(row["birth_date"],"%Y-%m-%d").date()
-        now=datetime.now().date()
-        age=now.year-birth.year-((now.month,now.day)<(birth.month,birth.day))
-        if age<18 and not row["guardian_approved_at"]:
+        verification=con.execute("SELECT verified_at FROM registration_email_confirmations WHERE user_id=?",(user_id,)).fetchone()
+        if verification and not verification["verified_at"]:
             con.rollback()
-            flash("Ανήλικος: απαιτείται πρώτα έλεγχος και έγκυρη υπογραφή του γονέα/κηδεμόνα.")
+            flash("Απαιτείται πρώτα επιβεβαίωση του email του μαθητή.")
             return redirect(url_for("admin_registrations"))
+        if row["birth_date"]:
+            birth=datetime.strptime(row["birth_date"],"%Y-%m-%d").date()
+            now=datetime.now().date()
+            age=now.year-birth.year-((now.month,now.day)<(birth.month,birth.day))
+            if age<18 and not row["guardian_approved_at"]:
+                con.rollback()
+                flash("Ανήλικος: απαιτείται πρώτα έλεγχος και έγκυρη υπογραφή του γονέα/κηδεμόνα.")
+                return redirect(url_for("admin_registrations"))
         stamp=datetime.now().isoformat(timespec="seconds")
         con.execute("UPDATE users SET active=1 WHERE id=? AND role='student'",(user_id,))
         con.execute("UPDATE student_registrations SET approved_at=?,approved_by=? WHERE user_id=?",
@@ -6198,6 +6206,9 @@ def _v76_initialize_clean_demo():
 init_db()
 if _V76_FRESH_DATABASE and DEMO_MODE:
     _v76_initialize_clean_demo()
+
+setup_legal_pages(app, db)
+setup_registration_email(app, db, login_locked, record_login_failure)
 
 if __name__=="__main__":
     app.run(

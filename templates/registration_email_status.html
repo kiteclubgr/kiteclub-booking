@@ -1,0 +1,21 @@
+{% extends "auth_base.html" %}{% block content %}
+<main class="kc-auth-panel" style="min-height:100svh"><div class="kc-auth-card">
+<img src="{{url_for('static',filename='img/kiteclub-logo.png')}}" alt="KiteClub">
+{% if state == 'confirm' %}
+<h1>Επιβεβαίωση email</h1><p class="hint">Πάτησε το κουμπί για να επιβεβαιώσεις το email της εγγραφής σου.</p>
+<form method="post"><input type="hidden" name="_csrf_token" value="{{csrf_token()}}"><button class="kc-primary" type="submit">Επιβεβαίωση email</button></form>
+{% elif state == 'verified' %}
+<h1>Το email επιβεβαιώθηκε!</h1><p class="hint">Ο λογαριασμός σου ενεργοποιήθηκε! Μπορείς να συνδεθείς με τον κωδικό σου. Αρχικό υπόλοιπο: 0 credits.</p>
+{% elif state == 'guardian_pending' %}
+<h1>Το email επιβεβαιώθηκε!</h1><p class="hint">Για αυτή την προϋπάρχουσα εγγραφή ανηλίκου εκκρεμεί η επαλήθευση συναίνεσης γονέα/κηδεμόνα. Επικοινώνησε με τη σχολή.</p>
+{% elif state == 'invalid' %}
+<h1>Ο σύνδεσμος δεν είναι διαθέσιμος</h1><p class="hint">Ο σύνδεσμος έληξε, χρησιμοποιήθηκε ήδη ή δεν είναι έγκυρος. Αν έχεις ήδη επιβεβαιώσει το email σου, δοκίμασε να συνδεθείς.</p>
+{% elif state == 'limited' %}
+<h1>Δοκίμασε ξανά αργότερα</h1><p class="hint">Έχουν γίνει πολλές προσπάθειες επαναποστολής. Περίμενε 15 λεπτά.</p>
+{% elif state == 'resent' %}
+<h1>Έλεγξε το email σου</h1><p class="hint">Αν υπάρχει εγγραφή που αναμένει επιβεβαίωση και έχει περάσει ένα λεπτό από την προηγούμενη αποστολή, θα επιχειρηθεί αποστολή νέου συνδέσμου. Έλεγξε και τα ανεπιθύμητα. Αν δεν τον λάβεις, επικοινώνησε με τη Φανή.</p>
+{% else %}
+<h1>Νέο email επιβεβαίωσης</h1><form method="post"><input type="hidden" name="_csrf_token" value="{{csrf_token()}}"><label for="resend-email">Email εγγραφής</label><input id="resend-email" name="email" type="email" maxlength="254" autocomplete="email" required><button type="submit" class="kc-primary">Επαναποστολή</button></form>
+{% endif %}
+<p><a href="{{url_for('login')}}">Σύνδεση</a> · <a href="{{url_for('resend_registration_email')}}">Νέο email επιβεβαίωσης</a></p>
+</div></main>{% endblock %}

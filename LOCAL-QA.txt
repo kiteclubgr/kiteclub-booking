@@ -1,0 +1,22 @@
+2026-10-16 — v76.7.17.14 Registration and Email Delivery
+All tests run on local disposable data, with mocked delivery; no real email sent.
+PASS tests_email_delivery.py: 6 cases, HTTPS payload, plain/HTML/Reply-To,
+idempotency key, no redirects, no credential/body/recipient leakage, failure handling,
+STARTTLS/SSL, local previews block outbound transports, no production preview mode.
+PASS tests_country_flags.py: all 49 SVGs, actual JS selection/back/autofill events,
+distinct flags for US and Canada sharing +1.
+PASS tests_registration_email.py: no DOB, zero credits, email confirmation, safe GET,
+CSRF, automatic activation, student login, replay/expiry/resend/rate limits,
+phone validation, existing known-minor protection.
+PASS tests_google_auth.py: 5 offline cases, new verified Google signup activation.
+PASS tests_legal_pages.py: all documents, immutable content/version audit, UTC events,
+required Terms/privacy/waiver acknowledgments, optional emails independent,
+transaction rollback, no fabricated legacy acceptance, supplied scans absent/404.
+PASS tests_reports_hours.py: corrected fixture schema and hours/pay regression.
+PASS tests_v75.py: syntax/templates/CSRF/logout guards/backup+restore.
+PASS run_local.py --check in isolated copy.
+PASS production-mode upgrade test from v76.7.17.5 on disposable database:
+users/students/instructors/slots/bookings/credits/finance unchanged; no legacy acceptance backfill.
+Live SMTP/API credentials, DNS/domain verification and inbox delivery remain untested.
+No production data, uploads, existing customer records or secrets accessed or reset.
+No complete live/mobile QA or legal approval claimed. Terms/privacy remain visible drafts.

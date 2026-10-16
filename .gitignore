@@ -4,3 +4,8 @@ __pycache__/
 .env
 kiteclub.db
 static/uploads/
+
+_local_data/
+.local_secret_key
+*.eml
+.env.*

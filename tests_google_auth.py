@@ -62,7 +62,7 @@ class GoogleAuthTests(unittest.TestCase):
             self.assertNotIn('uid', s)
         con = application.db(); con.execute('UPDATE users SET active=1 WHERE id=?',(uid,)); con.commit(); con.close()
 
-    def test_registration_uses_verified_email_and_stays_inactive(self):
+    def test_registration_uses_verified_email_and_activates(self):
         self.callback('new-sub', 'google-new@example.test')
         page = self.client.get('/register').get_data(as_text=True)
         self.assertIn('google-new@example.test', page)
@@ -70,12 +70,12 @@ class GoogleAuthTests(unittest.TestCase):
         with self.client.session_transaction() as s:
             s['_csrf_token'] = 'csrf'
         r = self.client.post('/register', data={'_csrf_token':'csrf', 'name':'New', 'surname':'Student',
-            'email':'forged@example.test', 'phone':'6900000000','birth_date':'1995-01-01', 'terms':'yes','waiver':'yes'})
+            'email':'forged@example.test', 'phone':'6900000000','birth_date':'1995-01-01', 'terms':'yes','privacy':'yes','terms_version':application.TERMS_VERSION,'privacy_version':application.PRIVACY_VERSION,'waiver_version':application.WAIVER_VERSION,'waiver':'yes'})
         self.assertIn('Η εγγραφή καταχωρήθηκε',r.get_data(as_text=True))
         con=application.db()
         user=con.execute("SELECT u.* FROM users u JOIN oauth_identities o ON u.id=o.user_id WHERE o.subject='new-sub'").fetchone()
         self.assertEqual(user['email'],'google-new@example.test')
-        self.assertEqual(user['active'],0)
+        self.assertEqual(user['active'],1)
         self.assertEqual(con.execute('SELECT credits FROM students WHERE user_id=?',(user['id'],)).fetchone()[0],0)
         con.close()
 

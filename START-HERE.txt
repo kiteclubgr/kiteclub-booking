@@ -1,0 +1,26 @@
+KiteClub v76.7.17.14 — Registration and Email Delivery
+
+WINDOWS LOCAL DEMO
+Extract/clone to a new folder and run START-WINDOWS.bat.
+Mac/Linux: bash START-MAC-LINUX.sh
+Open http://127.0.0.1:5000/register
+Local demo only: Admin admin@kiteclub.gr / admin123;
+Student student@kiteclub.gr / student123; Instructor angelos@kiteclub.gr / teacher123.
+These accounts are created only for the isolated local launcher, never as a production reset.
+
+Emails are saved under _local_data/mail-preview; no real mail is sent locally.
+Open the .eml, copy the localhost confirmation link and confirm it in the browser.
+New students activate after email verification, starting with zero credits.
+Country prefix defaults to +30; flags change with the selected country.
+Full English waiver text at /waiver; Terms /terms; Privacy /privacy-policy.
+No supplied document photographs are included. Guardian paperwork is manual.
+Terms/Privacy remain review drafts. See LEGAL-REVIEW.md.
+
+RAILWAY / PRODUCTION
+Use the existing gunicorn start command, existing persistent /data volume and secrets.
+Do NOT run run_local.py, seed/repair scripts or replace a production database.
+Nothing in this release resets existing bookings, credits, finance or users.
+New registration/verification/legal tables are created additively on startup.
+See EMAIL-SETUP.md for verified sender DNS and Railway email Variables.
+Real inbox delivery remains unverified until a provider is configured and tested.
+This is a tested functional update, not a claim of complete stable production QA.

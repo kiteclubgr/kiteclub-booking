@@ -35,6 +35,9 @@ INSERT INTO booking_slots VALUES(12,3);
 INSERT INTO bookings VALUES(13,4,2,1,'confirmed');
 INSERT INTO booking_participants VALUES(13,2,NULL);
 INSERT INTO booking_slots VALUES(13,4);
+-- Add newer reporting fields after the legacy five-column fixture INSERTs.
+ALTER TABLE bookings ADD COLUMN actual_duration REAL;
+ALTER TABLE bookings ADD COLUMN group_lesson_type TEXT;
 ''')
 ctx={'con':con,'date_from':'2026-10-12','date_to':'2026-10-18'}
 exec('def calculate():\n'+block+'\n    return locals()\n',ctx)

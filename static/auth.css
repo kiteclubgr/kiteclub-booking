@@ -156,3 +156,18 @@ details{margin:24px 0;border:1px solid var(--line);border-radius:8px;padding:16p
 .kc-google-button{width:100%;min-height:48px;display:flex;align-items:center;justify-content:center;gap:12px;border:1px solid var(--line);border-radius:8px;background:white;color:var(--ink);font:500 16px Arial,sans-serif;cursor:pointer}
 .kc-google-button:hover{background:#f4f7fb}
 .kc-google-mark{font:bold 24px Arial,sans-serif;color:#4285f4}
+
+/* Registration mobile number and international prefix share one row. */
+.kc-mobile-phone{display:flex;gap:8px;align-items:stretch;min-width:0}
+.kc-auth-register .kc-mobile-phone select{flex:0 0 100px;width:100px;min-width:0;height:48px;padding:8px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font:inherit;font-size:16px}
+.kc-auth-register .kc-mobile-phone input{flex:1 1 0;width:0;min-width:0}
+.kc-mobile-phone select:focus-visible{outline:3px solid var(--teal);outline-offset:3px}
+.kc-phone-help{display:block;margin-top:6px;font-size:12px;line-height:1.4;color:var(--ink)}
+@media(max-width:600px){.kc-auth-register .kc-mobile-phone select{height:54px}}
+
+.kc-legal-links{text-align:center;font-size:13px;padding:8px 16px;margin:0;background:#fff}.kc-legal-links a{color:var(--ink);text-underline-offset:3px}
+
+/* Local SVG flags do not depend on Windows emoji fonts. */
+.kc-phone-prefix{position:relative;flex:0 0 100px;width:100px;min-width:0}
+.kc-country-flag{position:absolute;width:24px;height:16px;left:9px;top:50%;transform:translateY(-50%);pointer-events:none;border:1px solid #ccd6df;border-radius:2px}
+.kc-auth-register .kc-phone-prefix select{width:100%;padding-left:39px}

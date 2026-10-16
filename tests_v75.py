@@ -10,6 +10,7 @@ root=Path(__file__).parent
 source=(root/'app.py').read_text()
 ast.parse(source)
 forms=0
+templates_count=len(list((root/'templates').glob('*.html')))
 for path in (root/'templates').glob('*.html'):
     body=path.read_text()
     # Logout is POST-only: reject links that would send GET and keep a session alive.
@@ -48,4 +49,4 @@ with tempfile.TemporaryDirectory() as tmp:
         zipped.extract('kiteclub.db',root/'restore')
     with sqlite3.connect(str(root/'restore'/'kiteclub.db')) as con:
         assert con.execute('SELECT id FROM check_table').fetchone()[0]==42
-print(f'PASS: app syntax; 27 Jinja templates; CSRF in {forms} POST forms; login guards; backup + restore integrity')
+print(f'PASS: app syntax; {templates_count} Jinja templates; CSRF in {forms} POST forms; login guards; backup + restore integrity')

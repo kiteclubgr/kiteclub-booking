@@ -8,3 +8,19 @@ document.querySelectorAll('.kc-password-toggle').forEach(button => {
     button.setAttribute('aria-label', visible ? 'Απόκρυψη κωδικού' : 'Εμφάνιση κωδικού');
   });
 });
+
+// Each option owns its flag; shared +1 prefixes can select US or Canada.
+const phonePrefix = document.getElementById('reg-phone-prefix');
+const countryFlag = document.getElementById('reg-country-flag');
+if (phonePrefix && countryFlag) {
+  const updatePhoneFlag = () => {
+    const selected = phonePrefix.selectedOptions[0];
+    if (!selected) return;
+    countryFlag.src = selected.dataset.flag;
+    countryFlag.alt = selected.dataset.country;
+  };
+  phonePrefix.addEventListener('input', updatePhoneFlag);
+  phonePrefix.addEventListener('change', updatePhoneFlag);
+  window.addEventListener('pageshow', updatePhoneFlag);
+  updatePhoneFlag();
+}

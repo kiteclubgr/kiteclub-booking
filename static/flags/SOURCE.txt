@@ -1,0 +1,3 @@
+Flag SVG assets from flag-icons 7.5.0 (lipis/flag-icons), MIT license.
+Source package: https://registry.npmjs.org/flag-icons/-/flag-icons-7.5.0.tgz
+Only selected 4x3 flags are bundled. Assets are served locally; no CDN requests.
