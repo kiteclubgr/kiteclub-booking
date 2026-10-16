@@ -1,4 +1,4 @@
-KiteClub v76.7.17.14 — Registration and Email Delivery
+KiteClub v76.7.17.15 — Package Purchase Cancellation
 
 WINDOWS LOCAL DEMO
 Extract/clone to a new folder and run START-WINDOWS.bat.
@@ -24,3 +24,8 @@ New registration/verification/legal tables are created additively on startup.
 See EMAIL-SETUP.md for verified sender DNS and Railway email Variables.
 Real inbox delivery remains unverified until a provider is configured and tested.
 This is a tested functional update, not a claim of complete stable production QA.
+
+PACKAGE CANCELLATION (LOCAL QA)
+Admin > Students > Student profile > Payments > Cancel purchase.
+Preview first; unpaid lesson purchases only. See RELEASE-v76.7.17.15.md.
+Publication authorized 16 October 2026. No automatic production data correction.

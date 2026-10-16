@@ -12,12 +12,13 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 from io import BytesIO
 from google_auth import setup_google, pending_google
 from email_delivery import deliver_message, email_from
+from package_cancellation import setup_package_cancellation
 from registration_phone import PHONE_COUNTRIES, registration_mobile
 from legal_pages import setup_legal_pages, record_registration_legal, TERMS_VERSION, PRIVACY_VERSION, WAIVER_VERSION
 from registration_email import setup_registration_email, issue_confirmation, send_confirmation, activate_verified_registration
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "KiteClub v76.7.17.14 · Registration and Email Delivery"
+APP_VERSION = "KiteClub v76.7.17.15 · Package Purchase Cancellation"
 
 # v70: production-ready storage. Locally everything stays inside the project.
 # On Railway mount a persistent volume at /data and set DATA_DIR=/data.
@@ -1296,7 +1297,7 @@ def _instructor_time_conflict(con, instructor_id, lesson_date, start_time, exclu
 
 
 def _activate_student_purchase(con, purchase, reason="purchase activation"):
-    if not purchase or int(purchase["credits_activated"] or 0)==1 or (purchase["package_type"] or "lesson")=="crew":
+    if not purchase or purchase["payment_status"] == "cancelled" or int(purchase["credits_activated"] or 0)==1 or (purchase["package_type"] or "lesson")=="crew":
         return 0.0
     hours=float(purchase["hours_total"] or 0)
     if hours<=0: return 0.0
@@ -1321,7 +1322,7 @@ def _consume_package_hours(con, student_id, booking_id, hours):
     rows=con.execute("""
       SELECT id,hours_remaining
       FROM student_packages
-      WHERE student_id=? AND COALESCE(credits_activated,0)=1 AND hours_remaining>0
+      WHERE student_id=? AND payment_status<>'cancelled' AND COALESCE(credits_activated,0)=1 AND hours_remaining>0
       ORDER BY purchased_at,id
     """,(student_id,)).fetchall()
     used=0.0
@@ -2900,7 +2901,7 @@ def admin():
     # v75.1 visual dashboard: live metrics only, no fake weather/revenue data.
     dashboard_total_students=con.execute("SELECT COUNT(*) n FROM students s JOIN users u ON u.id=s.user_id WHERE COALESCE(u.active,1)=1").fetchone()["n"]
     dashboard_total_instructors=con.execute("SELECT COUNT(*) n FROM instructors i JOIN users u ON u.id=i.user_id WHERE COALESCE(u.active,1)=1").fetchone()["n"]
-    dashboard_pending_payments=con.execute("""SELECT COALESCE(SUM(MAX(0,COALESCE(sp.price,0)-COALESCE(sp.paid_amount,0))),0) amount FROM student_packages sp WHERE COALESCE(sp.payment_status,'unpaid')<>'paid'""").fetchone()["amount"]
+    dashboard_pending_payments=con.execute("""SELECT COALESCE(SUM(MAX(0,COALESCE(sp.price,0)-COALESCE(sp.paid_amount,0))),0) amount FROM student_packages sp WHERE COALESCE(sp.payment_status,'unpaid') NOT IN ('paid','cancelled')""").fetchone()["amount"]
     dashboard_today_rows=con.execute("""
       SELECT b.id,b.student_id,b.status,b.payment_status,b.duration,s.lesson_date,s.start_time,
              su.name student_name,su.surname student_surname,iu.name instructor_name,iu.surname instructor_surname,
@@ -5359,6 +5360,8 @@ def admin_package_purchase_add_payment(purchase_id):
     if not (24 <= len(request_id) <= 128 and re.fullmatch(r"[A-Za-z0-9_-]+", request_id)):
         abort(400, description="Missing or invalid payment request ID. Refresh the page.")
     con=db(); con.execute("BEGIN IMMEDIATE"); purchase=con.execute("SELECT * FROM student_packages WHERE id=?",(purchase_id,)).fetchone()
+    if purchase and purchase["payment_status"] == "cancelled":
+        con.rollback(); con.close(); abort(409, description="Η αγορά έχει ακυρωθεί.")
     if not purchase:
         con.rollback(); con.close(); flash("Η αγορά δεν βρέθηκε."); return redirect(url_for("admin_packages"))
     if _payment_request_used(con,request_id):
@@ -5420,6 +5423,8 @@ def admin_package_purchase_mark_paid(purchase_id):
     u=current_user()
     if not u or u["role"]!="admin": return redirect(url_for("login"))
     con=db(); con.execute("BEGIN IMMEDIATE"); purchase=con.execute("SELECT * FROM student_packages WHERE id=?",(purchase_id,)).fetchone()
+    if purchase and purchase["payment_status"] == "cancelled":
+        con.rollback(); con.close(); abort(409, description="Η αγορά έχει ακυρωθεί.")
     if not purchase:
         con.rollback(); con.close(); flash("Η αγορά πακέτου δεν βρέθηκε."); return redirect(url_for("admin_packages"))
     balance=max(0.0,float(purchase["price"] or 0)-float(purchase["paid_amount"] or 0))
@@ -6207,6 +6212,7 @@ init_db()
 if _V76_FRESH_DATABASE and DEMO_MODE:
     _v76_initialize_clean_demo()
 
+setup_package_cancellation(app, db, current_user)
 setup_legal_pages(app, db)
 setup_registration_email(app, db, login_locked, record_login_failure)
 

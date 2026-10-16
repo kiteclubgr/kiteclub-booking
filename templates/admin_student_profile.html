@@ -146,14 +146,14 @@
           {% if package_history %}
           <div class="package-history">
             {% for p in package_history %}
-            {% set paid = p.paid_amount or 0 %}{% set due = (p.price or 0) - paid %}
+            {% set paid = p.paid_amount or 0 %}{% set due = 0 if p.payment_status=='cancelled' else (p.price or 0) - paid %}
             <div class="package-row">
               <div><b>{{p.package_name}}</b><div class="package-stat">{{p.purchased_at[:16].replace('T',' ') if p.purchased_at else '—'}}{% if p.note %} · {{p.note}}{% endif %}</div></div>
               <div>{% if (p.package_type or 'lesson')=='crew' %}<b>Crew</b><div class="package-stat">membership</div>{% else %}<b>{{p.hours_total}}h</b><div class="package-stat">{{p.hours_remaining}}h διαθέσιμες</div>{% endif %}</div>
               <div><b class="money-paid">{{'%.2f'|format(paid)}}€</b><div class="package-stat">πληρωμένα / {{'%.2f'|format(p.price)}}€</div><b class="money-due">{{'%.2f'|format(due if due>0 else 0)}}€</b><div class="package-stat">υπόλοιπο</div></div>
-              <div>{% if p.payment_status=='paid' %}<span class="badge ok">PAID</span>{% elif p.payment_status=='partial' %}<span class="badge status-partial">PARTIALLY PAID</span>{% else %}<span class="badge status-unpaid">UNPAID</span>{% endif %}<div class="package-stat" style="margin-top:6px">{% if p.credits_activated %}Ώρες ενεργές{% else %}Ώρες μη ενεργές{% endif %}</div></div>
+              <div>{% if p.payment_status=='cancelled' %}<span class="badge off">Ακυρωμένο</span>{% elif p.payment_status=='paid' %}<span class="badge ok">PAID</span>{% elif p.payment_status=='partial' %}<span class="badge status-partial">PARTIALLY PAID</span>{% else %}<span class="badge status-unpaid">UNPAID</span>{% endif %}<div class="package-stat" style="margin-top:6px">{% if p.payment_status=='cancelled' %}Ώρες ακυρωμένες{% elif p.credits_activated %}Ώρες ενεργές{% else %}Ώρες μη ενεργές{% endif %}</div></div>
               <div class="pay-actions">
-                {% if due > 0.009 %}
+                {% if p.payment_status!='cancelled' and due > 0.009 %}
                   <form method="post" action="{{url_for('admin_package_purchase_add_payment',purchase_id=p.id)}}" class="flexible-payment-form">
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="payment_request_id" value="{{ payment_request_id() }}">
@@ -163,7 +163,8 @@
                     <button class="btn alt" name="payment_action" value="installment" type="submit">Δόση</button>
                     <button class="btn" name="payment_action" value="settle" type="submit" title="Κλείσιμο οφειλής με το ποσό που εισήγαγες. Αν είναι μικρότερο από το υπόλοιπο, η διαφορά καταγράφεται ως συμφωνημένη έκπτωση.">Εξόφληση</button>
                   </form>
-                {% else %}<span class="badge ok">Εξοφλημένο</span>{% endif %}
+                {% elif p.payment_status!='cancelled' %}<span class="badge ok">Εξοφλημένο</span>{% endif %}
+                <a class="btn alt" href="{{url_for('admin_package_purchase_cancel',purchase_id=p.id)}}">{{'Στοιχεία ακύρωσης' if p.payment_status=='cancelled' else 'Ακύρωση αγοράς'}}</a>
               </div>
             </div>
             {% endfor %}

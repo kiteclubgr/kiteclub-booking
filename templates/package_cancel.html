@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card" style="max-width:780px;margin:20px auto;padding:24px">
+<h1>Ακύρωση αγοράς</h1>
+<p><b>{{purchase.package_name}}</b> · Αγορά #{{purchase.id}} · Μαθητής #{{purchase.student_id}}</p>
+<p>Αρχική αξία {{'%.2f'|format(purchase.price)}}€ · Πληρωμένα {{'%.2f'|format(purchase.paid_amount or 0)}}€ · Ώρες πακέτου {{purchase.hours_remaining}}h</p>
+{% if error %}<p role="alert" style="color:#b42318">{{error}}</p>{% endif %}
+{% if audit %}
+<p><b>Ακυρωμένο</b> · {{audit.cancelled_at}} · Admin #{{audit.actor_id}} {{audit.actor_name or ''}}</p>
+<p>{{audit.reason}}</p>
+<p>Αφαιρέθηκαν {{audit.removed_credits}} credits. Ακυρωμένη οφειλή {{'%.2f'|format(audit.original_price)}}€.</p>
+{% if audit.manual_ledger_id %}<p>Συνδέθηκε η χειροκίνητη κίνηση #{{audit.manual_ledger_id}}. Δεν αφαιρέθηκαν ξανά credits.</p>{% endif %}
+{% if audit.replacement_purchase_id %}<p>Η κατανάλωση μεταφέρθηκε στην αγορά #{{audit.replacement_purchase_id}}.</p>{% endif %}
+{% elif purchase.payment_status=='cancelled' %}<p>Η αγορά είναι ακυρωμένη.</p>
+{% elif preview %}
+<h2>Έλεγχος πριν την ακύρωση</h2>
+<ul>
+<li>Ακύρωση οφειλής: <b>{{'%.2f'|format(purchase.price)}}€</b>.</li>
+<li>Νέα είσπραξη: <b>0€</b>.</li>
+<li>Αφαίρεση credits: <b>{{preview.removed}}h</b>.</li>
+<li>Υπόλοιπο μαθητή: {{preview.credits}}h → <b>{{preview.credits-preview.removed}}h</b>.</li>
+{% if preview.manual %}<li>Σύνδεση χειροκίνητης αφαίρεσης #{{preview.manual.id}} ({{preview.manual.amount}}h). Θα καταγραφεί αντιλογισμός και ακύρωση της αρχικής χορήγησης, με μηδενική καθαρή μεταβολή credits.</li>{% endif %}
+{% if preview.replacement %}<li>Μεταφορά {{preview.used}}h κατανάλωσης στην αγορά #{{preview.replacement.id}} — {{preview.replacement.package_name}}. Διαθέσιμες ώρες εκεί: {{preview.replacement.hours_remaining}}h → {{preview.replacement.hours_remaining-preview.used}}h.</li>{% endif %}
+</ul>
+<p>Αιτιολογία: {{preview.reason}}</p>
+<p>Οι κρατήσεις και οι πληρωμές παραμένουν ως έχουν. Η αγορά θα διατηρηθεί στο ιστορικό ως «Ακυρωμένο».</p>
+<form method="post">
+<input type="hidden" name="_csrf_token" value="{{csrf_token()}}">
+<input type="hidden" name="action" value="confirm">
+<input type="hidden" name="mode" value="{{preview.mode}}">
+<input type="hidden" name="reason" value="{{preview.reason}}">
+<input type="hidden" name="preview_token" value="{{preview_token}}">
+{% if preview.manual %}<input type="hidden" name="manual_ledger_id" value="{{preview.manual.id}}"><input type="hidden" name="manual_ack" value="yes">{% endif %}
+{% if preview.replacement %}<input type="hidden" name="replacement_purchase_id" value="{{preview.replacement.id}}">{% endif %}
+<button class="btn" type="submit" style="background:#b42318">Επιβεβαίωση ακύρωσης</button>
+<a class="btn alt" href="{{url_for('admin_package_purchase_cancel',purchase_id=purchase.id)}}">Επιστροφή</a>
+</form>
+{% else %}
+<p>Αφορά λανθασμένες, απλήρωτες αγορές μαθημάτων. Αγορές με πληρωμές και συνδρομές Crew χρειάζονται ξεχωριστό χειρισμό.</p>
+<form method="post" style="display:grid;gap:16px">
+<input type="hidden" name="_csrf_token" value="{{csrf_token()}}">
+<input type="hidden" name="action" value="preview">
+<label>Αιτιολογία <textarea name="reason" required minlength="5" maxlength="1000" rows="3" style="display:block;width:100%;box-sizing:border-box">{{request.form.get('reason','')}}</textarea></label>
+<label>Τρόπος ακύρωσης <select name="mode" style="display:block;max-width:100%">
+<option value="normal" {% if request.form.get('mode')!='manual' %}selected{% endif %}>Κανονική — αφαίρεση αχρησιμοποίητων credits</option>
+<option value="manual" {% if request.form.get('mode')=='manual' %}selected{% endif %}>Τα credits αφαιρέθηκαν ήδη χειροκίνητα</option>
+</select></label>
+<details {% if request.form.get('mode')=='manual' %}open{% endif %}><summary>Σύνδεση προηγούμενης χειροκίνητης διόρθωσης</summary>
+<p>Συμπλήρωσε μόνο αν επέλεξες «Τα credits αφαιρέθηκαν ήδη χειροκίνητα». Απαιτείται αφαίρεση ίση με όλες τις ώρες της λανθασμένης αγοράς.</p>
+<label>Χειροκίνητη κίνηση <select name="manual_ledger_id" style="display:block;max-width:100%"><option value="">Επίλεξε</option>{% for r in manual_rows %}<option value="{{r.id}}" {% if request.form.get('manual_ledger_id')==r.id|string %}selected{% endif %}>#{{r.id}} · {{r.amount}}h · {{r.created_at}} · {{r.note or ''}}</option>{% endfor %}</select></label>
+<label>Σωστό πακέτο για τυχόν ήδη δεσμευμένες ώρες <select name="replacement_purchase_id" style="display:block;max-width:100%"><option value="">Επίλεξε εφόσον υπάρχει κατανάλωση</option>{% for r in replacements %}<option value="{{r.id}}" {% if request.form.get('replacement_purchase_id')==r.id|string %}selected{% endif %}>#{{r.id}} · {{r.package_name}} · {{r.hours_remaining}}h διαθέσιμες</option>{% endfor %}</select></label>
+<p><label><input type="checkbox" name="manual_ack" value="yes" {% if request.form.get('manual_ack')=='yes' %}checked{% endif %}> Επιβεβαιώνω ότι η συγκεκριμένη χειροκίνητη αφαίρεση διορθώνει αυτή τη λανθασμένη αγορά και ότι το πακέτο αντικατάστασης είναι το σωστό.</label></p>
+</details>
+<button class="btn" type="submit">Προεπισκόπηση ακύρωσης</button>
+</form>
+{% endif %}
+<p><a href="{{url_for('admin_student_profile',student_id=purchase.student_id)}}#payments">Επιστροφή στο προφίλ μαθητή</a></p>
+</div>
+{% endblock %}

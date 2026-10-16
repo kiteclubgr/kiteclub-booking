@@ -1,3 +1,20 @@
+2026-10-16 — v76.7.17.15 Package Purchase Cancellation
+Offline QA record. Publication authorized 16 October 2026. No real data modified by QA.
+PASS tests_package_cancellation.py: HTTP admin/CSRF guards; safe GET; mandatory
+reason; preview/confirm HMAC and stale-state rejection; repeat cancellation;
+unpaid/inactive cancellations; exact manual correction scenario and package
+consumption transfer; student balance and ledger unchanged in manual mode;
+debt reduced by original price; later refund uses replacement package once;
+receipt/paid protection; cancelled payment routes blocked; audit failure rollback;
+all 39 Jinja templates compile and affected admin views return 200.
+PASS tests_reports_hours.py: booked/completed/shared/cancelled hours and pay.
+PASS tests_v75.py: 39 Jinja templates, 68 POST forms/CSRF, login guards,
+backup/restore on disposable databases. Existing tar extraction deprecation warning.
+PASS tests_registration_email.py: offline registration and verification regression.
+No real emails sent. No production DB or credentials copied into this package.
+Manual browser/mobile QA and production read-only verification remain pending.
+
+Previous release checks (v76.7.17.14):
 2026-10-16 — v76.7.17.14 Registration and Email Delivery
 All tests run on local disposable data, with mocked delivery; no real email sent.
 PASS tests_email_delivery.py: 6 cases, HTTPS payload, plain/HTML/Reply-To,
