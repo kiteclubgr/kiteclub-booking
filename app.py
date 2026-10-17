@@ -19,7 +19,7 @@ from legal_pages import setup_legal_pages, record_registration_legal, TERMS_VERS
 from registration_email import setup_registration_email, issue_confirmation, send_confirmation, activate_verified_registration
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "KiteClub v76.7.17.18 · Merge After Booking Edit"
+APP_VERSION = "KiteClub v76.7.17.19 · Group Completion Fix"
 
 # v70: production-ready storage. Locally everything stays inside the project.
 # On Railway mount a persistent volume at /data and set DATA_DIR=/data.
@@ -5930,7 +5930,8 @@ def instructor_complete_lesson(booking_id):
         return redirect(url_for("instructor"))
     return render_template(
       "instructor_complete.html",lesson=lesson,skills=skills,participants=participants,
-      progress=progress,participant_progress=participant_progress,beginner_curriculum=BEGINNER_CURRICULUM
+      progress=progress,participant_progress=participant_progress,beginner_curriculum=BEGINNER_CURRICULUM,
+      completion_form=request.form if request.method == "POST" else None
     )
 
 
@@ -6017,7 +6018,7 @@ def complete_group(booking_id):
     participants=_booking_participants(con,booking_id)
     if len(participants)<=1:
         con.rollback(); con.close(); flash("Αυτή δεν είναι group κράτηση.")
-        return redirect(url_for("instructor_complete_lesson",booking_id=booking_id))
+        return instructor_complete_lesson(booking_id)
     if b["status"] not in ("confirmed","pending_payment"):
         con.rollback(); con.close(); flash("Το group μάθημα έχει ήδη κλείσει.")
         return redirect(url_for("instructor_lesson",booking_id=booking_id))
@@ -6027,14 +6028,14 @@ def complete_group(booking_id):
     booked=float(b["duration"] or 1)
     if actual not in ((1.,) if booked==1 else (1.,1.5,2.)):
         con.rollback();con.close();flash("Επίλεξε έγκυρη πραγματική διάρκεια ομαδικού μαθήματος.")
-        return redirect(url_for("instructor_complete_lesson",booking_id=booking_id))
+        return instructor_complete_lesson(booking_id)
     valid={"completed","makeup","no_show"}; now=datetime.now().isoformat(); results=[]; any_completed=False
     for person in participants:
         sid=int(person["student_id"])
         status=(request.form.get(f"status_{sid}") or "").strip().lower()
         if status not in valid:
             con.rollback(); con.close(); flash("Επίλεξε κατάσταση για κάθε μέλος του group.")
-            return redirect(url_for("instructor_complete_lesson",booking_id=booking_id))
+            return instructor_complete_lesson(booking_id)
         skill=(request.form.get(f"skill_{sid}") or "").strip()
         notes=(request.form.get(f"notes_{sid}") or "").strip()
         if status!="completed": skill=""
@@ -6052,13 +6053,13 @@ def complete_group(booking_id):
         if not worked:
             con.rollback(); con.close()
             flash(f"Επίλεξε τουλάχιστον μία τεχνική για τον/την {person['name']} (Completed).")
-            return redirect(url_for("instructor_complete_lesson",booking_id=booking_id))
+            return instructor_complete_lesson(booking_id)
         progress_updates=[]
         for key in worked:
             progress_status=(request.form.get(f"progress_status_{sid}_{key}") or "practicing").strip().lower()
             if progress_status not in ("practicing", "mastered"):
                 con.rollback(); con.close(); flash("Μη έγκυρη κατάσταση προόδου.")
-                return redirect(url_for("instructor_complete_lesson",booking_id=booking_id))
+                return instructor_complete_lesson(booking_id)
             progress_updates.append((key,progress_status))
         worked_by_student[sid]=progress_updates
 
