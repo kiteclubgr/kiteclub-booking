@@ -43,7 +43,11 @@ with tempfile.TemporaryDirectory() as folder:
     with c.session_transaction() as session: session['uid']=con.execute("SELECT id FROM users WHERE role='admin'").fetchone()[0]
     post(f'/admin/registrations/{uid}/approve',manual_review='yes')
     assert con.execute('SELECT active FROM users WHERE id=?',(uid,)).fetchone()[0]==0
-    assert post(path).status_code==200
+    activated_response=post(path)
+    assert activated_response.status_code==303
+    assert activated_response.headers['Location']=='/'
+    with c.session_transaction() as session:
+        assert any('Ο λογαριασμός σου ενεργοποιήθηκε' in message for category,message in session.get('_flashes', []))
     assert c.get(path).status_code==400
     assert con.execute('SELECT active FROM users WHERE id=?',(uid,)).fetchone()[0]==1
     assert con.execute('SELECT credits FROM students WHERE user_id=?',(uid,)).fetchone()[0]==0

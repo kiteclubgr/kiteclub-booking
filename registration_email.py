@@ -57,7 +57,7 @@ def send_confirmation(email, name, token):
     if os.getenv('EMAIL_REPLY_TO'):
         message['Reply-To'] = os.environ['EMAIL_REPLY_TO']
     message['To'] = email
-    message['Subject'] = 'KiteClub — Επιβεβαίωση του email σου'
+    message['Subject'] = 'KiteClub — Ενεργοποίηση λογαριασμού'
     message.set_content(body)
     message.add_alternative(render_template('emails/confirm_registration_email.html',
                                             name=name, confirmation_url=link), subtype='html')
@@ -94,7 +94,10 @@ def setup_registration_email(app, db, login_locked, record_attempt):
                         'WHERE user_id=? AND token_hash=?', (stamp(),row['user_id'],digest))
             activated = activate_verified_registration(con, row['user_id'])
             con.commit()
-            return render_template('registration_email_status.html', state='verified' if activated else 'guardian_pending')
+            if activated:
+                flash('Ο λογαριασμός σου ενεργοποιήθηκε! Συνδέσου με το email και τον κωδικό σου.', 'success')
+                return redirect(url_for('login'), code=303)
+            return render_template('registration_email_status.html', state='guardian_pending')
         finally:
             con.close()
 
