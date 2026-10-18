@@ -1,0 +1,62 @@
+            <div class="slot-head">
+              <strong>Slot {{col.column_no}}</strong>
+              {% if col.instructor_id %}<div class="tiny"><b>{{col.instructor_name}}{% if col.instructor_surname %} {{col.instructor_surname}}{% endif %}</b></div>{% endif %}
+              <form method="post" action="{{url_for('assign_day_column',column_no=col.column_no)}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="date" value="{{date}}">
+                <select name="instructor_id" onchange="this.form.submit()">
+                  <option value="">— Χωρίς εκπαιδευτή —</option>
+                  {% for i in instructors %}
+                    {% set ns = namespace(used_elsewhere=false) %}
+                    {% for other in day_columns %}
+                      {% if other.column_no != col.column_no and other.instructor_id == i.id %}
+                        {% set ns.used_elsewhere = true %}
+                      {% endif %}
+                    {% endfor %}
+                    {% if not ns.used_elsewhere or col.instructor_id==i.id %}
+                      <option value="{{i.id}}" {% if col.instructor_id==i.id %}selected{% endif %}>{{i.name}}{% if i.surname %} {{i.surname}}{% endif %}</option>
+                    {% endif %}
+                  {% endfor %}
+                </select>
+              </form>
+              {% set act = activation_by_column.get(col.column_no) %}
+              {% if act %}
+              <div class="activation-line">
+                <span class="{{'activation-active' if act.active else 'activation-standby'}}">{{'ACTIVE' if act.active else 'STANDBY'}}</span>
+                <span class="activation-progress">{{act.booked_hours|round(1)}} / {{act.threshold|round(1)}}h booked</span>
+              </div>
+
+              {% if col.column_no == 1 %}
+                <div class="activation-note">BASE ACTIVE · πρώτος στη σειρά</div>
+              {% else %}
+                <div class="activation-controls">
+                  <form method="post" action="{{url_for('set_day_column_activation',column_no=col.column_no)}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="date" value="{{date}}">
+                    <input type="hidden" name="mode" value="auto">
+                    <button class="activation-btn {% if not act.activation_override %}selected-auto{% endif %}" type="submit">Auto</button>
+                  </form>
+                  <form method="post" action="{{url_for('set_day_column_activation',column_no=col.column_no)}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="date" value="{{date}}">
+                    <input type="hidden" name="mode" value="active">
+                    <button class="activation-btn {% if act.activation_override == 'active' %}selected-active{% endif %}" type="submit">Activate</button>
+                  </form>
+                  <form method="post" action="{{url_for('set_day_column_activation',column_no=col.column_no)}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="date" value="{{date}}">
+                    <input type="hidden" name="mode" value="standby">
+                    <button class="activation-btn {% if act.activation_override == 'standby' %}selected-standby{% endif %}" type="submit">Standby</button>
+                  </form>
+                </div>
+
+                {% if act.activation_override == 'active' %}
+                  <div class="activation-note">Manual Activate · ανοικτός ανεξάρτητα από τις 4h</div>
+                {% elif act.activation_override == 'standby' %}
+                  <div class="activation-note">Manual Standby · τα auto slots παραμένουν κλειστά</div>
+                {% elif act.activated_once %}
+                  <div class="activation-note">AUTO LOCKED · έχει ήδη ανοίξει και δεν ξανακλείνει από ακύρωση</div>
+                {% elif not act.active and act.previous_name %}
+                  <div class="activation-note">Ανοίγει όταν {{act.previous_name}} φτάσει {{act.previous_threshold|round(1)}}h · απομένουν {{act.remaining_hours|round(1)}}h</div>
+                {% else %}
+                  <div class="activation-note">Auto · ενεργοποιήθηκε από το όριο του προηγούμενου</div>
+                {% endif %}
+              {% endif %}
+              {% endif %}
+            </div>

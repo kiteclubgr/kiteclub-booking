@@ -182,6 +182,7 @@
 </style>
 <link rel="stylesheet" href="{{url_for('static',filename='admin-dashboard-v75-1.css')}}">
 <link rel="stylesheet" href="{{url_for('static',filename='admin-v4.css')}}">
+<link rel="stylesheet" href="{{url_for('static',filename='admin-mobile-schedule.css',v='76.7.17.21')}}">
 
 <div class="admin-shell">
   {% set sidebar_dashboard=true %}{% include '_admin_sidebar_static.html' %}
@@ -385,13 +386,6 @@
     </section>
 
     <section class="tab-panel" id="tab-day">
-      <div class="card spread day-manage-head">
-        <div><h1>Διαχείριση ημέρας</h1><div class="muted">{{date|gr_date}}</div></div>
-        <div class="row">
-          <form method="get" class="row"><input class="date-gr" type="text" name="date" value="{{date|gr_date}}" placeholder="ΗΗ/ΜΜ/ΕΕΕΕ" pattern="\d{2}/\d{2}/\d{4}" required><button class="btn">Άνοιγμα</button></form>
-          <form method="post" action="{{url_for('manual_rebalance')}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="date" value="{{date}}"><button class="btn alt">Rebalance instructors</button></form>
-        </div>
-      </div>
 <div class="card week-card">
   <div class="week-top">
     <div>
@@ -399,29 +393,30 @@
       <div class="muted">Κάνε κλικ σε μία ημέρα για να τη διαχειριστείς. Κάθε ημέρα έχει ένα spot.</div>
     </div>
     <div class="week-nav">
-      <a class="btn alt" href="{{url_for('admin',date=prev_week|gr_date)}}">‹</a>
+      <a class="btn alt" href="{{url_for('admin',date=prev_week|gr_date)}}#day">‹</a>
       <span class="badge off">{{week_start|gr_date}} – {{week_end|gr_date}}</span>
-      <a class="btn alt" href="{{url_for('admin',date=next_week|gr_date)}}">›</a>
+      <a class="btn alt" href="{{url_for('admin',date=next_week|gr_date)}}#day">›</a>
     </div>
   </div>
 
   <div class="week-grid">
     {% for d in week_days %}
-    <a class="day-card {% if d.selected %}selected{% endif %}" href="{{url_for('admin',date=d.iso|gr_date)}}">
-      <div class="day-name">{{d.label}}</div>
-      <div class="day-date">{{d.iso|gr_date}}</div>
+    <a class="day-card {% if d.selected %}selected{% endif %}" href="{{url_for('admin',date=d.iso|gr_date)}}#day">
+      <div class="day-name"><span class="week-day-full">{{d.label}}</span><span class="week-day-short" aria-hidden="true">{{d.label[:1]}}</span></div>
+      <div class="day-date"><span class="week-day-full">{{d.iso|gr_date}}</span><span class="week-day-short" aria-hidden="true">{{d.iso[8:10]}}</span></div>
       {% if d.spot %}
-        <span class="spot-pill">{{d.spot}}</span>
+        <span class="spot-pill" title="{{d.spot}}">{{d.spot}}</span>
       {% else %}
-        <div class="no-spot">Δεν έχει οριστεί spot</div>
+        <div class="no-spot"><span class="week-day-full">Δεν έχει οριστεί spot</span><span class="week-day-short" aria-hidden="true">—</span></div>
       {% endif %}
     </a>
     {% endfor %}
   </div>
 </div>
 
-<div class="card">
-  <h2>Προσθήκη Slots</h2>
+<details class="card mobile-slots" open>
+  <summary>＋ Δημιουργία slots</summary>
+  
   <p class="muted">Δημιουργεί αυτόματα ωριαίες γραμμές. Μετά επιλέγεις εκπαιδευτή στην κεφαλίδα κάθε Slot.</p>
   <form method="post" action="{{url_for('generate_hours')}}" class="schedule-row"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
     <div><label>Ημερομηνία</label><br><input class="date-gr" type="text" name="date" value="{{date|gr_date}}" placeholder="ΗΗ/ΜΜ/ΕΕΕΕ" pattern="\d{2}/\d{2}/\d{4}" required></div>
@@ -524,7 +519,7 @@
     <div><label>Spot</label><br><select name="spot_id" style="width:100%">{% for s in spots %}<option value="{{s.id}}" {% if day_spot and day_spot.spot_id==s.id %}selected{% endif %}>{{s.name}}</option>{% endfor %}</select></div>
     <div class="wide"><button class="btn">Δημιουργία slots</button></div>
   </form>
-</div>
+</details>
 
 <div class="card">
   <div class="spread">
@@ -543,75 +538,15 @@
   </div><br>
 
   {% if day_hours %}
-  <div class="timetable-wrap">
+  {% include '_admin_mobile_schedule.html' %}
+  <div class="timetable-wrap desktop-timetable">
     <table class="timetable">
       <thead>
         <tr>
           <th>Ώρα</th>
           {% for col in day_columns %}
           <th>
-            <div class="slot-head">
-              <strong>Slot {{col.column_no}}</strong>
-              {% if col.instructor_id %}<div class="tiny"><b>{{col.instructor_name}}{% if col.instructor_surname %} {{col.instructor_surname}}{% endif %}</b></div>{% endif %}
-              <form method="post" action="{{url_for('assign_day_column',column_no=col.column_no)}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="date" value="{{date}}">
-                <select name="instructor_id" onchange="this.form.submit()">
-                  <option value="">— Χωρίς εκπαιδευτή —</option>
-                  {% for i in instructors %}
-                    {% set ns = namespace(used_elsewhere=false) %}
-                    {% for other in day_columns %}
-                      {% if other.column_no != col.column_no and other.instructor_id == i.id %}
-                        {% set ns.used_elsewhere = true %}
-                      {% endif %}
-                    {% endfor %}
-                    {% if not ns.used_elsewhere or col.instructor_id==i.id %}
-                      <option value="{{i.id}}" {% if col.instructor_id==i.id %}selected{% endif %}>{{i.name}}{% if i.surname %} {{i.surname}}{% endif %}</option>
-                    {% endif %}
-                  {% endfor %}
-                </select>
-              </form>
-              {% set act = activation_by_column.get(col.column_no) %}
-              {% if act %}
-              <div class="activation-line">
-                <span class="{{'activation-active' if act.active else 'activation-standby'}}">{{'ACTIVE' if act.active else 'STANDBY'}}</span>
-                <span class="activation-progress">{{act.booked_hours|round(1)}} / {{act.threshold|round(1)}}h booked</span>
-              </div>
-
-              {% if col.column_no == 1 %}
-                <div class="activation-note">BASE ACTIVE · πρώτος στη σειρά</div>
-              {% else %}
-                <div class="activation-controls">
-                  <form method="post" action="{{url_for('set_day_column_activation',column_no=col.column_no)}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                    <input type="hidden" name="date" value="{{date}}">
-                    <input type="hidden" name="mode" value="auto">
-                    <button class="activation-btn {% if not act.activation_override %}selected-auto{% endif %}" type="submit">Auto</button>
-                  </form>
-                  <form method="post" action="{{url_for('set_day_column_activation',column_no=col.column_no)}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                    <input type="hidden" name="date" value="{{date}}">
-                    <input type="hidden" name="mode" value="active">
-                    <button class="activation-btn {% if act.activation_override == 'active' %}selected-active{% endif %}" type="submit">Activate</button>
-                  </form>
-                  <form method="post" action="{{url_for('set_day_column_activation',column_no=col.column_no)}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                    <input type="hidden" name="date" value="{{date}}">
-                    <input type="hidden" name="mode" value="standby">
-                    <button class="activation-btn {% if act.activation_override == 'standby' %}selected-standby{% endif %}" type="submit">Standby</button>
-                  </form>
-                </div>
-
-                {% if act.activation_override == 'active' %}
-                  <div class="activation-note">Manual Activate · ανοικτός ανεξάρτητα από τις 4h</div>
-                {% elif act.activation_override == 'standby' %}
-                  <div class="activation-note">Manual Standby · τα auto slots παραμένουν κλειστά</div>
-                {% elif act.activated_once %}
-                  <div class="activation-note">AUTO LOCKED · έχει ήδη ανοίξει και δεν ξανακλείνει από ακύρωση</div>
-                {% elif not act.active and act.previous_name %}
-                  <div class="activation-note">Ανοίγει όταν {{act.previous_name}} φτάσει {{act.previous_threshold|round(1)}}h · απομένουν {{act.remaining_hours|round(1)}}h</div>
-                {% else %}
-                  <div class="activation-note">Auto · ενεργοποιήθηκε από το όριο του προηγούμενου</div>
-                {% endif %}
-              {% endif %}
-              {% endif %}
-            </div>
+{% include '_admin_column_settings.html' %}
           </th>
           {% endfor %}
         </tr>
@@ -1250,4 +1185,5 @@
 })();
 </script>
 
+<script src="{{url_for('static',filename='admin-mobile-schedule.js',v='76.7.17.21')}}"></script>
 {% endblock %}

@@ -1,0 +1,76 @@
+/* Admin schedule, mobile only. Existing desktop timetable and mutation routes retained. */
+.week-day-short,.mobile-day-program{display:none}
+.mobile-slots>summary{display:none}
+.mobile-booking-dialog{width:min(540px,100%);max-height:85dvh;box-sizing:border-box;padding:22px;border:0;border-radius:20px;color:#15334c;overflow:auto;box-shadow:0 12px 60px #122d5060}
+.mobile-booking-dialog::backdrop{background:#102b4670}
+.mobile-booking-dialog header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.mobile-booking-dialog header h2{margin:0;font-size:21px}
+.mobile-booking-dialog header button{min-width:44px;min-height:44px;border:0;border-radius:50%;font-size:26px;background:#f0f5f8;color:#12334d}
+.mobile-booking-dialog p{line-height:1.5;overflow-wrap:anywhere}
+.mobile-detail-status{font-weight:800;color:#1174bb;margin-top:12px}
+.mobile-edit-action{width:100%;margin:14px 0;background:#ff6236!important}
+.mobile-booking-dialog a{display:block;text-align:center;padding:12px;color:#087fb9;font-weight:800}
+.mobile-booking-dialog form{display:grid;gap:12px;margin:16px 0}
+@media(max-width:900px){
+ #tab-day{min-width:0}
+ #tab-day>.card{padding:12px}
+ #tab-day .day-manage-head{gap:10px;align-items:flex-start}
+ #tab-day .day-manage-head h1{font-size:24px;margin:0}
+ #tab-day .day-manage-head>.row{width:100%;flex-wrap:wrap;gap:8px}
+ #tab-day .day-manage-head form{max-width:100%;flex-wrap:wrap}
+ #tab-day .day-manage-head input{width:135px;min-width:0;box-sizing:border-box}
+ #tab-day .day-manage-head .btn{font-size:12px;padding:10px}
+ #tab-day .week-card .week-top{display:flex;flex-direction:column;gap:10px;align-items:stretch}
+ #tab-day .week-card h2{font-size:17px}
+ #tab-day .week-card .week-top .muted{display:none}
+ #tab-day .week-nav{justify-content:space-between;gap:4px}
+ #tab-day .week-nav .badge{font-size:10px;padding:5px}
+ #tab-day .week-nav .btn{padding:8px 12px}
+ #tab-day .week-grid{grid-template-columns:repeat(7,minmax(0,1fr));gap:3px;margin-top:10px}
+ #tab-day .day-card{min-height:90px;min-width:0;padding:8px 2px;border-radius:9px;text-align:center;box-sizing:border-box;overflow:hidden}
+ #tab-day .day-card.selected{background:#ff6236;color:white;border-color:#ff6236}
+ #tab-day .week-day-full{display:none}
+ #tab-day .week-day-short{display:inline}
+ #tab-day .day-name{font-size:12px}
+ #tab-day .day-date{font-size:16px;font-weight:800;margin:5px 0;color:inherit}
+ #tab-day .spot-pill,#tab-day .no-spot{display:block;min-width:0;width:auto;max-width:100%;font-size:9px;line-height:1.25;padding:3px 0;margin:0;background:transparent;color:inherit;white-space:normal;overflow-wrap:anywhere}
+ #tab-day .mobile-slots>summary{display:list-item;font-weight:850;cursor:pointer;min-height:32px;line-height:32px}
+ #tab-day .mobile-slots .schedule-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+ #tab-day .mobile-slots .schedule-row>*{min-width:0}
+ #tab-day .mobile-slots input,#tab-day .mobile-slots select{width:100%;min-width:0;max-width:100%;box-sizing:border-box}
+ #tab-day .mobile-slots .wide{grid-column:1/-1}
+ #tab-day .desktop-timetable{display:none}
+ #tab-day .mobile-day-program{display:block}
+ #tab-day .mobile-day-spot{font-weight:850;font-size:16px;margin:0 0 8px}
+ #tab-day .mobile-schedule-help{font-size:11px;color:#63798c}
+ #tab-day .mobile-instructor-settings{font-size:12px;margin-bottom:12px;border:1px solid #e0e9ef;border-radius:10px;padding:10px}
+ #tab-day .mobile-instructor-setting{border-top:1px solid #e0e9ef;margin-top:12px;padding-top:12px}
+ #tab-day .mobile-instructor-setting select{width:100%;max-width:100%}
+ #tab-day .mobile-schedule-table{table-layout:fixed;width:100%;min-width:0;border-collapse:separate;border-spacing:0;border:1px solid #e1e9ef;border-radius:12px;overflow:hidden}
+ #tab-day .mobile-schedule-table th,#tab-day .mobile-schedule-table td{padding:3px;min-width:0;vertical-align:top;border-bottom:1px solid #e1e9ef;border-right:1px solid #e1e9ef;overflow-wrap:anywhere;text-align:center}
+ #tab-day .mobile-schedule-table th:first-child{width:40px;box-sizing:border-box;white-space:nowrap;font-size:10px}
+ #tab-day .mobile-schedule-table thead th{background:#f3f7fa;font-size:11px;padding:9px 3px}
+ #tab-day .mobile-schedule-table tbody th{vertical-align:middle;background:#f6f9fb}
+ #tab-day .mobile-schedule-table small{display:block;font-size:9px;margin-top:4px}
+ .mobile-active{color:#168248}.mobile-standby{color:#a07c2c}
+ #tab-day .mobile-booking{display:block;width:100%;min-height:70px;box-sizing:border-box;border:0;border-radius:8px;padding:7px 3px;background:#deefff;color:#0b5389;text-align:center;font:inherit;cursor:pointer;margin-bottom:3px;overflow-wrap:anywhere}
+ #tab-day .mobile-booking-state{display:block;font-size:8px;font-weight:850;margin-bottom:5px}
+ #tab-day .mobile-booking-name{display:block;font-size:11px;font-weight:750;line-height:1.3}
+ #tab-day .mobile-state-completed{background:#eadfff;color:#6825a5}
+ #tab-day .mobile-state-no_show{background:#fff0df;color:#a4510a}
+ #tab-day .mobile-state-pending_payment{background:#fff2cc;color:#8c6104}
+ #tab-day .mobile-slot-add{border:1px solid #dce7ef;background:white;color:#137cb1;border-radius:8px;width:100%;min-height:32px;font-size:19px}
+ #tab-day .mobile-free{width:100%;min-height:70px;border:0;background:#ecf7ef;color:#167448;font-size:9px;border-radius:8px;overflow-wrap:anywhere;padding:3px}
+ #tab-day .mobile-free-closed{background:#fff0f0;color:#a75757}
+ #tab-day .mobile-free-standby{background:#f2f4f6;color:#657888}
+ #tab-day .mobile-empty{color:#8296a5;display:block;padding:20px 0}
+ #tab-day>.card:has(.mobile-day-program)>.spread{display:none}
+ #tab-day>.card:has(.mobile-day-program)>br{display:none}
+ .mobile-booking-dialog{position:fixed;inset:auto 0 0;margin:0;width:100%;max-width:none;max-height:85dvh;border-radius:22px 22px 0 0;padding:20px 18px calc(18px + env(safe-area-inset-bottom));}
+ #editBookingModal,#bookingModal{padding:8px;box-sizing:border-box}
+ #editBookingModal .booking-modal,#bookingModal .booking-modal{width:100%;max-height:90dvh}
+ #editBookingModal .booking-modal-body,#bookingModal .booking-modal-body{padding:12px;min-width:0}
+ #editBookingModal input,#editBookingModal select{min-width:0;max-width:100%;box-sizing:border-box}
+}
+
+.mobile-booking-dialog [hidden]{display:none!important}

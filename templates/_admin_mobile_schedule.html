@@ -1,0 +1,47 @@
+<div class="mobile-day-program">
+  <div class="mobile-day-spot">📍 {{day_spot.name if day_spot else 'Δεν έχει οριστεί spot'}}</div>
+  <p class="mobile-schedule-help">Πάτησε μια κράτηση για στοιχεία και επεξεργασία.</p>
+  <details class="mobile-instructor-settings"><summary>Ρυθμίσεις εκπαιδευτών</summary>
+    {% for col in day_columns %}<div class="mobile-instructor-setting">{% include '_admin_column_settings.html' %}</div>{% endfor %}
+  </details>
+  <table class="mobile-schedule-table" aria-label="Ημερήσιο πρόγραμμα κινητού">
+    <thead><tr><th scope="col">Ώρα</th>{% for col in day_columns %}<th scope="col"><span>{{col.instructor_name or ('Slot ' ~ col.column_no)}}{% if col.instructor_surname %} {{col.instructor_surname}}{% endif %}</span>{% set act=activation_by_column.get(col.column_no) %}{% if act %}<small class="{{'mobile-active' if act.active else 'mobile-standby'}}">{{'Ενεργός' if act.active else 'Standby'}}</small>{% endif %}</th>{% endfor %}</tr></thead>
+    <tbody>{% for h in day_hours %}<tr><th scope="row">{{h.start_time|hm24}}</th>
+      {% for col in day_columns %}<td>
+        {% set data=slot_lookup.get((h.start_time,col.instructor_id)) if col.instructor_id else none %}
+        {% if data %}
+          {% if data.bookings %}
+            {% for b in data.bookings %}
+            {% set state=booking_state_meta(b.booking_status,b.payment_status) %}
+            <button type="button" class="mobile-booking mobile-state-{{b.booking_status}}" data-booking-info='{{ {"id":b.booking_id,"studentId":b.student_id,"name":b.participant_names or (b.student_name ~ " " ~ (b.student_surname or "")),"date":b.booking_lesson_date,"time":b.booking_start_time,"duration":b.duration|float,"instructorId":b.booking_instructor_id,"instructor":(col.instructor_name or "") ~ " " ~ (col.instructor_surname or ""),"spot":h.spot,"status":b.booking_status,"label":state.label,"payment":b.payment_status,"history":url_for("admin_booking_history",booking_id=b.booking_id)}|tojson|forceescape }}' aria-label="Στοιχεία κράτησης: {{b.participant_names or b.student_name}}">
+              <span class="mobile-booking-state">{{state.label}}</span>
+              <span class="mobile-booking-name">{{b.participant_names or (b.student_name ~ ' ' ~ (b.student_surname or ''))}}</span>
+              {% if b.participant_count>1 %}<small>{{b.participant_count}}P</small>{% endif %}
+            </button>
+            {% endfor %}
+            {% if data.shared_count<3 %}<button type="button" class="mobile-slot-add" onclick="openBookingModal({{data.slot.id}})" aria-label="Προσθήκη μαθητή στις {{h.start_time|hm24}} με {{col.instructor_name}}">＋</button>{% endif %}
+          {% else %}
+            <button type="button" class="mobile-free mobile-free-{{data.slot.status}}" data-slot-id="{{data.slot.id}}" data-slot-status="{{data.slot.status}}" data-slot-time="{{h.start_time|hm24}}" data-slot-instructor="{{col.instructor_name or ''}}">{{{'open':'Διαθέσιμο','closed':'Κλειστό','standby':'Standby','pending_payment':'Αναμονή','booked':'Κρατημένο'}.get(data.slot.status,data.slot.status)}}</button>
+          {% endif %}
+        {% else %}<span class="mobile-empty">—</span>{% endif %}
+      </td>{% endfor %}
+    </tr>{% endfor %}</tbody>
+  </table>
+</div>
+<dialog id="mobileBookingDetails" class="mobile-booking-dialog" aria-labelledby="mobileBookingDetailsTitle">
+  <header><h2 id="mobileBookingDetailsTitle">Στοιχεία κράτησης</h2><button type="button" data-close-mobile-dialog aria-label="Κλείσιμο">×</button></header>
+  <div class="mobile-detail-status" id="mobileDetailStatus"></div><h3 id="mobileDetailName"></h3>
+  <p id="mobileDetailTime"></p><p id="mobileDetailInstructor"></p><p id="mobileDetailSpot"></p>
+  <button type="button" class="btn mobile-edit-action" id="mobileEditBooking">✎ Επεξεργασία κράτησης</button>
+  <p id="mobileBookingLocked" class="muted" hidden>Η κράτηση είναι κλειδωμένη. Μπορείς να δεις το ιστορικό της.</p>
+  <a id="mobileBookingHistory">Ιστορικό κράτησης</a>
+</dialog>
+<dialog id="mobileSlotDetails" class="mobile-booking-dialog" aria-labelledby="mobileSlotTitle">
+  <header><h2 id="mobileSlotTitle">Διαχείριση θέσης</h2><button type="button" data-close-mobile-dialog aria-label="Κλείσιμο">×</button></header>
+  <p id="mobileSlotCaption"></p>
+  <form method="post" id="mobileSlotForm"><input type="hidden" name="_csrf_token" value="{{csrf_token()}}">
+    <label for="mobileSlotState">Κατάσταση θέσης</label><select id="mobileSlotState" name="status"><option value="open">Διαθέσιμο</option><option value="closed">Κλειστό</option></select>
+    <button type="submit" class="btn">Αποθήκευση</button>
+  </form>
+  <button type="button" class="btn" id="mobileBookSlot">＋ Κράτηση μαθητή</button>
+</dialog>
