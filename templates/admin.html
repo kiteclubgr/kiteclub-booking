@@ -852,15 +852,28 @@
     <div class="muted">Μαθητές, credits και πρόσφατες κρατήσεις.</div>
   </div>
 <div class="card">
-  <div class="spread" style="gap:12px;align-items:end;flex-wrap:wrap;margin-bottom:12px">
-    <div><h2 style="margin-bottom:3px">Μαθητές & Credits</h2><div class="muted">Αλφαβητική σειρά βάσει ονόματος.</div></div>
-    <div style="min-width:280px;max-width:440px;flex:1"><label style="font-size:11px;font-weight:900">Αναζήτηση μαθητή</label><input id="adminStudentSearch" type="search" placeholder="Όνομα, επώνυμο, Student ID, email ή τηλέφωνο" style="width:100%"></div>
+  <div class="students-heading"><div><h2>Μαθητές</h2><div class="muted">{{students|length}} μαθητές</div></div><button type="button" class="btn" id="openNewStudent">＋ Νέος μαθητής</button></div>
+  <label class="students-search-label" for="adminStudentSearch">Αναζήτηση μαθητή</label>
+  <input id="adminStudentSearch" class="students-search" type="search" placeholder="Όνομα, κωδικός, email ή τηλέφωνο" autocomplete="off">
+  <div class="student-filters" role="group" aria-label="Φίλτρα διαθέσιμων credits"><button type="button" data-credit-filter="all" aria-pressed="true">Όλοι</button><button type="button" data-credit-filter="positive" aria-pressed="false">Με credits</button><button type="button" data-credit-filter="empty" aria-pressed="false">Χωρίς credits</button></div>
+  <div id="adminStudentList" class="student-card-list">
+  {% for s in students %}
+  <article class="admin-student-row student-compact-card" data-credits="{{s.credits}}" data-search="{{(s.name ~ ' ' ~ (s.surname or '') ~ ' ' ~ (s.student_code or '') ~ ' ' ~ s.email ~ ' ' ~ (s.phone or ''))|lower}}">
+    <div class="student-card-avatar" aria-hidden="true">{{s.name[:1]}}{{(s.surname or '')[:1]}}</div>
+    <div class="student-card-copy"><a class="student-card-name" href="{{url_for('admin_student_profile',student_id=s.id)}}">{{s.name}}{% if s.surname %} {{s.surname}}{% endif %}</a><div class="muted">{{s.student_code}} · {{s.level}} · {{'Private' if s.lesson_type=='private' else ('2P' if s.lesson_type=='2p' else '3P')}}</div><div class="student-card-email">{{s.email}}</div></div>
+    <span class="student-credit-badge {{'positive' if s.credits>0 else ('negative' if s.credits<0 else 'empty')}}" title="Διαθέσιμα credits">{{s.credits|float}}h</span>
+    <div class="student-card-actions"><a class="btn alt" href="{{url_for('admin_student_profile',student_id=s.id)}}">Προφίλ</a><button type="button" class="btn alt" data-adjust-url="{{url_for('adjust_credits',student_id=s.id)}}" data-student-name="{{s.name}} {{s.surname or ''}}" data-balance="{{s.credits}}">± Credits</button></div>
+  </article>
+  {% endfor %}
   </div>
-  <form method="post" action="{{url_for('add_student')}}" class="row" style="margin-bottom:14px"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-    <input name="name" placeholder="Όνομα" autocomplete="given-name" required>
-    <input name="surname" placeholder="Επώνυμο" autocomplete="family-name" required>
-    <input type="email" name="email" placeholder="Email" required>
-    <input name="phone" placeholder="Τηλέφωνο">
+  <p id="adminStudentNoResults" class="muted" hidden>Δεν βρέθηκε μαθητής.</p>
+  <div class="student-pagination"><span id="studentPageLabel" aria-live="polite"></span><div><button type="button" id="studentPrevPage" aria-label="Προηγούμενη σελίδα">‹</button><button type="button" id="studentNextPage" aria-label="Επόμενη σελίδα">›</button></div></div>
+  <dialog id="newStudentDialog" class="student-dialog" aria-labelledby="newStudentTitle"><header><h2 id="newStudentTitle">Νέος μαθητής</h2><button type="button" data-close-student-dialog aria-label="Κλείσιμο">×</button></header>
+  <form method="post" action="{{url_for('add_student')}}" class="student-create-form"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+    <input name="name" aria-label="Όνομα" placeholder="Όνομα" autocomplete="given-name" required>
+    <input name="surname" aria-label="Επώνυμο" placeholder="Επώνυμο" autocomplete="family-name" required>
+    <input type="email" name="email" aria-label="Email" placeholder="Email" required>
+    <input name="phone" aria-label="Τηλέφωνο" placeholder="Τηλέφωνο">
     <input value="Beginner" readonly><input type="hidden" name="level" value="Beginner">
     <select name="initial_service" title="Αρχική υπηρεσία">
       <option value="none">Χωρίς αρχική υπηρεσία</option>
@@ -869,25 +882,15 @@
       <option value="8h">Πακέτο 8 ωρών · 360€</option>
     </select>
 
-    <input name="password" type="password" placeholder="8+ χαρακτήρες με γράμματα και αριθμούς" minlength="8" pattern="(?=.*[A-Za-zΑ-Ωα-ω])(?=.*\d).{8,}" title="Τουλάχιστον 8 χαρακτήρες, με γράμματα και αριθμούς" required style="width:160px">
-    <button class="btn">+ Νέος μαθητής</button>
+    <input name="password" type="password" aria-label="Κωδικός" placeholder="8+ χαρακτήρες με γράμματα και αριθμούς" minlength="8" pattern="(?=.*[A-Za-zΑ-Ωα-ω])(?=.*\d).{8,}" title="Τουλάχιστον 8 χαρακτήρες, με γράμματα και αριθμούς" required >
+    <button class="btn">Δημιουργία μαθητή</button>
   </form>
-  <div id="adminStudentList">
-  {% for s in students %}
-  <div class="item spread admin-student-row" data-search="{{(s.name ~ ' ' ~ (s.surname or '') ~ ' ' ~ (s.student_code or '') ~ ' ' ~ s.email ~ ' ' ~ (s.phone or ''))|lower}}">
-    <div><b><a href="{{url_for('admin_student_profile',student_id=s.id)}}" style="color:inherit">{{s.name}}{% if s.surname %} {{s.surname}}{% endif %}</a></b><div class="muted">{{s.student_code}} · {{s.email}} · {{s.level}} · {{'Private' if s.lesson_type=='private' else ('2P Group' if s.lesson_type=='2p' else '3P Group')}}</div></div>
-    <div class="row">
-      <span class="badge ok">{{s.credits}} ώρες</span>
-      <form method="post" action="{{url_for('adjust_credits',student_id=s.id)}}" class="row"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-        <input type="number" step="0.5" name="amount" placeholder="+/- ώρες" style="width:90px" required>
-        <input name="note" placeholder="Σημείωση">
-        <button class="btn alt">Update credits</button>
-      </form>
-    </div>
-  </div>
-  {% endfor %}
-  <div id="adminStudentNoResults" class="muted" style="display:none;padding:18px 4px">Δεν βρέθηκε μαθητής.</div>
-  </div>
+  </dialog>
+  <dialog id="studentCreditsDialog" class="student-dialog" aria-labelledby="studentCreditsTitle"><header><h2 id="studentCreditsTitle">Μεταβολή credits</h2><button type="button" data-close-student-dialog aria-label="Κλείσιμο">×</button></header>
+    <p id="studentCreditsName"></p><p id="studentCreditsBalance" class="muted"></p>
+    <form method="post" id="studentCreditsForm"><input type="hidden" name="_csrf_token" value="{{csrf_token()}}"><label for="studentCreditAmount">Μεταβολή ωρών (+ προσθήκη / − αφαίρεση)</label><input id="studentCreditAmount" type="number" step="0.5" name="amount" placeholder="π.χ. 2 ή -1" required><label for="studentCreditNote">Σημείωση</label><input id="studentCreditNote" name="note" placeholder="Αιτία μεταβολής"><button type="submit" class="btn">Αποθήκευση μεταβολής</button></form>
+  </dialog>
+
 </div>
 
 <div class="card">
@@ -1015,10 +1018,6 @@
   activate(saved);
 
   const modal=document.getElementById('bookingModal');
-  const adminStudentSearch=document.getElementById('adminStudentSearch');
-  const adminStudentRows=[...document.querySelectorAll('.admin-student-row')];
-  const adminStudentNoResults=document.getElementById('adminStudentNoResults');
-  if(adminStudentSearch){adminStudentSearch.addEventListener('input',()=>{const q=adminStudentSearch.value.trim().toLocaleLowerCase('el-GR');let visible=0;adminStudentRows.forEach(r=>{const ok=!q || (r.dataset.search||'').toLocaleLowerCase('el-GR').includes(q);r.style.display=ok?'':'none';if(ok)visible++;});if(adminStudentNoResults)adminStudentNoResults.style.display=visible?'none':'block';});}
 
   const search=document.getElementById('studentBookingSearch');
   const pickForms=[...document.querySelectorAll('.student-pick')];
@@ -1186,4 +1185,6 @@
 </script>
 
 <script src="{{url_for('static',filename='admin-mobile-schedule.js',v='76.7.17.21')}}"></script>
+<link rel="stylesheet" href="{{url_for('static',filename='admin-students.css',v='76.7.17.23')}}">
+<script src="{{url_for('static',filename='admin-students.js',v='76.7.17.23')}}"></script>
 {% endblock %}
