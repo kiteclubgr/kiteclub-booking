@@ -1,4 +1,4 @@
-{% if me and me.role in ('student', 'instructor') %}
+{% if me and me.role in ('student', 'instructor') and request.endpoint != 'student_home' %}
 <div class="kc-mobile-session-bar" aria-label="Λογαριασμός {{'μαθητή' if me.role=='student' else 'εκπαιδευτή'}}">
   <span class="kc-mobile-session-role">{{'Μαθητής' if me.role=='student' else 'Εκπαιδευτής'}}</span>
   <form class="kc-mobile-logout-form" action="{{url_for('logout')}}" method="post">

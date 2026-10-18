@@ -19,7 +19,7 @@ from legal_pages import setup_legal_pages, record_registration_legal, TERMS_VERS
 from registration_email import setup_registration_email, issue_confirmation, send_confirmation, activate_verified_registration
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "KiteClub v76.7.17.24 · Account Activation"
+APP_VERSION = "KiteClub v76.7.17.26 · Student Header Cleanup"
 
 # v70: production-ready storage. Locally everything stays inside the project.
 # On Railway mount a persistent volume at /data and set DATA_DIR=/data.
@@ -1955,8 +1955,10 @@ def student_home():
         if status in ("confirmed","pending_payment") and dt>=now_dt:
             upcoming.append(dict(row))
     photos=con.execute("SELECT * FROM student_photos WHERE student_id=? ORDER BY COALESCE(photo_date,'') DESC,created_at DESC,id DESC LIMIT 6",(u["id"],)).fetchall()
+    progress=get_student_progress(con,u["id"])
+    completed=[dict(row) for row in reversed(rows) if (row["participant_status"] or row["status"])=="completed"]
     con.close()
-    return render_template("student_home.html",student=st,upcoming=upcoming,student_photos=photos,student_nav="home")
+    return render_template("student_home.html",student=st,upcoming=upcoming,student_photos=photos,student_nav="home",progress=progress,completed=completed)
 
 @app.route("/student")
 def student():
