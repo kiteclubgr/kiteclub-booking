@@ -19,7 +19,7 @@ from legal_pages import setup_legal_pages, record_registration_legal, TERMS_VERS
 from registration_email import setup_registration_email, issue_confirmation, send_confirmation, activate_verified_registration
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "KiteClub v76.7.17.19 · Group Completion Fix"
+APP_VERSION = "KiteClub v76.7.17.20 · Instructor Lesson Pay Display"
 
 # v70: production-ready storage. Locally everything stays inside the project.
 # On Railway mount a persistent volume at /data and set DATA_DIR=/data.
@@ -3995,6 +3995,9 @@ def admin_instructor_profile(instructor_id):
 
     booking_report=con.execute("""
       SELECT b.id,b.status,b.duration,b.actual_duration,b.next_skill,sl.lesson_date,sl.start_time,sl.id slot_id,
+             (SELECT COALESCE(SUM(ih.hours),0) FROM instructor_hours ih
+              WHERE ih.booking_id=b.id AND ih.instructor_id=sl.instructor_id
+                AND ih.lesson_date BETWEEN ? AND ?) earned_hours,
              su.name student,su.surname student_surname,(CASE WHEN (SELECT COUNT(DISTINCT spp.skill_key) FROM student_skill_progress spp WHERE spp.student_id=su.id AND spp.status='mastered' AND spp.skill_key IN ('l1_theory','l1_trim','l1_control','l1_quick_release','l1_power_strike','l1_bodydrag','l2_control','l2_water_relaunch','l2_bodydrag','l2_self_rescue','l3_control','l3_bodydrag_downwind','l3_bodydrag_upwind','l3_bodydrag_board','l4_bodydrag','l4_waterstart','l4_keep_going','l4_upwind')) = 18 THEN 'Kiter' ELSE 'Beginner' END) AS level,
              COALESCE(day_sp.name,slot_sp.name) spot,
              (SELECT COUNT(*) FROM booking_participants bp WHERE bp.booking_id=b.id) participant_count,
@@ -4007,7 +4010,14 @@ def admin_instructor_profile(instructor_id):
       LEFT JOIN spots day_sp ON day_sp.id=ds.spot_id
       WHERE sl.instructor_id=? AND b.status NOT LIKE 'cancelled%' AND sl.lesson_date BETWEEN ? AND ?
       ORDER BY sl.lesson_date DESC,sl.start_time DESC
-    """,(instructor_id,pfrom,pto)).fetchall()
+    """,(pfrom,pto,instructor_id,pfrom,pto)).fetchall()
+
+    # Display completed actual duration and authoritative accrued pay, rather than
+    # scheduled duration. Future rows are explicitly estimates; No-show earns zero.
+    booking_report=[dict(row) for row in booking_report]
+    for row in booking_report:
+        row["display_duration"]=(row["actual_duration"] if row["actual_duration"] is not None else row["duration"]) if row["status"]=="completed" else row["duration"]
+        row["display_pay"]=float(row["earned_hours"] or 0)*float(inst["hourly_rate"] or 0) if row["status"]=="completed" else (0.0 if row["status"]=="no_show" else float(row["duration"] or 0)*float(inst["hourly_rate"] or 0))
 
     completed_report=[r for r in booking_report if r["status"]=="completed"]
     no_show_report=[r for r in booking_report if r["status"]=="no_show"]
