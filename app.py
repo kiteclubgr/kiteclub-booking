@@ -19,7 +19,7 @@ from legal_pages import setup_legal_pages, record_registration_legal, TERMS_VERS
 from registration_email import setup_registration_email, issue_confirmation, send_confirmation, activate_verified_registration
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "KiteClub v76.7.17.26 · Student Header Cleanup"
+APP_VERSION = "KiteClub v76.7.17.30 · Password Reset"
 
 # v70: production-ready storage. Locally everything stays inside the project.
 # On Railway mount a persistent volume at /data and set DATA_DIR=/data.
@@ -115,7 +115,7 @@ def security_headers(response):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
     response.headers["Cache-Control"] = "no-store" if session.get("uid") else "no-cache"
-    if request.endpoint in ("confirm_registration_email", "resend_registration_email"):
+    if request.endpoint in ("confirm_registration_email", "resend_registration_email", "forgot_password", "reset_password"):
         response.headers["Cache-Control"] = "no-store"
         response.headers["Referrer-Policy"] = "no-referrer"
     if request.is_secure:
@@ -1757,6 +1757,7 @@ def login():
                     con.close()
             session.clear()
             session["uid"]=u["id"]
+            session["password_session_version"]=app.extensions["reset_session_version"](u["id"])
             session["role"]=u["role"]
             session.permanent=True
             csrf_token()  # Rotate token with newly authenticated session.
@@ -6258,6 +6259,9 @@ if _V76_FRESH_DATABASE and DEMO_MODE:
 setup_package_cancellation(app, db, current_user)
 setup_legal_pages(app, db)
 setup_registration_email(app, db, login_locked, record_login_failure)
+
+from password_reset import setup_password_reset
+setup_password_reset(app, db, login_locked, record_login_failure)
 
 if __name__=="__main__":
     app.run(

@@ -73,6 +73,7 @@ def setup_google(app, db, csrf_token):
                     return redirect(url_for('login'))
                 session.clear()
                 session['uid'], session['role'] = user['id'], user['role']
+                session['password_session_version'] = app.extensions['reset_session_version'](user['id'])
                 session.permanent = True
                 csrf_token()
                 return redirect(url_for('home'))
