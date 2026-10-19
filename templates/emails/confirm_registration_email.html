@@ -1,15 +1,8 @@
-<!doctype html><html lang="el"><head><meta charset="utf-8"><title>Επιβεβαίωση email KiteClub</title></head>
-<body style="margin:0;background:#eef7fa;font-family:Arial,sans-serif;color:#112645">
-<table role="presentation" width="100%"><tr><td align="center" style="padding:30px 12px">
-<table role="presentation" width="100%" style="max-width:580px;background:white;border-radius:14px"><tr><td style="padding:32px;line-height:1.7">
-<p style="color:#009bad;font-size:24px;font-weight:bold;margin-top:0">KiteClub.gr</p>
-<h1 style="font-size:24px">Ενεργοποίηση λογαριασμού</h1>
-<p>Γεια σου {{ name }},</p><p>Καλώς ήρθες στο KiteClub!</p>
-<p>Για να επιβεβαιώσεις το email σου και να ολοκληρώσεις την ενεργοποίηση του λογαριασμού σου, πάτησε το παρακάτω κουμπί:</p>
-<p style="padding:12px 0"><a href="{{ confirmation_url }}" style="background:#009bad;color:white;text-decoration:none;padding:15px 22px;border-radius:7px;display:inline-block;font-weight:bold">Ενεργοποίηση λογαριασμού</a></p>
-<p>Ο σύνδεσμος ισχύει για <strong>24 ώρες</strong> και μπορεί να χρησιμοποιηθεί μία φορά.</p>
-<p>Στη σελίδα που θα ανοίξει, πάτησε «Ενεργοποίηση και συνέχεια στη σύνδεση» για να ολοκληρώσεις την επιβεβαίωση. Μπορείς να συνδεθείς με τον κωδικό σου. Αρχικό υπόλοιπο: 0 credits.</p>
-<p style="font-size:13px;color:#64738e">Αν δεν λειτουργεί το κουμπί, αντέγραψε αυτόν τον σύνδεσμο στον browser:<br><a href="{{ confirmation_url }}" style="word-break:break-all">{{ confirmation_url }}</a></p>
-<p style="font-size:13px;color:#64738e">Αν δεν έκανες εσύ αυτή την εγγραφή, αγνόησε το μήνυμα.</p>
-<p>Τα λέμε στο νερό!<br>Η ομάδα του KiteClub.gr</p>
-</td></tr></table></td></tr></table></body></html>
+{% set email_title = "Καλώς ήρθες στο KiteClub!" %}
+{% set intro = "Επιβεβαίωσε το email σου για να ενεργοποιήσεις τον λογαριασμό σου και να οργανώσεις τα επόμενα μαθήματά σου." %}
+{% set action_label = "Επιβεβαίωση email" %}
+{% set expiry_label = "24 ώρες" %}
+{% set next_step = "Στη σελίδα που θα ανοίξει, επιβεβαίωσε την ενεργοποίηση για να ολοκληρώσεις την εγγραφή σου." %}
+{% set ignore_note = "Αν δεν έκανες εσύ την εγγραφή, αγνόησε αυτό το email." %}
+{% set action_url = confirmation_url %}
+{% include "emails/_transactional_email.html" %}

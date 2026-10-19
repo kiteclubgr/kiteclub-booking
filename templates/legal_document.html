@@ -4,7 +4,7 @@
 {% if document.status in ['draft','transcription'] %}<meta name="robots" content="noindex, nofollow">{% endif %}
 <link rel="stylesheet" href="{{url_for('static',filename='legal.css',v='76.7.17.14')}}"></head>
 <body><a class="skip" href="#legal-content">Μετάβαση στο κείμενο</a>
-<header><a href="{{url_for('login')}}" aria-label="KiteClub — σύνδεση"><img src="{{url_for('static',filename='img/kiteclub-logo.png')}}" alt="KiteClub.gr Since 2007"></a>
+<header><a href="{{url_for('login')}}" aria-label="KiteClub — σύνδεση"><img src="{{url_for('static',filename='img/kiteclub-logo-transparent.png')}}" alt="KiteClub.gr Since 2007"></a>
 <nav aria-label="Σελίδες εφαρμογής"><a href="{{url_for('login')}}">Σύνδεση</a><a href="{{url_for('register')}}">Εγγραφή</a></nav></header>
 <main id="legal-content"><div class="eyebrow">KiteClub Booking</div><h1>{{document.title}}</h1>
 <p class="meta">{{'Ημερομηνία ψηφιακής μεταγραφής:' if document.document_key == 'waiver' else 'Ημερομηνία κειμένου:'}} {{document.document_date}} · Έκδοση {{document.version}}</p>

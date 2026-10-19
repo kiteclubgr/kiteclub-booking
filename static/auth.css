@@ -6,7 +6,7 @@ body{margin:0;color:var(--ink);font-family:Arial,'Segoe UI',sans-serif;backgroun
 .kc-auth{min-height:100svh;display:grid;grid-template-columns:minmax(0,53fr) minmax(0,47fr)}
 .kc-auth-hero{min-height:100svh;padding:28px 5vw 34px;display:flex;flex-direction:column;justify-content:space-between;color:#fff;background:transparent}
 /* Preserve the original artwork and mask its rectangular outer backdrop. */
-.kc-hero-logo,.kc-auth-card>img{object-fit:contain;-webkit-mask-image:radial-gradient(ellipse 36% 35% at 50% 50%,#000 99%,transparent 100%),linear-gradient(#000,#000);mask-image:radial-gradient(ellipse 36% 35% at 50% 50%,#000 99%,transparent 100%),linear-gradient(#000,#000);-webkit-mask-size:100% 100%,87% 24%;mask-size:100% 100%,87% 24%;-webkit-mask-position:center,center 58%;mask-position:center,center 58%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
+.kc-hero-logo,.kc-auth-card>img{object-fit:contain}
 .kc-hero-logo{display:block;width:clamp(170px,16vw,245px);height:auto;margin:-18px 0 -8px}
 .kc-auth-slogan{font-family:KiteClubScript,'Segoe Script',cursive;font-size:clamp(64px,7.1vw,108px);font-weight:600;line-height:.88;letter-spacing:-2px;transform:rotate(-8deg);max-width:330px;margin:14px 0 0}
 .kc-auth-slogan em{display:block;font-style:normal}.kc-auth-slogan em+em{margin-top:22px}

@@ -11,7 +11,7 @@
 @media(max-width:520px){.kc-auth-panel.kc-confirm-panel{padding:20px 14px}.kc-confirm-panel .kc-auth-card{padding:24px 20px}.kc-confirm-panel .kc-auth-card h1{font-size:25px}}
 </style>
 <main class="kc-auth-panel kc-confirm-panel"><div class="kc-auth-card">
-<img src="{{url_for('static',filename='img/kiteclub-logo.png')}}" alt="KiteClub">
+<img src="{{url_for('static',filename='img/kiteclub-logo-transparent.png')}}" alt="KiteClub">
 {% if state == 'confirm' %}
 <h1>Επιβεβαίωσε την ενεργοποίηση</h1><p class="hint">Ένα τελευταίο βήμα και είσαι έτοιμος! Πάτησε το κουμπί για να επιβεβαιώσεις το email σου και να ενεργοποιήσεις τον λογαριασμό σου στο KiteClub.</p>
 <form method="post"><input type="hidden" name="_csrf_token" value="{{csrf_token()}}"><button class="kc-primary" type="submit">Ενεργοποίηση και συνέχεια στη σύνδεση</button></form>
