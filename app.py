@@ -19,7 +19,7 @@ from legal_pages import setup_legal_pages, record_registration_legal, TERMS_VERS
 from registration_email import setup_registration_email, issue_confirmation, send_confirmation, activate_verified_registration
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "KiteClub v76.7.17.50 · English Registration"
+APP_VERSION = "KiteClub v76.7.17.51 · Check Email Screen"
 
 # v70: production-ready storage. Locally everything stays inside the project.
 # On Railway mount a persistent volume at /data and set DATA_DIR=/data.
@@ -1840,7 +1840,10 @@ def register():
         con.commit()
         delivery = send_confirmation(email, name, token) if token else "already_verified"
         session.pop('google_identity', None)
-        return render_template("register_success.html", confirmation_pending=bool(token), mail_delivery=delivery)
+        if token:
+            session['registration_waiting_email'] = email
+            return redirect(url_for('registration_check_email', lang='en' if request.args.get('lang') == 'en' else 'el'), code=303)
+        return render_template("register_success.html", confirmation_pending=False, mail_delivery=delivery)
     except sqlite3.IntegrityError:
         con.rollback()
         flash("Δεν ήταν δυνατή η εγγραφή. Ελέγξτε τα στοιχεία.")
@@ -6271,6 +6274,9 @@ setup_stripe_payments(app, db, current_user, _activate_student_purchase, DATA_RO
 
 from package_pages import setup_package_pages
 setup_package_pages(app, db, current_user)
+
+from registration_waiting import setup_registration_waiting
+setup_registration_waiting(app, db)
 
 if __name__=="__main__":
     app.run(
