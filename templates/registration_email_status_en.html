@@ -1,0 +1,34 @@
+{% extends "auth_base.html" %}{% block content %}
+<style>
+.kc-auth-panel.kc-confirm-panel{min-height:100svh;padding:32px 16px;background:#102b4640}
+.kc-confirm-panel .kc-auth-card{width:100%;max-width:480px;flex:none;padding:28px 32px 32px;border-radius:24px;text-align:center;box-shadow:0 18px 60px #102b4640}
+.kc-confirm-panel .kc-auth-card>img{width:190px;margin:-18px auto -6px}
+.kc-confirm-panel .kc-auth-card h1{font-size:28px;letter-spacing:-.5px}
+.kc-confirm-panel .hint{font-size:16px;margin-bottom:20px;color:#65738d}
+.kc-confirm-panel .kc-primary{font-size:16px;min-height:50px;margin-top:24px;padding:14px 12px}
+.kc-confirm-panel .kc-auth-card>p:last-child{font-size:14px;margin-top:22px}
+.kc-confirm-note{font-size:13px;color:#65738d;line-height:1.6;margin:18px 0 0}
+@media(max-width:520px){.kc-auth-panel.kc-confirm-panel{padding:20px 14px}.kc-confirm-panel .kc-auth-card{padding:24px 20px}.kc-confirm-panel .kc-auth-card h1{font-size:25px}}
+</style>
+<main class="kc-auth-panel kc-confirm-panel"><div class="kc-auth-card">
+<img src="{{url_for('static',filename='img/kiteclub-logo-transparent.png')}}" alt="KiteClub">
+{% if state == 'confirm' %}
+<h1>Confirm activation</h1><p class="hint">One last step! Click to verify your email and activate your KiteClub account.</p>
+<form method="post"><input type="hidden" name="_csrf_token" value="{{csrf_token()}}"><button class="kc-primary" type="submit">Activate and continue to login</button></form>
+<p class="kc-confirm-note">This link expires after 24 hours and can be used once.</p>
+{% elif state == 'verified' %}
+<h1>Email verified!</h1><p class="hint">Your account is active. Log in with your password. Starting balance: 0 lesson credits.</p>
+{% elif state == 'guardian_pending' %}
+<h1>Email verified!</h1><p class="hint">Guardian consent verification is pending for this existing minor registration. Contact the school.</p>
+{% elif state == 'invalid' %}
+<h1>This link is unavailable</h1><p class="hint">This link has expired, has already been used or is invalid. If you have already verified your email, try logging in.</p>
+{% elif state == 'limited' %}
+<h1>Try again later</h1><p class="hint">Too many resend attempts. Wait 15 minutes.</p>
+{% elif state == 'resent' %}
+<h1>Check your email</h1><p class="hint">If this email has a registration awaiting verification and a minute has passed since the last send, we will attempt to send a new link. Check Spam too. If it does not arrive, contact the school.</p>
+{% else %}
+<h1>New verification email</h1><form method="post"><input type="hidden" name="_csrf_token" value="{{csrf_token()}}"><label for="resend-email">Registration email</label><input id="resend-email" name="email" type="email" maxlength="254" autocomplete="email" required><button type="submit" class="kc-primary">Send again</button></form>
+{% endif %}
+<p><a href="{{url_for('login',lang='en')}}">Log in</a> · <a href="{{url_for('resend_registration_email',lang='en')}}">New verification email</a></p>
+</div></main>{% endblock %}
+

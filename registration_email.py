@@ -49,18 +49,19 @@ def activate_verified_registration(con, user_id):
 
 
 def send_confirmation(email, name, token):
+    language = current_app.extensions["purchase_language"]()
     base = current_app.config['REGISTRATION_PUBLIC_URL'].rstrip('/')
-    link = base + url_for('confirm_registration_email', token=token)
-    body = render_template('emails/confirm_registration_email.txt', name=name, confirmation_url=link)
+    link = base + url_for('confirm_registration_email', token=token, lang=language)
+    body = render_template('emails/confirm_registration_email.txt', name=name, confirmation_url=link, language=language)
     message = EmailMessage()
     message['From'] = email_from()
     if os.getenv('EMAIL_REPLY_TO'):
         message['Reply-To'] = os.environ['EMAIL_REPLY_TO']
     message['To'] = email
-    message['Subject'] = 'KiteClub — Ενεργοποίηση λογαριασμού'
+    message['Subject'] = 'KiteClub — Activate your account' if language == 'en' else 'KiteClub — Ενεργοποίηση λογαριασμού'
     message.set_content(body)
     message.add_alternative(render_template('emails/confirm_registration_email.html',
-                                            name=name, confirmation_url=link), subtype='html')
+                                            name=name, confirmation_url=link, language=language), subtype='html')
     return deliver_message(message, idempotency_key='registration-'+hashlib.sha256(token.encode()).hexdigest())
 
 
@@ -77,7 +78,7 @@ def setup_registration_email(app, db, login_locked, record_attempt):
     app.config['LOCAL_EMAIL_PREVIEW'] = not production and os.getenv('LOCAL_EMAIL_PREVIEW') == '1'
 
     def confirmation_screen(state, status=200, preview=False):
-        language = 'en' if request.args.get('lang') == 'en' else 'el'
+        language = current_app.extensions['purchase_language']()
         def language_url(lang):
             return url_for(request.endpoint, **dict(request.view_args or {}), lang=lang,
                            **({'state': state} if preview else {}))
@@ -104,6 +105,7 @@ def setup_registration_email(app, db, login_locked, record_attempt):
             if not row or row['expires_at'] < int(time.time()) or row['verified_at']:
                 con.rollback()
                 return confirmation_screen('invalid', 400)
+            current_app.extensions['purchase_restore_context'](con, row['user_id'])
             if request.method == 'GET':
                 con.rollback()
                 return confirmation_screen('confirm')
@@ -145,4 +147,5 @@ def setup_registration_email(app, db, login_locked, record_attempt):
         if job:
             send_confirmation(*job)
         return render_template('registration_email_status.html', state='resent')
+
 

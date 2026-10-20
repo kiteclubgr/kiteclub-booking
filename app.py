@@ -11,6 +11,7 @@ from pathlib import Path
 from PIL import Image, ImageOps, UnidentifiedImageError
 from io import BytesIO
 from google_auth import setup_google, pending_google
+from journey_text import journey_text
 from email_delivery import deliver_message, email_from
 from booking_merge import ensure_merge_schema, merge_after_admin_edit
 from package_cancellation import setup_package_cancellation
@@ -19,7 +20,7 @@ from legal_pages import setup_legal_pages, record_registration_legal, TERMS_VERS
 from registration_email import setup_registration_email, issue_confirmation, send_confirmation, activate_verified_registration
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "KiteClub v76.7.17.53 · Email Confirmation Screens"
+APP_VERSION = "KiteClub v76.7.17.54 · Package Purchase Journey"
 
 # v70: production-ready storage. Locally everything stays inside the project.
 # On Railway mount a persistent volume at /data and set DATA_DIR=/data.
@@ -1732,7 +1733,7 @@ def login():
     if request.method=="GET":
         existing=current_user()
         if existing:
-            return redirect(url_for("home"))
+            return redirect(app.extensions["purchase_after_login"](existing["id"]) if existing["role"] == "student" else url_for("home"))
     if request.method=="POST":
         email = request.form.get("email", "").strip().lower()
         client_ip = request.remote_addr or 'unknown'
@@ -1741,7 +1742,7 @@ def login():
         con=db()
         if login_locked(con, key, 8) or login_locked(con, ip_key, 30):
             con.close()
-            flash("Πολλές αποτυχημένες προσπάθειες. Δοκίμασε ξανά σε 15 λεπτά.")
+            flash(journey_text("Πολλές αποτυχημένες προσπάθειες. Δοκίμασε ξανά σε 15 λεπτά."))
             return render_template("login.html"), 429
         u=con.execute("SELECT * FROM users WHERE lower(email)=? AND COALESCE(active,1)=1",(email,)).fetchone()
         if u and check_password_hash(u["password_hash"], request.form.get("password", "")):
@@ -1758,17 +1759,19 @@ def login():
                     flash("Το Google έχει ήδη συνδεθεί με λογαριασμό. Δοκιμάστε σύνδεση Google.")
                 finally:
                     con.close()
+            purchase_context = {k: session[k] for k in ("registration_package", "purchase_language") if k in session}
             session.clear()
+            session.update(purchase_context)
             session["uid"]=u["id"]
             session["password_session_version"]=app.extensions["reset_session_version"](u["id"])
             session["role"]=u["role"]
             session.permanent=True
             csrf_token()  # Rotate token with newly authenticated session.
-            return redirect(url_for("home"))
+            return redirect(app.extensions["purchase_after_login"](u["id"]) if u["role"] == "student" else url_for("home"))
         record_login_failure(con, key)
         record_login_failure(con, ip_key)
         con.close()
-        flash("Λάθος email ή password")
+        flash(journey_text("Λάθος email ή password"))
     return render_template("login.html")
 
 
@@ -1790,20 +1793,20 @@ def register():
     try:
         phone = registration_mobile(form.get("phone_prefix"), form.get("phone"))
     except ValueError as error:
-        flash(str(error))
+        flash("Enter a valid mobile number and country calling code." if app.extensions["purchase_language"]() == "en" else str(error))
         return redirect(url_for("register", lang="en") if request.args.get("lang") == "en" else url_for("register"))
     password = form.get("password") or ""
     if not name or len(name)>100 or not surname or len(surname)>100 or not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+",email) or len(email)>254 or not 7<=len(phone)<=30:
-        flash("Συμπληρώστε σωστά όνομα, επώνυμο, email και τηλέφωνο.")
+        flash(journey_text("Συμπληρώστε σωστά όνομα, επώνυμο, email και τηλέφωνο."))
         return redirect(url_for("register", lang="en") if request.args.get("lang") == "en" else url_for("register"))
     if not identity and (not password_meets_policy(password) or password != form.get("confirm_password")):
-        flash("Ο κωδικός πρέπει να έχει τουλάχιστον 8 χαρακτήρες, γράμματα και αριθμούς και να ταιριάζει με την επιβεβαίωση.")
+        flash(journey_text("Ο κωδικός πρέπει να έχει τουλάχιστον 8 χαρακτήρες, γράμματα και αριθμούς και να ταιριάζει με την επιβεβαίωση."))
         return redirect(url_for("register", lang="en") if request.args.get("lang") == "en" else url_for("register"))
     if form.get("terms")!="yes" or form.get("privacy")!="yes" or form.get("waiver")!="yes":
-        flash("Αποδεχτείτε τους Όρους Χρήσης, επιβεβαιώστε την ενημέρωση για το Απόρρητο και διαβάστε την ενημέρωση κινδύνων.")
+        flash(journey_text("Αποδεχτείτε τους Όρους Χρήσης, επιβεβαιώστε την ενημέρωση για το Απόρρητο και διαβάστε την ενημέρωση κινδύνων."))
         return redirect(url_for("register", lang="en") if request.args.get("lang") == "en" else url_for("register"))
     if form.get("terms_version") != TERMS_VERSION or form.get("privacy_version") != PRIVACY_VERSION or form.get("waiver_version") != WAIVER_VERSION:
-        flash("Τα νομικά κείμενα ενημερώθηκαν. Ανανεώστε τη φόρμα και διαβάστε τις τρέχουσες εκδόσεις.")
+        flash(journey_text("Τα νομικά κείμενα ενημερώθηκαν. Ανανεώστε τη φόρμα και διαβάστε τις τρέχουσες εκδόσεις."))
         return redirect(url_for("register", lang="en") if request.args.get("lang") == "en" else url_for("register"))
     con=db()
     try:
@@ -1811,11 +1814,11 @@ def register():
         k=_registration_ip_key()
         if login_locked(con,k,5):
             con.rollback()
-            flash("Έχουν γίνει πολλές εγγραφές. Δοκιμάστε ξανά αργότερα.")
+            flash(journey_text("Έχουν γίνει πολλές εγγραφές. Δοκιμάστε ξανά αργότερα."))
             return render_template("register.html",waiver_version=WAIVER_VERSION, phone_countries=PHONE_COUNTRIES),429
         if con.execute("SELECT id FROM users WHERE lower(email)=?",(email,)).fetchone():
             con.rollback()
-            flash("Το email χρησιμοποιείται ήδη. Δοκιμάστε σύνδεση.")
+            flash(journey_text("Το email χρησιμοποιείται ήδη. Δοκιμάστε σύνδεση."))
             return redirect(url_for("register", lang="en") if request.args.get("lang") == "en" else url_for("register"))
         now=datetime.now().isoformat(timespec="seconds")
         uid=con.execute("""INSERT INTO users(name,surname,email,phone,role,password_hash,active)
@@ -1833,6 +1836,7 @@ def register():
         if identity:
             con.execute("INSERT INTO oauth_identities(provider,subject,user_id) VALUES('google',?,?)", (identity['sub'],uid))
         record_registration_legal(con, uid)
+        app.extensions["purchase_save_context"](con, uid)
         token = issue_confirmation(con, uid, already_verified=bool(identity))
         if identity:
             activate_verified_registration(con, uid)
@@ -1846,7 +1850,7 @@ def register():
         return render_template("register_success.html", confirmation_pending=False, mail_delivery=delivery)
     except sqlite3.IntegrityError:
         con.rollback()
-        flash("Δεν ήταν δυνατή η εγγραφή. Ελέγξτε τα στοιχεία.")
+        flash(journey_text("Δεν ήταν δυνατή η εγγραφή. Ελέγξτε τα στοιχεία."))
         return redirect(url_for("register", lang="en") if request.args.get("lang") == "en" else url_for("register"))
     finally:
         con.close()
@@ -6264,6 +6268,8 @@ if _V76_FRESH_DATABASE and DEMO_MODE:
 
 setup_package_cancellation(app, db, current_user)
 setup_legal_pages(app, db)
+from purchase_journey import setup_purchase_journey
+setup_purchase_journey(app, db)
 setup_registration_email(app, db, login_locked, record_login_failure)
 
 from password_reset import setup_password_reset
@@ -6284,3 +6290,4 @@ if __name__=="__main__":
         port=int(os.getenv("PORT", "5000")),
         debug=os.getenv("FLASK_DEBUG", "0").lower() in ("1", "true", "yes"),
     )
+

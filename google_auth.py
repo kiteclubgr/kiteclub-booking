@@ -36,13 +36,13 @@ def setup_google(app, db, csrf_token):
     def google_login():
         if not enabled:
             flash('Η σύνδεση Google δεν έχει ενεργοποιηθεί ακόμη.')
-            return redirect(url_for('login'))
+            return redirect(url_for('login',lang=session.get('purchase_language','el')))
         session.pop('google_identity', None)
         try:
             return google.authorize_redirect(callback, prompt='select_account')
         except (OAuthError, RequestException):
             flash('Η Google δεν είναι διαθέσιμη αυτή τη στιγμή. Δοκιμάστε ξανά.')
-            return redirect(url_for('login'))
+            return redirect(url_for('login',lang=session.get('purchase_language','el')))
 
     @app.get('/auth/google/callback')
     def google_callback():
@@ -50,7 +50,7 @@ def setup_google(app, db, csrf_token):
             abort(404)
         if not session.get('_state_google_' + str(request.args.get('state', ''))):
             flash('Η σύνδεση Google έληξε. Δοκιμάστε ξανά.')
-            return redirect(url_for('login'))
+            return redirect(url_for('login',lang=session.get('purchase_language','el')))
         try:
             token = google.authorize_access_token()
             # Authlib verifies signature, issuer, audience, expiry and nonce.
@@ -62,7 +62,7 @@ def setup_google(app, db, csrf_token):
                 raise ValueError('Invalid email')
         except (OAuthError, RequestException, JoseError, ValueError):
             flash('Δεν ολοκληρώθηκε η επιβεβαίωση Google. Δοκιμάστε ξανά.')
-            return redirect(url_for('login'))
+            return redirect(url_for('login',lang=session.get('purchase_language','el')))
         con = db()
         try:
             user = con.execute('SELECT u.* FROM oauth_identities o JOIN users u ON u.id=o.user_id WHERE o.provider=? AND o.subject=?', ('google', info['sub'])).fetchone()
@@ -70,24 +70,29 @@ def setup_google(app, db, csrf_token):
                 if not user['active']:
                     session.clear()
                     flash('Ο λογαριασμός σας αναμένει έγκριση από τη σχολή ή είναι ανενεργός.')
-                    return redirect(url_for('login'))
+                    return redirect(url_for('login',lang=session.get('purchase_language','el')))
+                purchase_context={k:session[k] for k in ("registration_package","purchase_language") if k in session}
                 session.clear()
+                session.update(purchase_context)
                 session['uid'], session['role'] = user['id'], user['role']
                 session['password_session_version'] = app.extensions['reset_session_version'](user['id'])
                 session.permanent = True
                 csrf_token()
-                return redirect(url_for('home'))
+                return redirect(app.extensions['purchase_after_login'](user['id']) if user['role']=='student' else url_for('home'))
             existing = con.execute('SELECT id FROM users WHERE lower(email)=?', (email,)).fetchone()
         finally:
             con.close()
+        purchase_context={k:session[k] for k in ('registration_package','purchase_language') if k in session}
         session.clear()
+        session.update(purchase_context)
         session['google_identity'] = {'sub': str(info['sub']), 'email': email,
             'name': str(info.get('given_name', ''))[:100],
             'surname': str(info.get('family_name', ''))[:100], 'expires': time.time() + 900}
         if existing:
             flash('Για να συνδέσετε το Google με τον υπάρχοντα λογαριασμό, συνδεθείτε μία φορά με το email και τον κωδικό σας.')
-            return redirect(url_for('login'))
+            return redirect(url_for('login',lang=session.get('purchase_language','el')))
         flash('Το email επιβεβαιώθηκε από τη Google. Συμπληρώστε τα υπόλοιπα στοιχεία για εγγραφή.')
-        return redirect(url_for('register'))
+        return redirect(url_for('register',lang=session.get('purchase_language','el')))
 
     return google
+

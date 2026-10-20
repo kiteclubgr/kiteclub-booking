@@ -1,8 +1,9 @@
-{% set email_title = "Καλώς ήρθες στο KiteClub!" %}
-{% set intro = "Επιβεβαίωσε το email σου για να ενεργοποιήσεις τον λογαριασμό σου και να οργανώσεις τα επόμενα μαθήματά σου." %}
-{% set action_label = "Επιβεβαίωση email" %}
-{% set expiry_label = "24 ώρες" %}
-{% set next_step = "Στη σελίδα που θα ανοίξει, επιβεβαίωσε την ενεργοποίηση για να ολοκληρώσεις την εγγραφή σου." %}
-{% set ignore_note = "Αν δεν έκανες εσύ την εγγραφή, αγνόησε αυτό το email." %}
+{% set email_title = ("Welcome to KiteClub!" if language == "en" else "Καλώς ήρθες στο KiteClub!") %}
+{% set intro = ("Verify your email to activate your account and plan your next lessons." if language == "en" else "Επιβεβαίωσε το email σου για να ενεργοποιήσεις τον λογαριασμό σου και να οργανώσεις τα επόμενα μαθήματά σου.") %}
+{% set action_label = ("Verify email" if language == "en" else "Επιβεβαίωση email") %}
+{% set expiry_label = ("24 hours" if language == "en" else "24 ώρες") %}
+{% set next_step = ("On the next page, confirm activation to complete your registration." if language == "en" else "Στη σελίδα που θα ανοίξει, επιβεβαίωσε την ενεργοποίηση για να ολοκληρώσεις την εγγραφή σου.") %}
+{% set ignore_note = ("If you did not sign up, ignore this email." if language == "en" else "Αν δεν έκανες εσύ την εγγραφή, αγνόησε αυτό το email.") %}
 {% set action_url = confirmation_url %}
 {% include "emails/_transactional_email.html" %}
+

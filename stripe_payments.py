@@ -105,6 +105,30 @@ def setup_stripe_payments(app, db, current_user, activate, data_root, base):
         nonce=uuid.uuid4().hex
         session['stripe_nonces']=(session.get('stripe_nonces',[])+[nonce])[-10:]
         return render_template('stripe_buy.html',packages=packages,nonce=nonce,order=None)
+    @app.get('/student/package-review')
+    def student_package_review():
+        uid=require_student()
+        with connection() as c:
+            if eligible(c,uid) != 'lesson':
+                abort(403, description='This package is for individual lessons. Contact the school about your group package.')
+            package=c.execute("SELECT * FROM packages WHERE active=1 AND package_type='lesson' AND hours=8 AND price>0 ORDER BY id LIMIT 1").fetchone()
+        if not package: abort(404)
+        nonce=uuid.uuid4().hex
+        session['stripe_nonces']=(session.get('stripe_nonces',[])+[nonce])[-10:]
+        session['purchase_language']='en' if request.args.get('lang',session.get('purchase_language'))=='en' else 'el'
+        session['purchase_reviews']={**session.get('purchase_reviews',{}),nonce:{'package_id':package['id'],'price':str(package['price'])}}
+        session['purchase_reviews']={k:v for k,v in session['purchase_reviews'].items() if k in session['stripe_nonces']}
+        response=app.make_response(render_template('package_review.html',package=package,nonce=nonce,language=session['purchase_language'],preview=False))
+        response.headers['Cache-Control']='no-store'
+        return response
+
+    @app.get('/packages/private-8h/review-preview')
+    def package_review_preview():
+        with connection() as c:
+            package=c.execute("SELECT * FROM packages WHERE active=1 AND package_type='lesson' AND hours=8 AND price>0 ORDER BY id LIMIT 1").fetchone()
+        if not package: abort(404)
+        return render_template('package_review.html',package=package,nonce='',language='en' if request.args.get('lang')=='en' else 'el',preview=True)
+
     @app.post('/student/buy-hours')
     def student_create_checkout():
         uid=require_student(); nonce=request.form.get('nonce','')
@@ -119,6 +143,9 @@ def setup_stripe_payments(app, db, current_user, activate, data_root, base):
             else:
                 p=c.execute('SELECT * FROM packages WHERE id=? AND active=1 AND package_type=?',(pid,eligible(c,uid))).fetchone()
                 if not p: abort(400)
+                reviewed=session.get('purchase_reviews',{}).get(nonce)
+                if reviewed and (reviewed['package_id']!=pid or Decimal(reviewed['price'])!=Decimal(str(p['price']))):
+                    abort(409,description='The package price has changed. Review the package again before paying.')
                 price=Decimal(str(p['price']))*100
                 if not price.is_finite() or price!=price.to_integral_value() or price<=0 or not math.isfinite(p['hours']) or p['hours']<=0: abort(400)
                 oid=uuid.uuid4().hex
@@ -128,7 +155,7 @@ def setup_stripe_payments(app, db, current_user, activate, data_root, base):
         if row['checkout_url']: return redirect(row['checkout_url'],303)
         # A fixed local origin avoids host-header injection into payment links.
         origin='https://booking.kiteclub.gr' if online() else 'http://127.0.0.1:5000'
-        params={'mode':'payment','client_reference_id':row['id'],
+        params={'locale':'en' if session.get('purchase_language')=='en' else 'el','mode':'payment','client_reference_id':row['id'],
                 'metadata':{'app':'kiteclub_booking','order_id':row['id'],'student_id':str(uid)},
                 'payment_intent_data':{'metadata':{'app':'kiteclub_booking','order_id':row['id'],'student_id':str(uid)}},
                 'line_items':[{'quantity':1,'price_data':{'currency':'eur','unit_amount':row['cents'],'product_data':{'name':row['name']}}}],
@@ -270,3 +297,4 @@ def setup_stripe_payments(app, db, current_user, activate, data_root, base):
             activate(c,c.execute('SELECT * FROM student_packages WHERE id=?',(purchase,)).fetchone(),'Stripe TEST verified payment')
             c.execute("UPDATE stripe_test_orders SET state='paid',checkout_id=?,payment_intent=?,purchase_id=? WHERE id=?",(obj['id'],paid['payment_intent'],purchase,row['id']))
         return '',200
+

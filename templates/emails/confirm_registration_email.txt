@@ -1,3 +1,20 @@
+{% if language == 'en' %}
+Hi {{ name }},
+
+Welcome to KiteClub!
+Verify your email and activate your account using this link:
+
+{{ confirmation_url }}
+
+The link expires after 24 hours and can be used once.
+On the page that opens, click “Activate my account”. You can then log in with your password.
+Your starting balance is 0 lesson credits. No payment has been made.
+
+If you did not sign up, ignore this email.
+
+See you on the water!
+The KiteClub.gr team
+{% else %}
 Γεια σου {{ name }},
 
 Καλώς ήρθες στο KiteClub!
@@ -14,3 +31,6 @@
 
 Τα λέμε στο νερό!
 Η ομάδα του KiteClub.gr
+
+
+{% endif %}

@@ -1,0 +1,40 @@
+{% extends 'base.html' %}{% block content %}
+<div class="card" style="max-width:800px;margin:24px auto">
+<a href="{{url_for('student_home')}}">← Αρχική</a>
+<p class="badge wait">STRIPE TEST · Χωρίς πραγματική χρέωση</p>
+{% if order %}
+<section class="payment-result" data-state="{{order.state}}" {% if order.state not in ['paid','expired','failed'] and request.args.get('checkout')!='cancelled' %}data-poll-url="{{url_for('student_stripe_status',oid=order.id,format='json')}}"{% endif %}>
+{% if order.state=='paid' and refunded_cents|default(0)>0 %}
+<h1>Καταχωρίστηκε επιστροφή χρημάτων</h1>
+<p>Επιστράφηκαν {{'%.2f'|format(refunded_cents/100)}} € από την αρχική πληρωμή. Δες το τρέχον υπόλοιπο ωρών στην Αρχική.</p>
+{% elif order.state=='paid' %}
+<div class="payment-icon success" aria-hidden="true">✓</div>
+<h1>Η πληρωμή σου ολοκληρώθηκε! 🏄</h1>
+<p>Η αρχική πληρωμή επιβεβαιώθηκε. Το τρέχον υπόλοιπο ωρών εμφανίζεται στην Αρχική.</p>
+<p><strong>Τα λέμε στην παραλία!</strong></p>
+{% elif request.args.get('checkout')=='cancelled' %}
+<h1>Επέστρεψες από την πληρωμή</h1>
+<p>Δεν έχουμε λάβει επιβεβαίωση πληρωμής για αυτή την αγορά.</p>
+<p>Αν ολοκλήρωσες ήδη την πληρωμή, έλεγξε ξανά την κατάσταση πριν δοκιμάσεις νέα αγορά.</p>
+{% elif order.state in ['expired','failed'] %}
+<h1>{{'Η διαδικασία πληρωμής έληξε' if order.state=='expired' else 'Η πληρωμή δεν ολοκληρώθηκε'}}</h1>
+<p>Δεν προστέθηκαν ώρες για αυτή την αγορά.</p>
+{% else %}
+<div class="payment-icon pending" aria-hidden="true">◷</div>
+<h1>Επιβεβαιώνουμε την πληρωμή σου…</h1>
+<p role="status" aria-live="polite" id="payment-status-copy">Περιμένουμε την επιβεβαίωση από το Stripe. Η οθόνη θα ενημερωθεί αυτόματα.</p>
+<p><strong>Μην επαναλάβεις την πληρωμή.</strong></p>
+{% endif %}
+<div class="payment-summary"><strong>{{order.name}}</strong><span>{{'%g'|format(order.hours)}} {{'ώρα' if order.hours==1 else 'ώρες'}} · {{'%.2f'|format(order.cents/100)}} €</span></div>
+{% if order.state=='paid' %}<a class="btn" href="{{url_for('student')}}">Κλείσε το επόμενο μάθημά σου</a>
+{% else %}<a class="btn alt" href="{{url_for('student_stripe_status',oid=order.id,checkout='returned')}}">Έλεγχος κατάστασης</a>{% endif %}
+</section>
+<script src="{{url_for('static',filename='stripe-confirmation.js',v='54')}}" defer></script>
+<style>
+.payment-result{padding:22px 4px;text-align:center;max-width:540px;margin:auto}.payment-result h1{font-size:28px;line-height:1.25;margin:18px 0 12px}.payment-result p{line-height:1.6;color:#526b82}.payment-result .btn{margin-top:12px}.payment-icon{width:68px;height:68px;border-radius:50%;display:grid;place-items:center;font-size:36px;margin:0 auto}.payment-icon.success{background:#e4f8ed;color:#14845c}.payment-icon.pending{background:#e8f7ff;color:#0788c8}.payment-summary{display:flex;flex-direction:column;gap:6px;background:#f3f8fb;border:1px solid #d9e6ee;border-radius:14px;padding:16px;margin:22px 0}.payment-summary span{color:#526b82}@media(max-width:600px){.payment-result h1{font-size:24px}.payment-result .btn{width:100%}}
+</style>
+{% else %}<h1>Αγορά ωρών</h1><p>Η τιμή αφορά τις δικές σου ώρες. Για 2P/3P η ομάδα ορίζεται πρώτα από τη σχολή.</p>
+{% for p in packages %}<section class="card"><h2>{{p.name}}</h2><p>{{'%g'|format(p.hours)}} ώρες · {{'%.2f'|format(p.price)}} €</p><form method="post"><input type="hidden" name="_csrf_token" value="{{csrf_token()}}"><input type="hidden" name="nonce" value="{{nonce}}"><input type="hidden" name="package_id" value="{{p.id}}"><button class="btn">Πληρωμή με κάρτα · TEST</button></form></section>{% else %}<p>Δεν υπάρχει διαθέσιμο πακέτο για το προφίλ σου. Επικοινώνησε με τη σχολή για έλεγχο της ομάδας.</p>{% endfor %}{% endif %}
+<p><small>Χρησιμοποίησε μόνο δοκιμαστική κάρτα Stripe. Τα στοιχεία κάρτας συμπληρώνονται στο Stripe.</small></p></div>
+{% endblock %}
+

@@ -3,7 +3,7 @@
 <div class="kc-auth kc-auth-register"><section class="kc-auth-hero"><div><img src="{{url_for('static',filename='img/kiteclub-logo-transparent.png')}}" alt="KiteClub" class="kc-hero-logo"><div class="kc-auth-slogan"><em>Learn <br>with us</em><em>Ride <br>with us</em></div></div><div class="kc-auth-hero-bottom"><div>Book your lessons</div><div>Updates & news</div><div>Join our community</div></div></section><section class="kc-auth-panel"><div class="kc-auth-card">
 <nav style="text-align:right;font-size:14px;margin-bottom:8px" aria-label="Language"><a href="/register" lang="el">Ελληνικά</a> · <a href="/register?lang=en" lang="en">English</a></nav><img src="{{url_for('static',filename='img/kiteclub-logo-transparent.png')}}" alt="KiteClub logo"><h1>Join KiteClub</h1><p class="hint">Create your account for lessons and bookings.</p>
 {% if not google_pending %}{% include "_google_button.html" %}{% endif %}
-<p class="kc-note">Verification emails, server messages and the following screens are currently in Greek.</p><div class="kc-step">1. Your details → 2. Terms & consent → 3. Verify your email</div>
+<div class="kc-step">1. Your details → 2. Terms & consent → 3. Verify your email</div>
 <form method="post" action="{{url_for('register',lang='en')}}" id="register-form"><input type="hidden" name="_csrf_token" value="{{csrf_token()}}">
 <div class="kc-auth-grid"><div><label for="reg-name">First name *</label><input id="reg-name" name="name" maxlength="100" autocomplete="given-name" value="{{google_pending.name if google_pending else ''}}" required></div>
 <div><label for="reg-surname">Last name *</label><input id="reg-surname" name="surname" maxlength="100" autocomplete="family-name" value="{{google_pending.surname if google_pending else ''}}" required></div>
@@ -24,3 +24,4 @@
 </div></section></div>
 <script>document.getElementById('register-form').addEventListener('submit',e=>{if(document.getElementById('reg-pass')&&document.getElementById('reg-pass').value!==document.getElementById('reg-confirm').value){e.preventDefault();alert('Passwords do not match.')}})</script>
 {% endblock %}
+

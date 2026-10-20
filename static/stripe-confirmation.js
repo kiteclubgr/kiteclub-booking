@@ -8,7 +8,7 @@
   function stop() { clearTimeout(timer); }
   function delayed() {
     stop();
-    if (copy) copy.textContent = 'Η επιβεβαίωση καθυστερεί. Αυτό δεν σημαίνει ότι η πληρωμή απέτυχε. Πάτησε «Έλεγχος κατάστασης» ή επικοινώνησε με τη σχολή. Μην επαναλάβεις την πληρωμή.';
+    if (copy) copy.textContent = root.dataset.language === 'en' ? 'Confirmation is taking longer than expected. This does not mean payment failed. Check the status or contact the school. Do not pay again.' : 'Η επιβεβαίωση καθυστερεί. Αυτό δεν σημαίνει ότι η πληρωμή απέτυχε. Πάτησε «Έλεγχος κατάστασης» ή επικοινώνησε με τη σχολή. Μην επαναλάβεις την πληρωμή.';
   }
   async function check() {
     if (Date.now() >= deadline) return delayed();
@@ -30,3 +30,4 @@
   timer = setTimeout(check, 1500);
   window.addEventListener('pagehide', stop, {once:true});
 })();
+
