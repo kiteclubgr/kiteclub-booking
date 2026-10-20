@@ -72,7 +72,7 @@
 
   {% endif %}
   {% if profile_view == 'profile' %}
-  <div id="payments" class="card"><h2>Πακέτα / Πληρωμές</h2>{% for p in package_history %}<div class="item spread"><div><b>{{p.package_name}}</b><div class="muted">{{p.hours_total}}h συνολικά · {{p.hours_remaining}}h υπόλοιπο · {{'%.2f'|format(p.price)}}€{% if p.paid_amount is defined %} · Πληρωμένα {{'%.2f'|format(p.paid_amount or 0)}}€{% endif %}</div></div><span class="badge {{'ok' if p.payment_status=='paid' else 'wait'}}">{{'Ακυρωμένο' if p.payment_status=='cancelled' else p.payment_status}}</span></div>{% else %}<p class="muted">Δεν υπάρχουν καταχωρημένα πακέτα.</p>{% endfor %}</div>
+  <div id="payments" class="card"><h2>Πακέτα / Πληρωμές</h2>{% for p in package_history %}{% set refund = stripe_refund_info(p.id) %}<div class="item spread"><div><b>{{p.package_name}}</b><div class="muted">{{p.hours_total}}h συνολικά · {{p.hours_remaining}}h υπόλοιπο · {{'%.2f'|format(p.price)}}€{% if p.paid_amount is defined %} · Πληρωμένα {{'%.2f'|format(p.paid_amount or 0)}}€{% endif %}</div></div><span class="badge {{'ok' if p.payment_status=='paid' else 'wait'}}">{{('Επιστράφηκε' if refund.full else 'Μερική επιστροφή') if refund else ('Ακυρωμένο' if p.payment_status=='cancelled' else p.payment_status)}}</span></div>{% else %}<p class="muted">Δεν υπάρχουν καταχωρημένα πακέτα.</p>{% endfor %}</div>
 
   {% endif %}
   {% if profile_view != 'photos' %}

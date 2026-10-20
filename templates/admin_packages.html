@@ -47,11 +47,11 @@
     <div class="card">
       <h2>Πρόσφατες αγορές / πληρωμές</h2>
       {% if purchases %}<div style="overflow:auto"><table class="purchase-table"><thead><tr><th>Ημερομηνία</th><th>Μαθητής</th><th>Πακέτο</th><th>Τύπος / Ώρες</th><th>Υπόλοιπο / Season</th><th>Τιμή</th><th>Status</th><th></th></tr></thead><tbody>
-        {% for p in purchases %}<tr>
+        {% for p in purchases %}{% set refund = stripe_refund_info(p.id) %}<tr>
           <td>{{p.purchased_at[:16].replace('T',' ') if p.purchased_at else '—'}}</td>
           <td><a href="{{url_for('admin_student_profile',student_id=p.student_id)}}">{{p.student_name}}{% if p.student_surname %} {{p.student_surname}}{% endif %}</a></td>
           <td>{{p.package_name}}</td><td>{% if (p.package_type or 'lesson')=='crew' %}Crew Member{% else %}{{p.hours_total}}h{% endif %}</td><td>{% if (p.package_type or 'lesson')=='crew' %}{{p.valid_from|gr_date}} → {{p.valid_until|gr_date}}{% else %}{{p.hours_remaining}}h{% endif %}</td><td>{{'%.2f'|format(p.price)}}€</td>
-          <td><span class="badge {{'status-paid' if p.payment_status=='paid' else 'status-pending'}}">{{'Ακυρωμένο' if p.payment_status=='cancelled' else p.payment_status}}</span></td>
+          <td><span class="badge {{'status-paid' if p.payment_status=='paid' else 'status-pending'}}">{{('Επιστράφηκε' if refund.full else 'Μερική επιστροφή') if refund else ('Ακυρωμένο' if p.payment_status=='cancelled' else p.payment_status)}}</span></td>
           <td>{% if p.payment_status not in ('paid','cancelled') %}<form method="post" action="{{url_for('admin_package_purchase_mark_paid',purchase_id=p.id)}}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}"><button class="btn" type="submit">Mark paid</button></form>{% endif %}</td>
         </tr>{% endfor %}
       </tbody></table></div>{% else %}<div class="muted">Δεν υπάρχουν αγορές ακόμη. Άνοιξε έναν μαθητή και πρόσθεσε πακέτο.</div>{% endif %}

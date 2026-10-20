@@ -80,6 +80,19 @@ with tempfile.TemporaryDirectory() as tmp:
  assert balance()==0
  assert refund_event('re_two').status_code==200 and balance()==0
  assert con.execute('SELECT price,paid_amount,hours_total,hours_remaining FROM student_packages WHERE id=?',(purchase_id,)).fetchone()[:]==(0,0,0,0)
+ # Refunded labels in Admin/Student, including when TEST is disabled. Rendering is read-only.
+ snapshot=list(con.iterdump())
+ with c.session_transaction() as sess:sess['uid']=con.execute("SELECT id FROM users WHERE role='admin'").fetchone()[0]
+ profile=c.get('/admin/students/'+str(uid));assert profile.status_code==200
+ assert 'Επιστράφηκε' in profile.text and 'Ώρες επιστραφείσες' in profile.text
+ assert ('/admin/package-purchases/'+str(purchase_id)+'/cancel') not in profile.text
+ assert c.get('/admin/packages').status_code==200
+ with c.session_transaction() as sess:sess['uid']=uid
+ student=c.get('/student/profile');assert student.status_code==200 and 'Επιστράφηκε' in student.text
+ os.environ['STRIPE_TEST_ENABLED']='0'
+ assert 'Επιστράφηκε' in c.get('/student/profile').text
+ os.environ['STRIPE_TEST_ENABLED']='1'
+ assert snapshot==list(con.iterdump()), 'Display must not change balances or receipts'
  # A duplicate paid webhook cannot regrant the original package.
  assert event().status_code==200 and balance()==0
  refund['status']='failed'

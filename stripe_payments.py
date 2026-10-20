@@ -41,6 +41,19 @@ def setup_stripe_payments(app, db, current_user, activate, data_root, base):
         if user['role']=='admin': return True
         with connection() as c: return allowed(c,user['id'])
     app.jinja_env.globals['stripe_test_enabled'] = enabled
+    def refund_info(purchase_id):
+        # Read historical receipts even when the TEST feature is later disabled.
+        with connection() as c:
+            if not c.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='stripe_test_orders'").fetchone(): return None
+            row=c.execute("""SELECT o.cents,COALESCE(SUM(r.applied_cents),0) refunded,
+                t.review FROM stripe_test_orders o
+                LEFT JOIN stripe_test_refunds r ON r.order_id=o.id
+                LEFT JOIN stripe_test_refund_totals t ON t.order_id=o.id
+                WHERE o.purchase_id=? GROUP BY o.id""",(purchase_id,)).fetchone()
+        if not row or row['refunded']<=0: return None
+        return {'full':row['refunded']>=row['cents'], 'amount':row['refunded']/100, 'review':row['review'] or ''}
+    app.jinja_env.globals['stripe_refund_info'] = refund_info
+
     if local or online():
         with connection() as c:
             c.execute('''CREATE TABLE IF NOT EXISTS stripe_test_orders (
