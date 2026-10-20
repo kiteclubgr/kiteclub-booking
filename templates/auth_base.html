@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>KiteClub — {% if request.endpoint == 'login' %}Σύνδεση{% elif request.endpoint in ('forgot_password','reset_password') %}Επαναφορά κωδικού{% else %}Εγγραφή{% endif %}</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='auth.css', v='76.7.17.31') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='auth.css', v='76.7.17.49') }}">
 </head>
 <body class="kc-auth-body">
   {% with messages = get_flashed_messages(with_categories=true) %}

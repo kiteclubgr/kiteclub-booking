@@ -171,3 +171,33 @@ details{margin:24px 0;border:1px solid var(--line);border-radius:8px;padding:16p
 .kc-phone-prefix{position:relative;flex:0 0 100px;width:100px;min-width:0}
 .kc-country-flag{position:absolute;width:24px;height:16px;left:9px;top:50%;transform:translateY(-50%);pointer-events:none;border:1px solid #ccd6df;border-radius:2px}
 .kc-auth-register .kc-phone-prefix select{width:100%;padding-left:39px}
+
+/* v49: bounded registration card and compact spacing; all legal controls stay visible. */
+@media(min-width:901px){
+.kc-auth-register.kc-auth{grid-template-columns:minmax(0,1fr) minmax(0,760px)}
+.kc-auth-register .kc-auth-panel{padding:20px 28px 20px 16px;align-items:flex-start}
+.kc-auth-register .kc-auth-card{max-width:700px;padding:16px 26px 22px}
+.kc-auth-register .kc-auth-card>img{width:150px;height:108px;object-fit:contain;margin:-8px auto 0}
+.kc-auth-register .kc-auth-card h1{font-size:28px;margin:2px 0 8px}
+.kc-auth-register .hint{font-size:15px;line-height:1.4;margin:0 0 12px}
+.kc-auth-register .kc-auth-card .kc-google-form{margin:10px 0!important}
+.kc-auth-register .kc-step{font-size:12px;margin:10px 0 4px}
+.kc-auth-register .kc-auth-card label{font-size:13px;margin:9px 0 5px}
+.kc-auth-register .kc-auth-card input:not([type=checkbox]):not([type=hidden]){height:44px;min-height:44px;padding:10px 12px;font-size:16px}
+.kc-auth-register .kc-mobile-phone select{height:44px}
+.kc-auth-register .kc-auth-card .kc-check{font-size:12px;line-height:1.45;margin:9px 0}
+.kc-auth-register .kc-auth-card details{margin:12px 0;padding:10px;font-size:12px}
+.kc-auth-register .kc-note{font-size:12px;margin:10px 0}
+.kc-auth-register .kc-primary{min-height:46px;font-size:17px;margin-top:12px;padding:12px}
+.kc-auth-register .kc-auth-card>p:last-child{font-size:14px;margin:12px 0 0}
+.kc-auth-register .kc-auth-hero{padding:24px 4vw;min-height:100svh}
+.kc-auth-register .kc-hero-logo{width:180px}
+.kc-auth-register .kc-auth-slogan{font-size:clamp(56px,5vw,84px)}
+.kc-auth-register .kc-auth-hero-bottom{font-size:17px;gap:14px;padding-top:20px}
+}
+@media(max-width:900px){
+.kc-auth-register .kc-auth-card>img{width:140px;height:100px;object-fit:contain;margin:-6px auto 0}
+.kc-auth-register .hint{font-size:15px;line-height:1.45;margin-bottom:14px}
+.kc-auth-register .kc-auth-card .kc-check{font-size:14px;line-height:1.5}
+.kc-auth-register .kc-auth-card .kc-check input{flex-shrink:0}
+}
