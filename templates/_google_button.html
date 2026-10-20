@@ -1,6 +1,6 @@
 {% if google_enabled %}
 <form method="post" action="{{url_for('google_login')}}" class="kc-google-form">
   <input type="hidden" name="_csrf_token" value="{{csrf_token()}}">
-  <button type="submit" class="kc-google-button"><span class="kc-google-mark" aria-hidden="true">G</span>Συνέχεια με Google</button>
+  <button type="submit" class="kc-google-button"><span class="kc-google-mark" aria-hidden="true">G</span>{{'Continue with Google' if request.endpoint == 'register' and request.args.get('lang') == 'en' else 'Συνέχεια με Google'}}</button>
 </form>
 {% endif %}

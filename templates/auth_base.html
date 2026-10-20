@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="el">
+<html lang="{{'en' if request.endpoint == 'register' and request.args.get('lang') == 'en' else 'el'}}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>KiteClub — {% if request.endpoint == 'login' %}Σύνδεση{% elif request.endpoint in ('forgot_password','reset_password') %}Επαναφορά κωδικού{% else %}Εγγραφή{% endif %}</title>
+  <title>KiteClub — {% if request.endpoint == 'login' %}Σύνδεση{% elif request.endpoint in ('forgot_password','reset_password') %}Επαναφορά κωδικού{% elif request.endpoint == 'register' and request.args.get('lang') == 'en' %}Sign up{% else %}Εγγραφή{% endif %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='auth.css', v='76.7.17.49') }}">
 </head>
 <body class="kc-auth-body">

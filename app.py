@@ -19,7 +19,7 @@ from legal_pages import setup_legal_pages, record_registration_legal, TERMS_VERS
 from registration_email import setup_registration_email, issue_confirmation, send_confirmation, activate_verified_registration
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "KiteClub v76.7.17.49 · Registration Layout"
+APP_VERSION = "KiteClub v76.7.17.50 · English Registration"
 
 # v70: production-ready storage. Locally everything stays inside the project.
 # On Railway mount a persistent volume at /data and set DATA_DIR=/data.
@@ -1791,20 +1791,20 @@ def register():
         phone = registration_mobile(form.get("phone_prefix"), form.get("phone"))
     except ValueError as error:
         flash(str(error))
-        return redirect(url_for("register"))
+        return redirect(url_for("register", lang="en") if request.args.get("lang") == "en" else url_for("register"))
     password = form.get("password") or ""
     if not name or len(name)>100 or not surname or len(surname)>100 or not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+",email) or len(email)>254 or not 7<=len(phone)<=30:
         flash("Συμπληρώστε σωστά όνομα, επώνυμο, email και τηλέφωνο.")
-        return redirect(url_for("register"))
+        return redirect(url_for("register", lang="en") if request.args.get("lang") == "en" else url_for("register"))
     if not identity and (not password_meets_policy(password) or password != form.get("confirm_password")):
         flash("Ο κωδικός πρέπει να έχει τουλάχιστον 8 χαρακτήρες, γράμματα και αριθμούς και να ταιριάζει με την επιβεβαίωση.")
-        return redirect(url_for("register"))
+        return redirect(url_for("register", lang="en") if request.args.get("lang") == "en" else url_for("register"))
     if form.get("terms")!="yes" or form.get("privacy")!="yes" or form.get("waiver")!="yes":
         flash("Αποδεχτείτε τους Όρους Χρήσης, επιβεβαιώστε την ενημέρωση για το Απόρρητο και διαβάστε την ενημέρωση κινδύνων.")
-        return redirect(url_for("register"))
+        return redirect(url_for("register", lang="en") if request.args.get("lang") == "en" else url_for("register"))
     if form.get("terms_version") != TERMS_VERSION or form.get("privacy_version") != PRIVACY_VERSION or form.get("waiver_version") != WAIVER_VERSION:
         flash("Τα νομικά κείμενα ενημερώθηκαν. Ανανεώστε τη φόρμα και διαβάστε τις τρέχουσες εκδόσεις.")
-        return redirect(url_for("register"))
+        return redirect(url_for("register", lang="en") if request.args.get("lang") == "en" else url_for("register"))
     con=db()
     try:
         con.execute("BEGIN IMMEDIATE")
@@ -1816,7 +1816,7 @@ def register():
         if con.execute("SELECT id FROM users WHERE lower(email)=?",(email,)).fetchone():
             con.rollback()
             flash("Το email χρησιμοποιείται ήδη. Δοκιμάστε σύνδεση.")
-            return redirect(url_for("register"))
+            return redirect(url_for("register", lang="en") if request.args.get("lang") == "en" else url_for("register"))
         now=datetime.now().isoformat(timespec="seconds")
         uid=con.execute("""INSERT INTO users(name,surname,email,phone,role,password_hash,active)
                        VALUES(?,?,?,?,?,?,0)""",(name,surname,email,phone,"student",generate_password_hash(secrets.token_urlsafe(48) if identity else password))).lastrowid
@@ -1844,7 +1844,7 @@ def register():
     except sqlite3.IntegrityError:
         con.rollback()
         flash("Δεν ήταν δυνατή η εγγραφή. Ελέγξτε τα στοιχεία.")
-        return redirect(url_for("register"))
+        return redirect(url_for("register", lang="en") if request.args.get("lang") == "en" else url_for("register"))
     finally:
         con.close()
 
