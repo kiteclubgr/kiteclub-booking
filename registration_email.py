@@ -6,7 +6,7 @@ import time
 from datetime import datetime, timezone
 from email.message import EmailMessage
 from email_delivery import deliver_message, email_from
-from flask import current_app, flash, redirect, render_template, request, url_for
+from flask import current_app, flash, redirect, render_template, request, url_for, make_response, session
 
 
 def stamp():
@@ -76,6 +76,23 @@ def setup_registration_email(app, db, login_locked, record_attempt):
         'https://booking.kiteclub.gr' if production else 'http://127.0.0.1:5000')
     app.config['LOCAL_EMAIL_PREVIEW'] = not production and os.getenv('LOCAL_EMAIL_PREVIEW') == '1'
 
+    def confirmation_screen(state, status=200, preview=False):
+        language = 'en' if request.args.get('lang') == 'en' else 'el'
+        def language_url(lang):
+            return url_for(request.endpoint, **dict(request.view_args or {}), lang=lang,
+                           **({'state': state} if preview else {}))
+        response = make_response(render_template('registration_confirmation.html',
+            state=state, language=language, preview=preview, language_url=language_url), status)
+        response.headers['Cache-Control'] = 'no-store'
+        return response
+
+    @app.get('/register/confirmation-preview')
+    def registration_confirmation_preview():
+        state = request.args.get('state', 'confirm')
+        if state not in ('confirm', 'verified', 'invalid'):
+            state = 'confirm'
+        return confirmation_screen(state, preview=True)
+
     @app.route('/register/confirm-email/<token>', methods=['GET', 'POST'])
     def confirm_registration_email(token):
         digest = hashlib.sha256(token.encode()).hexdigest()
@@ -86,17 +103,17 @@ def setup_registration_email(app, db, login_locked, record_attempt):
                               (digest,)).fetchone()
             if not row or row['expires_at'] < int(time.time()) or row['verified_at']:
                 con.rollback()
-                return render_template('registration_email_status.html', state='invalid'), 400
+                return confirmation_screen('invalid', 400)
             if request.method == 'GET':
                 con.rollback()
-                return render_template('registration_email_status.html', state='confirm')
+                return confirmation_screen('confirm')
             con.execute('UPDATE registration_email_confirmations SET verified_at=?,token_hash=NULL '
                         'WHERE user_id=? AND token_hash=?', (stamp(),row['user_id'],digest))
             activated = activate_verified_registration(con, row['user_id'])
             con.commit()
             if activated:
-                flash('Ο λογαριασμός σου ενεργοποιήθηκε! Συνδέσου με το email και τον κωδικό σου.', 'success')
-                return redirect(url_for('login'), code=303)
+                session.pop('registration_waiting_email', None)
+                return confirmation_screen('verified')
             return render_template('registration_email_status.html', state='guardian_pending')
         finally:
             con.close()
@@ -128,3 +145,4 @@ def setup_registration_email(app, db, login_locked, record_attempt):
         if job:
             send_confirmation(*job)
         return render_template('registration_email_status.html', state='resent')
+
