@@ -19,7 +19,7 @@ from legal_pages import setup_legal_pages, record_registration_legal, TERMS_VERS
 from registration_email import setup_registration_email, issue_confirmation, send_confirmation, activate_verified_registration
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "KiteClub v76.7.17.46 · Package Photo Framing"
+APP_VERSION = "KiteClub v76.7.17.47 · Package Wave Background"
 
 # v70: production-ready storage. Locally everything stays inside the project.
 # On Railway mount a persistent volume at /data and set DATA_DIR=/data.
