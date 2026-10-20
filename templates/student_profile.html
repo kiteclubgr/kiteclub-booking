@@ -1,4 +1,5 @@
 {% extends "base.html" %}{% block content %}
+{% set profile_view=request.args.get('view') if request.args.get('view') in ['lessons','photos'] else 'profile' %}
 <link rel="stylesheet" href="{{ url_for('static', filename='student-portal.css') }}">
 <link rel="stylesheet" href="{{url_for('static',filename='role-sidebar-v3.css')}}?v=33">
 <script>document.body.classList.add('student-portal-body')</script>
@@ -9,11 +10,13 @@
 @media(max-width:800px){.hero{grid-template-columns:auto 1fr}.hero .actions{grid-column:1/-1}.section-grid{grid-template-columns:1fr}.view-grid{grid-template-columns:1fr}.photo-grid{grid-template-columns:1fr 1fr}.stats{grid-template-columns:1fr}.summary-cards{grid-template-columns:1fr 1fr}.photo-card img{height:160px}.progress-levels{grid-template-columns:1fr}}
 </style>
 <div class="student-portal-shell">
-  {% set student_nav='profile' %}{% include '_student_portal_sidebar.html' %}
+  {% set student_nav=profile_view %}{% include '_student_portal_sidebar.html' %}
   <main class="student-portal-main">
     <div class="student-portal-top"><strong>{{student.name}}{% if student.surname %} {{student.surname}}{% endif %}</strong> · <a href="{{url_for('student_home')}}">Αρχική</a></div>
     <div class="student-portal-content">
 <div class="sp">
+{% if profile_view!='profile' %}<div class="card"><h1>{{'Τα μαθήματά μου' if profile_view=='lessons' else 'Οι φωτογραφίες μου'}}</h1><p class="muted">{{student.name}} {{student.surname or ''}}</p><a href="{{url_for('student_profile')}}">← Προφίλ μου</a></div>{% endif %}
+{% if profile_view=='profile' %}
   <div class="student-profile-card">
     <div class="avatar">{% if student.profile_photo %}<img src="{{url_for('static',filename=student.profile_photo)}}" alt="{{student.name}}">{% else %}{{student.name[:1]}}{{student.surname[:1] if student.surname else ''}}{% endif %}</div>
     <div>
@@ -24,7 +27,7 @@
     <div class="actions"><a class="btn" href="{{url_for('student_profile_edit')}}">✎ Επεξεργασία προφίλ</a> <a class="btn alt" href="{{url_for('student')}}">← Κρατήσεις</a></div>
   </div>
 
-  <div class="student-profile-tabs"><a class="active" href="#details">Στοιχεία</a><a href="#progress">Πρόοδος</a><a href="#lessons">Τα μαθήματά μου</a><a href="#photos">Φωτογραφίες</a><a href="#payments">Πακέτα / Πληρωμές</a><a href="#history">Ιστορικό</a></div>
+  <div class="student-profile-tabs"><a class="active" href="#details">Στοιχεία</a><a href="#progress">Πρόοδος</a><a href="{{url_for('student_profile',view='lessons')}}">Τα μαθήματά μου</a><a href="{{url_for('student_profile',view='photos')}}">Φωτογραφίες</a><a href="#payments">Πακέτα / Πληρωμές</a><a href="#history">Ιστορικό</a></div>
 
   <div class="summary-cards">
     <div class="summary-card"><span>Διαθέσιμα credits</span><b>{{student.credits}}h</b><div class="small">Ώρες που μπορείς να κλείσεις</div></div>
@@ -32,7 +35,7 @@
     <div class="summary-card"><span>Επόμενο μάθημα</span>{% if upcoming %}<b>{{upcoming[0].start_time|hm24}}</b><div class="small">{{upcoming[0].lesson_date|gr_date}} · {{upcoming[0].instructor}}{% if upcoming[0].instructor_surname %} {{upcoming[0].instructor_surname}}{% endif %}</div>{% else %}<b>—</b><div class="small">Δεν υπάρχει προγραμματισμένο μάθημα</div>{% endif %}</div>
     <div class="summary-card"><span>Φωτογραφίες</span><b>{{student_photos|length}}</b><div class="small">Από τα μαθήματα και τις δραστηριότητές σου</div></div>
   </div>
-  <div class="quick-nav" style="margin-bottom:14px"><a href="{{url_for('student')}}">📅 Νέα κράτηση</a><a href="#lessons">🎓 Τα μαθήματά μου</a><a href="#photos">🖼 Φωτογραφίες</a><a href="#payments">💳 Πακέτα / Πληρωμές</a></div>
+  <div class="quick-nav" style="margin-bottom:14px"><a href="{{url_for('student')}}">📅 Νέα κράτηση</a><a href="{{url_for('student_profile',view='lessons')}}">🎓 Τα μαθήματά μου</a><a href="{{url_for('student_profile',view='photos')}}">🖼 Φωτογραφίες</a><a href="#payments">💳 Πακέτα / Πληρωμές</a></div>
 
   <section id="details" class="section-grid">
     <div class="panel">
@@ -59,18 +62,28 @@
     <div class="progress-levels">{% for level in progress.levels %}<div class="progress-level {% if level.complete %}done{% endif %}"><div class="progress-level-head"><b>{{level.title}}</b><span class="badge {{'ok' if level.complete else 'off'}}">{{level.mastered}}/{{level.count}}</span></div>{% for skill in level.skills %}<div class="progress-skill {{skill.status}}"><span>{% if skill.status=='mastered' %}✓{% elif skill.status=='practicing' %}◐{% else %}○{% endif %} {{skill.name}}</span><span class="progress-status">{{'MASTERED' if skill.status=='mastered' else ('PRACTICING' if skill.status=='practicing' else 'NOT STARTED')}}</span></div>{% endfor %}</div>{% endfor %}</div>
   </div>
 
+  {% endif %}
+  {% if profile_view != 'photos' %}
   <div id="lessons" class="card"><h2>Επόμενα μαθήματα</h2>{% for b in upcoming %}<div class="item spread"><div><b>{{b.lesson_date|gr_date}} · {{b.start_time|hm24}} · {{b.instructor}}{% if b.instructor_surname %} {{b.instructor_surname}}{% endif %}</b><div class="muted">{{b.spot}} · {{b.duration}} ώρες{% if b.participant_count and b.participant_count>1 %} · {{b.participant_count}}P Group{% endif %}</div>{% if b.participant_count and b.participant_count>1 %}<div class="muted">{{b.participant_names}}</div>{% endif %}</div><span class="badge wait">{{b.status}}</span></div>{% else %}<p class="muted">Δεν υπάρχουν επόμενα μαθήματα.</p>{% endfor %}</div>
 
+  {% endif %}
+  {% if profile_view != 'lessons' %}
   <div id="photos" class="card"><div class="spread"><div><h2>Οι φωτογραφίες μου</h2><div class="muted">Φωτογραφίες από τα μαθήματα και τις δραστηριότητές μου.</div></div><span class="badge off">{{student_photos|length}} φωτογραφίες</span></div><br>{% if student_photos %}<div class="photo-grid">{% for ph in student_photos %}<article class="photo-card"><button type="button" class="student-photo-open" data-src="{{url_for('static',filename=ph.file_path)}}"><img src="{{url_for('static',filename=ph.file_path)}}" alt="{{ph.caption or 'Φωτογραφία μαθήματος'}}"></button><div class="photo-info"><div class="photo-date">{{ph.photo_date|gr_date if ph.photo_date else ''}}</div><div class="photo-caption">{{ph.caption or 'Φωτογραφία μαθήματος'}}</div></div></article>{% endfor %}</div>{% else %}<div class="photo-empty">Δεν έχουν προστεθεί φωτογραφίες ακόμη.</div>{% endif %}</div>
 
+  {% endif %}
+  {% if profile_view == 'profile' %}
   <div id="payments" class="card"><h2>Πακέτα / Πληρωμές</h2>{% for p in package_history %}<div class="item spread"><div><b>{{p.package_name}}</b><div class="muted">{{p.hours_total}}h συνολικά · {{p.hours_remaining}}h υπόλοιπο · {{'%.2f'|format(p.price)}}€{% if p.paid_amount is defined %} · Πληρωμένα {{'%.2f'|format(p.paid_amount or 0)}}€{% endif %}</div></div><span class="badge {{'ok' if p.payment_status=='paid' else 'wait'}}">{{'Ακυρωμένο' if p.payment_status=='cancelled' else p.payment_status}}</span></div>{% else %}<p class="muted">Δεν υπάρχουν καταχωρημένα πακέτα.</p>{% endfor %}</div>
 
+  {% endif %}
+  {% if profile_view != 'photos' %}
   <div id="history" class="card"><h2>Ιστορικό completed</h2>{% if completed %}<div style="overflow:auto"><table class="tbl"><tr><th>Ημερομηνία</th><th>Ώρα</th><th>Instructor</th><th>Spot</th><th>Διάρκεια</th><th>Επόμενη τεχνική</th></tr>{% for b in completed %}<tr><td>{{b.lesson_date|gr_date}}</td><td>{{b.start_time|hm24}}</td><td>{{b.instructor}}{% if b.instructor_surname %} {{b.instructor_surname}}{% endif %}</td><td>{{b.spot}}</td><td>{{b.duration}}h</td><td>{{b.next_skill or '—'}}</td></tr>{% endfor %}</table></div>{% else %}<p class="muted">Δεν υπάρχουν completed μαθήματα ακόμη.</p>{% endif %}</div>
   <div class="card"><h2>Make-up / No-show / Ακυρωμένα</h2><div class="cards"><div class="metric"><span>Make-up</span><b>{{makeups|length}}</b></div><div class="metric"><span>No-show</span><b>{{no_shows|length}}</b></div><div class="metric"><span>Ακυρωμένα</span><b>{{cancelled|length}}</b></div></div></div>
+{% endif %}
 </div>
     </div>
   </main>
 </div>
 <div class="photo-lightbox" id="photoLightbox" aria-hidden="true"><button class="close-photo" type="button" aria-label="Κλείσιμο">×</button><button class="nav-photo prev-photo" type="button" aria-label="Προηγούμενη">‹</button><img id="photoLightboxImage" alt="Μεγάλη προβολή φωτογραφίας"><button class="nav-photo next-photo" type="button" aria-label="Επόμενη">›</button><div class="lightbox-caption" id="photoLightboxCaption"></div></div>
+<script>(function(){if(!location.search && ['#lessons','#photos'].includes(location.hash)){location.replace({{url_for('student_profile')|tojson}}+'?view='+location.hash.slice(1));}})();</script>
 <script>(function(){const lb=document.getElementById('photoLightbox'),img=document.getElementById('photoLightboxImage'),cap=document.getElementById('photoLightboxCaption'),x=document.querySelector('.close-photo'),prev=document.querySelector('.prev-photo'),next=document.querySelector('.next-photo'),buttons=[...document.querySelectorAll('.student-photo-open')];let idx=0;buttons.forEach((b,i)=>b.addEventListener('click',()=>{idx=i;show()}));function show(){if(!buttons.length)return;const b=buttons[idx];img.src=b.dataset.src;const card=b.closest('.photo-card');cap.textContent=card?((card.querySelector('.photo-date')?.textContent||'')+' · '+(card.querySelector('.photo-caption')?.textContent||'')):'';lb.classList.add('open');lb.setAttribute('aria-hidden','false')}function shut(){lb.classList.remove('open');lb.setAttribute('aria-hidden','true');img.src=''}if(x)x.addEventListener('click',shut);if(prev)prev.addEventListener('click',e=>{e.stopPropagation();idx=(idx-1+buttons.length)%buttons.length;show()});if(next)next.addEventListener('click',e=>{e.stopPropagation();idx=(idx+1)%buttons.length;show()});if(lb)lb.addEventListener('click',e=>{if(e.target===lb)shut()});document.addEventListener('keydown',e=>{if(!lb.classList.contains('open'))return;if(e.key==='Escape')shut();if(e.key==='ArrowLeft'&&buttons.length){idx=(idx-1+buttons.length)%buttons.length;show()}if(e.key==='ArrowRight'&&buttons.length){idx=(idx+1)%buttons.length;show()}})})();</script>
 {% endblock %}

@@ -1,0 +1,22 @@
+.kc-student-mobile-header{display:none}
+@media(max-width:900px){
+ body.kc-student-layout{padding-bottom:0!important}
+ body.kc-student-layout>nav,
+ body.kc-student-layout .kc-mobile-session-bar,
+ body.kc-student-layout .mobile-topbar,
+ body.kc-student-layout .bottom-nav,
+ body.kc-student-layout .sh-mobile-nav,
+ body.kc-student-layout .sh-banner{display:none!important}
+ body.kc-student-layout .kc-student-mobile-header{display:block;background:#fff;border-bottom:1px solid #d9e6ee;padding:8px max(12px,env(safe-area-inset-right)) 10px max(12px,env(safe-area-inset-left))}
+ .kc-student-account{display:flex;align-items:center;gap:10px;min-height:62px;margin-bottom:8px}
+ .kc-student-brand{flex:none;display:block;width:60px;height:60px}
+ .kc-student-brand img{display:block;width:100%;height:100%;object-fit:contain}
+ .kc-student-name{flex:1;min-width:0;overflow-wrap:anywhere;text-decoration:none;font-weight:800;font-size:14px}
+ .kc-student-account form{margin:0;flex:none}
+ .kc-student-account button{min-height:44px;padding:10px;border:1px solid #efc8bf;border-radius:11px;background:#fff3ed;color:#a73320;font:inherit;font-size:13px;font-weight:800;cursor:pointer}
+ body.kc-student-layout .kc-student-mobile-nav{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;height:auto;position:static;padding:0;border:0;box-shadow:none;background:transparent}
+ .kc-student-mobile-nav a{display:flex;align-items:center;justify-content:center;min-height:44px;padding:8px 3px;border:1px solid #d9e6ee;border-radius:10px;font-size:12px;font-weight:750;text-decoration:none;text-align:center;overflow-wrap:anywhere;color:#173955;background:#fff}
+ .kc-student-mobile-nav a[aria-current=page]{color:#fff;background:#ff6036;border-color:#ff6036}
+ .kc-student-mobile-header :is(a,button):focus-visible{outline:3px solid #0788c8;outline-offset:2px}
+ body.kc-student-layout .confirmbar{bottom:0!important}
+}

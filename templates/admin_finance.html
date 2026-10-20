@@ -11,6 +11,7 @@
       <form method="get" class="month-form"><div><label>Μήνας</label><input type="month" name="month" value="{{month}}"></div><button class="btn" type="submit">Εφαρμογή</button></form>
     </div>
 
+    {% if stripe_test_enabled() %}<p><a class="btn alt" href="{{url_for('admin_stripe_refunds')}}">Επιστροφές Stripe · TEST →</a></p>{% endif %}
     <div class="finance-grid">
       <div class="fin-card"><div class="k">Συνολικά έσοδα</div><div class="v positive">{{'%.2f'|format(summary.total_revenue)}}€</div><div class="sub">Πληρωμένα packages + Crew</div></div>
       <div class="fin-card"><div class="k">Lesson packages</div><div class="v">{{'%.2f'|format(summary.lesson_revenue)}}€</div><div class="sub">Έσοδα μαθημάτων</div></div>

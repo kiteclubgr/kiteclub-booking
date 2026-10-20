@@ -1,0 +1,28 @@
+/* Visual candidate: reuses Admin colors, spacing and card treatments. */
+body.kc-student-layout{background:#f3f8fb}
+body.kc-student-layout .btn:not(.alt){background:linear-gradient(108deg,#ff673e,#fa4927);border-radius:11px;box-shadow:0 8px 16px #f6542a20}
+body.kc-student-layout :is(.sh-card,.panel,.student-profile-card){border-radius:18px;border-color:#d9e6ee;box-shadow:0 7px 22px #0b23400d}
+body.kc-student-layout .sh-metric{background:white;border-radius:16px;border-color:#d9e6ee;box-shadow:0 7px 22px #0b234008}
+body.kc-student-layout .sh-heading h1{font-size:34px;letter-spacing:-.6px}
+body.kc-student-layout .sh-symbol{border-radius:13px;width:46px;height:46px;background:#e8f7ff;color:#0788c8}
+body.kc-student-layout .peach .sh-symbol{background:#fff0e9;color:#ee5b35}
+body.kc-student-layout .yellow .sh-symbol{background:#fff5d9;color:#ba8b1d}
+body.kc-student-layout .mint .sh-symbol{background:#e4f8ed;color:#14845c}
+body.kc-student-layout .sh-banner{background:none;height:64px;margin-bottom:10px;padding-top:12px}
+body.kc-student-layout .sh-user{border:1px solid #d9e6ee;border-radius:13px;box-shadow:none}
+@media(max-width:900px){
+ body.kc-student-layout .kc-student-mobile-header{padding:8px 12px 12px;box-shadow:0 5px 20px #0b234008}
+ .kc-student-account{margin-bottom:10px}
+ .kc-student-brand{width:64px;height:64px}
+ .kc-student-account button{background:white;border-color:#d9e6ee;color:#18344e;border-radius:11px}
+ body.kc-student-layout .kc-student-mobile-nav{gap:7px}
+ .kc-student-mobile-nav a{display:flex;gap:6px;border:0;background:#f4f8fb;border-radius:11px;min-height:48px;font-size:12px;color:#193450}
+ .kc-student-mobile-nav svg{width:17px;height:17px;flex:none}
+ .kc-student-mobile-nav a[aria-current=page]{background:linear-gradient(108deg,#ff673e,#fa4927);box-shadow:0 6px 13px #f6542a26}
+ body.kc-student-layout .student-portal-main{padding:18px 14px 28px}
+ body.kc-student-layout .sh-heading h1{font-size:27px;letter-spacing:-.5px}
+ body.kc-student-layout .sh-metric{padding:16px 12px;min-height:139px}
+ body.kc-student-layout .sh-metric h2{font-size:12px;line-height:1.4}
+ body.kc-student-layout .sh-symbol{width:37px;height:37px;font-size:23px}
+}
+@media(max-width:900px){.kc-student-mobile-nav a{font-size:11px;gap:4px;white-space:nowrap;overflow-wrap:normal}.kc-student-mobile-nav svg{width:15px!important;height:15px!important}}

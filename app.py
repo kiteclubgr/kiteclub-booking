@@ -19,7 +19,7 @@ from legal_pages import setup_legal_pages, record_registration_legal, TERMS_VERS
 from registration_email import setup_registration_email, issue_confirmation, send_confirmation, activate_verified_registration
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "KiteClub v76.7.17.33 · Shared Logo Framing"
+APP_VERSION = "KiteClub v76.7.17.42 · Online Stripe Test"
 
 # v70: production-ready storage. Locally everything stays inside the project.
 # On Railway mount a persistent volume at /data and set DATA_DIR=/data.
@@ -47,6 +47,7 @@ if DATA_DIR_ENV:
         UPLOAD_ROOT = Path(BASE) / "static" / "uploads"
         UPLOAD_ROOT.mkdir(parents=True, exist_ok=True)
 else:
+    DATA_ROOT = Path(BASE).resolve()
     DB = os.path.join(BASE, "kiteclub.db")
     UPLOAD_ROOT = Path(BASE) / "static" / "uploads"
     UPLOAD_ROOT.mkdir(parents=True, exist_ok=True)
@@ -102,6 +103,8 @@ app.jinja_env.globals["payment_request_id"] = lambda: secrets.token_urlsafe(24)
 
 @app.before_request
 def enforce_csrf():
+    if request.endpoint == "stripe_webhook":
+        return  # Stripe signature validates the raw request body.
     if request.method in ("POST", "PUT", "PATCH", "DELETE"):
         supplied = request.form.get("_csrf_token") or request.headers.get("X-CSRF-Token", "")
         expected = session.get("_csrf_token", "")
@@ -6262,6 +6265,9 @@ setup_registration_email(app, db, login_locked, record_login_failure)
 
 from password_reset import setup_password_reset
 setup_password_reset(app, db, login_locked, record_login_failure)
+
+from stripe_payments import setup_stripe_payments
+setup_stripe_payments(app, db, current_user, _activate_student_purchase, DATA_ROOT, BASE)
 
 if __name__=="__main__":
     app.run(

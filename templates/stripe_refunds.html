@@ -1,0 +1,19 @@
+{% extends 'base.html' %}{% block content %}
+<div class="card" style="max-width:900px;margin:24px auto">
+<a href="{{url_for('admin_finance')}}">← Οικονομικά</a>
+<h1>Επιστροφές Stripe · TEST</h1>
+<p>Οι επιστροφές χρημάτων γίνονται αποκλειστικά στο Stripe. Εδώ βλέπεις τον συγχρονισμό τους.</p>
+<p>Σε μερική επιστροφή οι ώρες υπολογίζονται αναλογικά στην αρχική τιμή του πακέτου. Δεσμευμένες ή χρησιμοποιημένες ώρες χρειάζονται έλεγχο.</p>
+{% for r in refunds %}
+<section class="card" style="margin:12px 0;overflow-wrap:anywhere">
+<h2>{{r.name}} · Αγορά #{{r.purchase_id}}</h2>
+<p><strong>{{'%.2f'|format(r.cents/100)}} €</strong> · {{r.status}}<br><small>{{r.id}}</small></p>
+<p>Συνολικές ώρες που αφαιρέθηκαν για την αγορά: {{'%.4g'|format(r.revoked_hours or 0)}}h</p>
+{% if r.review %}<p role="alert" style="color:#a12c20"><strong>Απαιτείται έλεγχος:</strong> {{r.review}}</p>{% endif %}
+<form method="post" action="{{url_for('admin_sync_stripe_refund',rid=r.id)}}">
+<input type="hidden" name="_csrf_token" value="{{csrf_token()}}">
+<button class="btn alt" type="submit">Επανέλεγχος από Stripe</button>
+</form>
+</section>
+{% else %}<p>Δεν έχουν ληφθεί επιστροφές.</p>{% endfor %}
+</div>{% endblock %}
