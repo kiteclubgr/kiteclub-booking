@@ -2,8 +2,9 @@
 from flask import abort, render_template
 
 def setup_package_pages(app, db, current_user):
-    @app.get('/packages/private-8h')
-    def public_private_8h():
+    @app.get('/en/packages/private-8h', defaults={'language': 'en'})
+    @app.get('/packages/private-8h', defaults={'language': 'el'})
+    def public_private_8h(language):
         con = db()
         try:
             package = con.execute(
@@ -14,4 +15,4 @@ def setup_package_pages(app, db, current_user):
             con.close()
         if not package:
             abort(404)
-        return render_template('public_package.html', package=package, user=current_user())
+        return render_template('public_package_en.html' if language == 'en' else 'public_package.html', package=package, user=current_user())
