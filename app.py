@@ -19,7 +19,7 @@ from legal_pages import setup_legal_pages, record_registration_legal, TERMS_VERS
 from registration_email import setup_registration_email, issue_confirmation, send_confirmation, activate_verified_registration
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "KiteClub v76.7.17.44 · Finance Refund Status"
+APP_VERSION = "KiteClub v76.7.17.45 · Package Page Preview"
 
 # v70: production-ready storage. Locally everything stays inside the project.
 # On Railway mount a persistent volume at /data and set DATA_DIR=/data.
@@ -6268,6 +6268,9 @@ setup_password_reset(app, db, login_locked, record_login_failure)
 
 from stripe_payments import setup_stripe_payments
 setup_stripe_payments(app, db, current_user, _activate_student_purchase, DATA_ROOT, BASE)
+
+from package_pages import setup_package_pages
+setup_package_pages(app, db, current_user)
 
 if __name__=="__main__":
     app.run(
