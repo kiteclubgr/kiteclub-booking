@@ -1775,6 +1775,45 @@ def login():
     return render_template("login.html")
 
 
+# First-time Google signup after explicit, versioned legal acknowledgement before OAuth.
+def complete_google_registration(info, consent):
+    email = str(info['email']).strip().lower()
+    name = str(info.get('given_name') or '').strip()[:100]
+    surname = str(info.get('family_name') or '').strip()[:100]
+    if not name or not surname:
+        return None  # Fall back to normal registration when Google omits a name.
+    con = db()
+    try:
+        con.execute('BEGIN IMMEDIATE')
+        if con.execute('SELECT id FROM users WHERE lower(email)=?', (email,)).fetchone():
+            con.rollback()
+            return None
+        now = datetime.now().isoformat(timespec='seconds')
+        uid = con.execute("""INSERT INTO users(name,surname,email,phone,role,password_hash,active)
+            VALUES(?,?,?,?,?,?,0)""", (name,surname,email,None,'student',generate_password_hash(secrets.token_urlsafe(48)))).lastrowid
+        con.execute("""INSERT INTO students(user_id,credits,level,student_code,lesson_type)
+            VALUES(?,0,'Beginner',?,'private')""",(uid,_next_student_code(con)))
+        con.execute("""INSERT INTO student_registrations(
+            user_id,birth_date,guardian_name,guardian_email,guardian_phone,waiver_version,
+            waiver_accepted_at,terms_accepted_at,lesson_emails,marketing_emails,created_at)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?)""",(uid,'',None,None,None,WAIVER_VERSION,None,now,
+            int(bool(consent.get('lesson_emails'))),int(bool(consent.get('marketing_emails'))),now))
+        con.execute("INSERT INTO oauth_identities(provider,subject,user_id) VALUES('google',?,?)",
+                    (str(info['sub']),uid))
+        record_registration_legal(con,uid)
+        app.extensions['purchase_save_context'](con,uid)
+        issue_confirmation(con,uid,already_verified=True)
+        activate_verified_registration(con,uid)
+        con.commit()
+        return uid
+    except sqlite3.IntegrityError:
+        con.rollback()
+        return None
+    finally:
+        con.close()
+
+app.extensions['google_complete_registration'] = complete_google_registration
+
 # Public sign-up: inactive until email confirmation; no manual signup approval.
 def _registration_ip_key():
     return "register-ip:" + (request.remote_addr or "unknown")
