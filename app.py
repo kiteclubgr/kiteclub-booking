@@ -1790,7 +1790,7 @@ def complete_google_registration(info, consent):
             return None
         now = datetime.now().isoformat(timespec='seconds')
         uid = con.execute("""INSERT INTO users(name,surname,email,phone,role,password_hash,active)
-            VALUES(?,?,?,?,?,?,0)""", (name,surname,email,None,'student',generate_password_hash(secrets.token_urlsafe(48)))).lastrowid
+            VALUES(?,?,?,?,?,?,0)""", (name,surname,email,consent['phone'],'student',generate_password_hash(secrets.token_urlsafe(48)))).lastrowid
         con.execute("""INSERT INTO students(user_id,credits,level,student_code,lesson_type)
             VALUES(?,0,'Beginner',?,'private')""",(uid,_next_student_code(con)))
         con.execute("""INSERT INTO student_registrations(
