@@ -2,7 +2,19 @@
 
 <div class="kc-auth kc-auth-register"><section class="kc-auth-hero"><div><img src="{{url_for('static',filename='img/kiteclub-logo-transparent.png')}}" alt="KiteClub" class="kc-hero-logo"><div class="kc-auth-slogan"><em>Learn <br>with us</em><em>Ride <br>with us</em></div></div><div class="kc-auth-hero-bottom"><div>Book your lessons</div><div>Updates & news</div><div>Join our community</div></div></section><section class="kc-auth-panel"><div class="kc-auth-card">
 <nav style="text-align:right;font-size:14px;margin-bottom:8px" aria-label="Language"><a href="/register" lang="el">Ελληνικά</a> · <a href="/register?lang=en" lang="en">English</a></nav><img src="{{url_for('static',filename='img/kiteclub-logo-transparent.png')}}" alt="KiteClub logo"><h1>Join KiteClub</h1><p class="hint">Create your account for lessons and bookings.</p>
-{% if not google_pending %}{% include "_google_button.html" %}{% endif %}
+{% if not google_pending and google_enabled %}
+<form method="post" action="{{url_for('google_login')}}" class="kc-google-form">
+<input type="hidden" name="_csrf_token" value="{{csrf_token()}}"><input type="hidden" name="signup_google" value="yes">
+<input type="hidden" name="terms_version" value="{{terms_version}}"><input type="hidden" name="privacy_version" value="{{privacy_version}}"><input type="hidden" name="waiver_version" value="{{waiver_version}}">
+<p class="kc-note">For a new Google account, accept the required terms before continuing. Existing linked accounts sign in directly.</p>
+<label class="kc-check"><input type="checkbox" name="terms" value="yes" required><span>I accept the <a href="{{url_for('terms_page',version=terms_version)}}" target="_blank" rel="noopener noreferrer">Terms of Use</a>. *</span></label>
+<label class="kc-check"><input type="checkbox" name="privacy" value="yes" required><span>I have read the <a href="{{url_for('privacy_page',version=privacy_version)}}" target="_blank" rel="noopener noreferrer">Privacy Policy</a>. *</span></label>
+<label class="kc-check"><input type="checkbox" name="waiver" value="yes" required><span>I have read the <a href="{{url_for('waiver_page',version=waiver_version)}}" target="_blank" rel="noopener noreferrer">participation agreement</a>. *</span></label>
+<label class="kc-check"><input type="checkbox" name="lesson_emails" value="yes"><span>Email me about available lesson slots (optional)</span></label>
+<label class="kc-check"><input type="checkbox" name="marketing_emails" value="yes"><span>Email me news and offers (optional)</span></label>
+<button type="submit" class="kc-google-button"><span class="kc-google-mark" aria-hidden="true">G</span>Continue with Google</button>
+</form>
+{% endif %}
 <div class="kc-step">1. Your details → 2. Terms & consent → 3. Verify your email</div>
 <form method="post" action="{{url_for('register',lang='en')}}" id="register-form"><input type="hidden" name="_csrf_token" value="{{csrf_token()}}">
 <div class="kc-auth-grid"><div><label for="reg-name">First name *</label><input id="reg-name" name="name" maxlength="100" autocomplete="given-name" value="{{google_pending.name if google_pending else ''}}" required></div>
