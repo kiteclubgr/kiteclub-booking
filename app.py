@@ -1791,12 +1791,14 @@ def register():
     if identity:
         email = identity["email"]
     try:
-        phone = registration_mobile(form.get("phone_prefix"), form.get("phone"))
+        # Google supplies a verified identity, but not a phone number.
+        phone = (registration_mobile(form.get("phone_prefix"), form.get("phone"))
+                 if not identity or (form.get("phone") or "").strip() else None)
     except ValueError as error:
         flash("Enter a valid mobile number and country calling code." if app.extensions["purchase_language"]() == "en" else str(error))
         return redirect(url_for("register", lang="en") if request.args.get("lang") == "en" else url_for("register"))
     password = form.get("password") or ""
-    if not name or len(name)>100 or not surname or len(surname)>100 or not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+",email) or len(email)>254 or not 7<=len(phone)<=30:
+    if not name or len(name)>100 or not surname or len(surname)>100 or not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+",email) or len(email)>254 or (phone is not None and not 7<=len(phone)<=30):
         flash(journey_text("Συμπληρώστε σωστά όνομα, επώνυμο, email και τηλέφωνο."))
         return redirect(url_for("register", lang="en") if request.args.get("lang") == "en" else url_for("register"))
     if not identity and (not password_meets_policy(password) or password != form.get("confirm_password")):
@@ -1847,7 +1849,15 @@ def register():
         if token:
             session['registration_waiting_email'] = email
             return redirect(url_for('registration_check_email', lang='en' if request.args.get('lang') == 'en' else 'el'), code=303)
-        return render_template("register_success.html", confirmation_pending=False, mail_delivery=delivery)
+        # First-time Google signup: after explicit legal acknowledgments, sign in directly.
+        purchase_context = {k: session[k] for k in ("registration_package", "purchase_language") if k in session}
+        session.clear()
+        session.update(purchase_context)
+        session["uid"], session["role"] = uid, "student"
+        session["password_session_version"] = app.extensions["reset_session_version"](uid)
+        session.permanent = True
+        csrf_token()
+        return redirect(app.extensions["purchase_after_login"](uid), code=303)
     except sqlite3.IntegrityError:
         con.rollback()
         flash(journey_text("Δεν ήταν δυνατή η εγγραφή. Ελέγξτε τα στοιχεία."))
