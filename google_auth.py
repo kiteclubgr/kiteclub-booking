@@ -38,6 +38,21 @@ def setup_google(app, db, csrf_token):
             flash('Η σύνδεση Google δεν έχει ενεργοποιηθεί ακόμη.')
             return redirect(url_for('login',lang=session.get('purchase_language','el')))
         session.pop('google_identity', None)
+        session.pop('google_signup_legal', None)
+        if request.form.get('signup_google') == 'yes':
+            from legal_pages import TERMS_VERSION, PRIVACY_VERSION, WAIVER_VERSION
+            checks = ('terms', 'privacy', 'waiver')
+            versions = (('terms_version', TERMS_VERSION), ('privacy_version', PRIVACY_VERSION), ('waiver_version', WAIVER_VERSION))
+            if any(request.form.get(k) != 'yes' for k in checks) or any(request.form.get(k) != v for k,v in versions):
+                flash('Αποδεχτείτε πρώτα τους ισχύοντες όρους για εγγραφή μέσω Google.')
+                return redirect(url_for('register', lang=session.get('purchase_language','el')))
+            session['google_signup_legal'] = {
+                'terms_version': TERMS_VERSION, 'privacy_version': PRIVACY_VERSION,
+                'waiver_version': WAIVER_VERSION,
+                'lesson_emails': request.form.get('lesson_emails') == 'yes',
+                'marketing_emails': request.form.get('marketing_emails') == 'yes',
+                'issued_at': time.time(),
+            }
         try:
             return google.authorize_redirect(callback, prompt='select_account')
         except (OAuthError, RequestException):
@@ -82,6 +97,21 @@ def setup_google(app, db, csrf_token):
             existing = con.execute('SELECT id FROM users WHERE lower(email)=?', (email,)).fetchone()
         finally:
             con.close()
+        preconsent = session.get('google_signup_legal')
+        if not existing and isinstance(preconsent, dict) and time.time() - preconsent.get('issued_at', 0) < 900:
+            from legal_pages import TERMS_VERSION, PRIVACY_VERSION, WAIVER_VERSION
+            if all(preconsent.get(key) == value for key, value in (
+                ('terms_version', TERMS_VERSION), ('privacy_version', PRIVACY_VERSION), ('waiver_version', WAIVER_VERSION))):
+                user_id = app.extensions['google_complete_registration'](info, preconsent)
+                if user_id:
+                    purchase_context={k:session[k] for k in ('registration_package','purchase_language') if k in session}
+                    session.clear()
+                    session.update(purchase_context)
+                    session['uid'], session['role'] = user_id, 'student'
+                    session['password_session_version'] = app.extensions['reset_session_version'](user_id)
+                    session.permanent = True
+                    csrf_token()
+                    return redirect(app.extensions['purchase_after_login'](user_id))
         purchase_context={k:session[k] for k in ('registration_package','purchase_language') if k in session}
         session.clear()
         session.update(purchase_context)
