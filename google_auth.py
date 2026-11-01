@@ -46,7 +46,14 @@ def setup_google(app, db, csrf_token):
             if any(request.form.get(k) != 'yes' for k in checks) or any(request.form.get(k) != v for k,v in versions):
                 flash('Αποδεχτείτε πρώτα τους ισχύοντες όρους για εγγραφή μέσω Google.')
                 return redirect(url_for('register', lang=session.get('purchase_language','el')))
+            from registration_phone import registration_mobile
+            try:
+                phone = registration_mobile(request.form.get('phone_prefix'), request.form.get('phone'))
+            except ValueError:
+                flash('Συμπληρώστε έγκυρο κινητό πριν συνεχίσετε με Google.')
+                return redirect(url_for('register',lang=session.get('purchase_language','el')))
             session['google_signup_legal'] = {
+                'phone': phone,
                 'terms_version': TERMS_VERSION, 'privacy_version': PRIVACY_VERSION,
                 'waiver_version': WAIVER_VERSION,
                 'lesson_emails': request.form.get('lesson_emails') == 'yes',
