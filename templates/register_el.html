@@ -2,7 +2,19 @@
 
 <div class="kc-auth kc-auth-register"><section class="kc-auth-hero"><div><img src="{{url_for('static',filename='img/kiteclub-logo-transparent.png')}}" alt="KiteClub" class="kc-hero-logo"><div class="kc-auth-slogan"><em>Learn <br>with us</em><em>Ride <br>with us</em></div></div><div class="kc-auth-hero-bottom">{% include "_auth_features.html" %}</div></section><section class="kc-auth-panel"><div class="kc-auth-card">
 <nav style="text-align:right;font-size:14px;margin-bottom:8px" aria-label="Language"><a href="/register" lang="el">Ελληνικά</a> · <a href="/register?lang=en" lang="en">English</a></nav><img src="{{url_for('static',filename='img/kiteclub-logo-transparent.png')}}" alt="KiteClub logo"><h1>Εγγραφή στο KiteClub</h1><p class="hint">Δημιουργήστε τον λογαριασμό σας για μαθήματα και κρατήσεις.</p>
-{% if not google_pending %}{% include "_google_button.html" %}{% endif %}
+{% if not google_pending and google_enabled %}
+<form method="post" action="{{url_for('google_login')}}" class="kc-google-form">
+<input type="hidden" name="_csrf_token" value="{{csrf_token()}}"><input type="hidden" name="signup_google" value="yes">
+<input type="hidden" name="terms_version" value="{{terms_version}}"><input type="hidden" name="privacy_version" value="{{privacy_version}}"><input type="hidden" name="waiver_version" value="{{waiver_version}}">
+<p class="kc-note">Για νέο λογαριασμό Google, αποδέξου πρώτα τους απαραίτητους όρους. Οι ήδη συνδεδεμένοι λογαριασμοί μπαίνουν απευθείας.</p>
+<label class="kc-check"><input type="checkbox" name="terms" value="yes" required><span>Αποδέχομαι τους <a href="{{url_for('terms_page',version=terms_version)}}" target="_blank" rel="noopener noreferrer">Όρους Χρήσης</a>. *</span></label>
+<label class="kc-check"><input type="checkbox" name="privacy" value="yes" required><span>Έλαβα γνώση της <a href="{{url_for('privacy_page',version=privacy_version)}}" target="_blank" rel="noopener noreferrer">Πολιτικής Απορρήτου</a>. *</span></label>
+<label class="kc-check"><input type="checkbox" name="waiver" value="yes" required><span>Έχω διαβάσει το <a href="{{url_for('waiver_page',version=waiver_version)}}" target="_blank" rel="noopener noreferrer">συμφωνητικό συμμετοχής</a>. *</span></label>
+<label class="kc-check"><input type="checkbox" name="lesson_emails" value="yes"><span>Email για διαθέσιμα μαθήματα (προαιρετικό)</span></label>
+<label class="kc-check"><input type="checkbox" name="marketing_emails" value="yes"><span>Email για νέα και προσφορές (προαιρετικό)</span></label>
+<button type="submit" class="kc-google-button"><span class="kc-google-mark" aria-hidden="true">G</span>Συνέχεια με Google</button>
+</form>
+{% endif %}
 <div class="kc-step">1. Στοιχεία → 2. Όροι & συγκατάθεση → 3. Επιβεβαίωση email</div>
 <form method="post" action="{{url_for('register')}}" id="register-form"><input type="hidden" name="_csrf_token" value="{{csrf_token()}}">
 <div class="kc-auth-grid"><div><label for="reg-name">Όνομα *</label><input id="reg-name" name="name" maxlength="100" autocomplete="given-name" value="{{google_pending.name if google_pending else ''}}" required></div>
