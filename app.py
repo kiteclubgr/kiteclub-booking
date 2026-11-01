@@ -102,6 +102,45 @@ def csrf_token():
 app.jinja_env.globals["csrf_token"] = csrf_token
 app.jinja_env.globals["payment_request_id"] = lambda: secrets.token_urlsafe(24)
 
+# Photo-gallery URLs historically point to Flask's static endpoint. A public
+# static symlink must never bypass student ownership checks.
+@app.before_request
+def protect_student_gallery_static():
+    if request.endpoint != "static":
+        return
+    filename = (request.view_args or {}).get("filename", "")
+    if not isinstance(filename, str):
+        abort(404)
+    normalized = filename.replace("\\", "/")
+    if not normalized.startswith("uploads/student_gallery/"):
+        return
+    # Only exact DB-linked gallery assets can be viewed (no guessed filenames).
+    if request.method not in ("GET", "HEAD"):
+        abort(405)
+    u = current_user()
+    if not u or u["role"] not in ("admin", "student"):
+        abort(404)
+    con = db()
+    try:
+        photo = con.execute(
+            "SELECT student_id FROM student_photos WHERE file_path=?",
+            (normalized,),
+        ).fetchone()
+    finally:
+        con.close()
+    if not photo or (u["role"] == "student" and int(photo["student_id"]) != int(u["id"])):
+        abort(404)
+
+
+@app.after_request
+def private_gallery_cache_headers(response):
+    if request.path.startswith("/static/uploads/student_gallery/"):
+        response.headers["Cache-Control"] = "private, no-store, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
+
+
 @app.before_request
 def enforce_csrf():
     if request.endpoint == "stripe_webhook":
