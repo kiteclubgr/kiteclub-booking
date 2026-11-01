@@ -1831,8 +1831,7 @@ def register():
         email = identity["email"]
     try:
         # Google supplies a verified identity, but not a phone number.
-        phone = (registration_mobile(form.get("phone_prefix"), form.get("phone"))
-                 if not identity or (form.get("phone") or "").strip() else None)
+        phone = registration_mobile(form.get("phone_prefix"), form.get("phone"))
     except ValueError as error:
         flash("Enter a valid mobile number and country calling code." if app.extensions["purchase_language"]() == "en" else str(error))
         return redirect(url_for("register", lang="en") if request.args.get("lang") == "en" else url_for("register"))
