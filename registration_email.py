@@ -134,7 +134,6 @@ def setup_registration_email(app, db, login_locked, record_attempt):
                 con.rollback()
                 return render_template('registration_email_status.html', state='limited'), 429
             record_attempt(con, key)
-            con.execute('BEGIN IMMEDIATE')
             row = con.execute('''SELECT u.id,u.name,u.email,e.issued_at
                 FROM registration_email_confirmations e JOIN users u ON u.id=e.user_id
                 WHERE lower(u.email)=? AND e.verified_at IS NULL''', (email,)).fetchone()
