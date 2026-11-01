@@ -201,3 +201,8 @@ details{margin:24px 0;border:1px solid var(--line);border-radius:8px;padding:16p
 .kc-auth-register .kc-auth-card .kc-check{font-size:14px;line-height:1.5}
 .kc-auth-register .kc-auth-card .kc-check input{flex-shrink:0}
 }
+
+/* Registration desktop: bring the card toward the visual center of the hero. */
+@media (min-width:901px){
+  .kc-auth-register .kc-auth-card{position:relative;left:-clamp(36px,5vw,90px)}
+}
