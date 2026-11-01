@@ -204,5 +204,5 @@ details{margin:24px 0;border:1px solid var(--line);border-radius:8px;padding:16p
 
 /* Registration desktop: bring the card toward the visual center of the hero. */
 @media (min-width:901px){
-  .kc-auth-register .kc-auth-card{position:relative;left:-clamp(36px,5vw,90px)}
+  .kc-auth-register .kc-auth-card{position:relative;left:-clamp(100px,9vw,170px)}
 }
