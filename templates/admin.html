@@ -1016,6 +1016,11 @@
   if(location.hash==='#day') saved='day';
   if(!buttons.some(b=>b.dataset.tab===saved)) saved='today';
   activate(saved);
+  // Links within this dashboard change the hash without reloading the page.
+  window.addEventListener('hashchange',()=>{
+    const name=location.hash.slice(1);
+    if(buttons.some(b=>b.dataset.tab===name)) activate(name);
+  });
 
   const modal=document.getElementById('bookingModal');
 

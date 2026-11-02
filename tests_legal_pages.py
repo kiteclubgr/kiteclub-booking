@@ -11,7 +11,7 @@ from unittest.mock import patch
 source=Path(__file__).resolve().parent
 with tempfile.TemporaryDirectory() as folder:
     root=Path(folder)/'app'
-    shutil.copytree(source,root,ignore=shutil.ignore_patterns('_local_data','__pycache__','*.db','.local_secret_key','uploads','.venv'))
+    shutil.copytree(source,root,ignore=shutil.ignore_patterns('_local_data','__pycache__','*.db','.local_secret_key','uploads','.venv','.git','*.db-*'))
     sys.path.insert(0,str(root))
     spec=importlib.util.spec_from_file_location('local_launcher',root/'run_local.py')
     launcher=importlib.util.module_from_spec(spec); spec.loader.exec_module(launcher)
@@ -52,10 +52,15 @@ with tempfile.TemporaryDirectory() as folder:
         assert signup('rollback@example.test').status_code==302
     assert not con.execute("SELECT id FROM users WHERE email='rollback@example.test'").fetchone()
     assert con.execute('SELECT COUNT(*) FROM registration_legal_acceptances').fetchone()[0]==0
-    assert signup('accept@example.test').status_code==200
+    response=signup('accept@example.test')
+    assert response.status_code==303, response.status_code
+    from urllib.parse import urlsplit
+    assert urlsplit(response.location).path=='/register/check-email', response.location
+    assert client.get(response.location).status_code==200
     uid=con.execute("SELECT id FROM users WHERE email='accept@example.test'").fetchone()[0]
     evidence=con.execute('SELECT a.*,d.body_html,d.sha256 FROM registration_legal_acceptances a JOIN legal_documents d ON d.document_key=a.document_key AND d.version=a.version WHERE a.user_id=?',(uid,)).fetchall()
     assert len(evidence)==3
+    assert {r['document_key']:r['version'] for r in evidence}==dict(terms=m.TERMS_VERSION,privacy=m.PRIVACY_VERSION,waiver=m.WAIVER_VERSION)
     assert {r['event'] for r in evidence}=={'accepted','acknowledged'}
     for row in evidence:
         assert row['recorded_at'].endswith('+00:00')
@@ -64,7 +69,8 @@ with tempfile.TemporaryDirectory() as folder:
     registration=con.execute('SELECT * FROM student_registrations WHERE user_id=?',(uid,)).fetchone()
     assert registration['waiver_version']==m.WAIVER_VERSION and registration['waiver_accepted_at'] is None
     assert registration['lesson_emails']==0 and registration['marketing_emails']==0
-    assert signup('lesson-opt-in@example.test',lesson_emails='yes').status_code==200
+    response=signup('lesson-opt-in@example.test',lesson_emails='yes')
+    assert response.status_code==303 and urlsplit(response.location).path=='/register/check-email'
     prefs=con.execute("SELECT r.lesson_emails,r.marketing_emails FROM student_registrations r JOIN users u ON u.id=r.user_id WHERE u.email='lesson-opt-in@example.test'").fetchone()
     assert tuple(prefs)==(1,0)
     # Existing accounts receive neither fabricated acceptance nor activation changes.
