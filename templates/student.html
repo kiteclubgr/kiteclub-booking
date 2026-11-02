@@ -366,7 +366,7 @@
     <div class="item spread">
       <div>
         <b>{{b.lesson_date|gr_date}} · {{b.start_time|hm24}} · {{b.instructor}}{% if b.instructor_surname %} {{b.instructor_surname}}{% endif %}</b>
-        <div class="muted">{{b.spot}} · {{b.duration}} ώρες{% if b.participant_count and b.participant_count>1 %} · {{b.participant_count}}P Group{% endif %}</div>
+        <div class="muted">{{b.spot}} · {{'%g'|format(b.actual_duration if b.status=='completed' and b.actual_duration is not none else b.duration)}} ώρες{% if b.participant_count and b.participant_count>1 %} · {{b.participant_count}}P Group{% endif %}</div>
         {% if b.participant_count and b.participant_count>1 %}<div class="group-names">{{b.participant_names}}</div>{% endif %}
         {% if b.status in ['confirmed','pending_payment'] %}
           {% if b.can_cancel %}
