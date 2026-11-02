@@ -11,7 +11,7 @@ import re
 source=Path(__file__).resolve().parent
 with tempfile.TemporaryDirectory() as folder:
     root=Path(folder)/'app'
-    shutil.copytree(source,root,ignore=shutil.ignore_patterns('_local_data','__pycache__','*.db','.local_secret_key','uploads','.venv'))
+    shutil.copytree(source,root,ignore=shutil.ignore_patterns('_local_data','__pycache__','*.db','.local_secret_key','uploads','.venv','.git','*.db-*'))
     sys.path.insert(0,str(root))
     spec=importlib.util.spec_from_file_location('local_launcher',root/'run_local.py')
     launcher=importlib.util.module_from_spec(spec); spec.loader.exec_module(launcher)
@@ -27,7 +27,10 @@ with tempfile.TemporaryDirectory() as folder:
     assert 'name="phone_prefix"' in page and re.search(r'<option\b[^>]*value="\+30"[^>]*\bselected\b',page)
     assert 'name="birth_date"' not in page and 'name="guardian_name"' not in page
     response=post('/register',name='Test',surname='Student',email='qa@example.test',phone='6900000000',password='password123',confirm_password='password123',terms='yes',privacy='yes',terms_version=m.TERMS_VERSION,privacy_version=m.PRIVACY_VERSION,waiver_version=m.WAIVER_VERSION,waiver='yes')
-    assert response.status_code==200
+    assert response.status_code==303, response.status_code
+    from urllib.parse import urlsplit
+    assert urlsplit(response.location).path=='/register/check-email', response.location
+    assert c.get(response.location).status_code==200
     con=m.db(); uid=con.execute("SELECT id FROM users WHERE email='qa@example.test'").fetchone()[0]
     assert con.execute('SELECT active FROM users WHERE id=?',(uid,)).fetchone()[0]==0
     assert con.execute('SELECT phone FROM users WHERE id=?',(uid,)).fetchone()[0]=='+306900000000'
@@ -40,14 +43,23 @@ with tempfile.TemporaryDirectory() as folder:
     assert c.get(path).status_code==200
     assert not con.execute('SELECT verified_at FROM registration_email_confirmations WHERE user_id=?',(uid,)).fetchone()[0]
     assert c.post(path).status_code==400
-    with c.session_transaction() as session: session['uid']=con.execute("SELECT id FROM users WHERE role='admin'").fetchone()[0]
-    post(f'/admin/registrations/{uid}/approve',manual_review='yes')
+    # Manual review cannot bypass email verification; keep the visitor session separate.
+    admin=m.app.test_client()
+    with admin.session_transaction() as session:
+        session['uid']=con.execute("SELECT id FROM users WHERE role='admin'").fetchone()[0]
+        session['_csrf_token']='admin-token'
+    assert admin.post(f'/admin/registrations/{uid}/approve',data={'_csrf_token':'admin-token','manual_review':'yes'}).status_code==302
     assert con.execute('SELECT active FROM users WHERE id=?',(uid,)).fetchone()[0]==0
     activated_response=post(path)
-    assert activated_response.status_code==303
-    assert activated_response.headers['Location']=='/'
+    # The confirmation now intentionally renders a 200 success screen; login is explicit.
+    assert activated_response.status_code==200, activated_response.status_code
+    assert 'Ο λογαριασμός σου ενεργοποιήθηκε' in activated_response.get_data(as_text=True)
+    assert activated_response.headers['Cache-Control']=='no-store'
     with c.session_transaction() as session:
-        assert any('Ο λογαριασμός σου ενεργοποιήθηκε' in message for category,message in session.get('_flashes', []))
+        assert 'uid' not in session
+        assert 'registration_waiting_email' not in session
+    assert con.execute('SELECT verified_at FROM registration_email_confirmations WHERE user_id=?',(uid,)).fetchone()[0]
+    assert con.execute('SELECT token_hash FROM registration_email_confirmations WHERE user_id=?',(uid,)).fetchone()[0] is None
     assert c.get(path).status_code==400
     assert con.execute('SELECT active FROM users WHERE id=?',(uid,)).fetchone()[0]==1
     assert con.execute('SELECT credits FROM students WHERE user_id=?',(uid,)).fetchone()[0]==0
@@ -59,7 +71,7 @@ with tempfile.TemporaryDirectory() as folder:
     con.execute('UPDATE users SET active=0 WHERE id=?',(uid,)); con.commit()
     assert post(path).status_code==400
     assert con.execute('SELECT active FROM users WHERE id=?',(uid,)).fetchone()[0]==0
-    assert c.get('/admin/registrations').status_code==200
+    assert admin.get('/admin/registrations').status_code==200
     # A second pending account: resend rotates the token; old and expired links fail.
     post('/register',name='Test',surname='Pending',email='pending@example.test',phone_prefix='+44',phone='7700 900123',password='password123',confirm_password='password123',terms='yes',privacy='yes',terms_version=m.TERMS_VERSION,privacy_version=m.PRIVACY_VERSION,waiver_version=m.WAIVER_VERSION,waiver='yes')
     pending=con.execute("SELECT id FROM users WHERE email='pending@example.test'").fetchone()[0]
@@ -67,12 +79,17 @@ with tempfile.TemporaryDirectory() as folder:
     for prefix,number in [('+30','2100000000'),('+30','690000'),('+30','+306900000000'),('+999','6900000000'),('+30','69000000ab')]:
         assert post('/register',name='Test',surname='Invalid',email='invalid@example.test',phone_prefix=prefix,phone=number,password='password123',confirm_password='password123',terms='yes',privacy='yes',terms_version=m.TERMS_VERSION,privacy_version=m.PRIVACY_VERSION,waiver_version=m.WAIVER_VERSION,waiver='yes').status_code==302
         assert not con.execute("SELECT id FROM users WHERE email='invalid@example.test'").fetchone()
+    pending_mail=max((root/'_local_data/mail-preview').glob('*.eml'),key=lambda f:f.stat().st_mtime_ns)
+    pending_body=BytesParser(policy=policy.default).parsebytes(pending_mail.read_bytes()).get_body(preferencelist=('plain',)).get_content()
+    old_path=re.search(r'http://127.0.0.1:5000(/register/confirm-email/[\w-]+)',pending_body)[1]
     old=con.execute('SELECT token_hash FROM registration_email_confirmations WHERE user_id=?',(pending,)).fetchone()[0]
     post('/register/resend-email',email='pending@example.test')
     assert con.execute('SELECT token_hash FROM registration_email_confirmations WHERE user_id=?',(pending,)).fetchone()[0]==old
     con.execute('UPDATE registration_email_confirmations SET issued_at=0 WHERE user_id=?',(pending,)); con.commit()
     post('/register/resend-email',email='pending@example.test')
     assert con.execute('SELECT token_hash FROM registration_email_confirmations WHERE user_id=?',(pending,)).fetchone()[0]!=old
+    assert c.get(old_path).status_code==400
+    assert post(old_path).status_code==400
     newest=max((root/'_local_data/mail-preview').glob('*.eml'),key=lambda f:f.stat().st_mtime_ns)
     body=BytesParser(policy=policy.default).parsebytes(newest.read_bytes()).get_body(preferencelist=('plain',)).get_content()
     expired=re.search(r'http://127.0.0.1:5000(/register/confirm-email/[\w-]+)',body)[1]

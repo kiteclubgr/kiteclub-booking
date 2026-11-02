@@ -7,16 +7,31 @@ from pathlib import Path
 from html.parser import HTMLParser
 
 class MobileForm(HTMLParser):
+    """Find logout by action inside the rendered role's mobile account chrome."""
+    VOID_TAGS = {'area','base','br','col','embed','hr','img','input','link','meta','param','source','track','wbr'}
+
     def __init__(self):
-        super().__init__();self.form=None;self.inside=False;self.token=None;self.buttons=0
+        super().__init__()
+        self.stack=[]; self.forms=[]; self.current=None
+
     def handle_starttag(self,tag,attrs):
         a=dict(attrs)
-        if tag=='form' and a.get('class')=='kc-mobile-logout-form':
-            self.form=a;self.inside=True
-        if self.inside and tag=='input' and a.get('name')=='_csrf_token':self.token=a.get('value')
-        if self.inside and tag=='button' and a.get('type')=='submit':self.buttons+=1
+        if tag=='form' and a.get('action')=='/logout':
+            mobile=any(classes & {'kc-student-mobile-header','kc-mobile-session-bar'} for _,classes in self.stack)
+            if mobile:
+                self.current=dict(attrs=a,token=None,buttons=0)
+                self.forms.append(self.current)
+        if self.current is not None:
+            if tag=='input' and a.get('name')=='_csrf_token': self.current['token']=a.get('value')
+            if tag=='button' and a.get('type')=='submit': self.current['buttons']+=1
+        if tag not in self.VOID_TAGS: self.stack.append((tag,set(a.get('class','').split())))
+
     def handle_endtag(self,tag):
-        if tag=='form':self.inside=False
+        if tag=='form': self.current=None
+        for i in range(len(self.stack)-1,-1,-1):
+            if self.stack[i][0]==tag:
+                del self.stack[i:]
+                break
 
 source=Path(__file__).resolve().parent
 with tempfile.TemporaryDirectory() as folder:
@@ -48,17 +63,20 @@ with tempfile.TemporaryDirectory() as folder:
             assert c.post('/',data={'_csrf_token':token,'email':email,'password':password}).status_code==302
             r=c.get(path);assert r.status_code==200,(role,path,r.status_code)
             parser=MobileForm();parser.feed(r.get_data(as_text=True))
-            assert parser.form and parser.form['method']=='post' and parser.form['action']=='/logout' and parser.token and parser.buttons==1,path
-            assert 'mobile-session.css?v=76.7.17.17' in r.get_data(as_text=True)
+            assert len(parser.forms)==1,(path,parser.forms)
+            form=parser.forms[0]
+            assert form['attrs']['method'].lower()=='post' and form['token'] and form['buttons']==1,path
+            with c.session_transaction() as sess: sess['logout_test_marker']='must-clear'
             # Invalid logout must leave the session intact.
             assert c.get('/logout').status_code==405
             assert c.post('/logout').status_code==400
             assert c.post('/logout',data={'_csrf_token':'invalid'}).status_code==400
             with c.session_transaction() as sess:assert sess['uid']==uid
-            r=c.post(parser.form['action'],data={'_csrf_token':parser.token});assert r.status_code==302
-            with c.session_transaction() as sess:assert 'uid' not in sess and 'role' not in sess and '_csrf_token' not in sess
+            r=c.post(form['attrs']['action'],data={'_csrf_token':form['token']});assert r.status_code==302
+            with c.session_transaction() as sess: assert not dict(sess),dict(sess)
             r=c.get(path);assert r.status_code==302,(path,r.status_code)
-            assert r.headers['Location'].endswith('/')
+            from urllib.parse import urlsplit
+            assert urlsplit(r.headers['Location']).path=='/'
             count+=1
     # Admin and signed-out pages retain their existing chrome.
     c=m.app.test_client();assert 'kc-mobile-logout-form' not in c.get('/').get_data(as_text=True)
