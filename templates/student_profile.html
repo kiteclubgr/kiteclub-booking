@@ -76,8 +76,8 @@
 
   {% endif %}
   {% if profile_view != 'photos' %}
-  <div id="history" class="card"><h2>Ιστορικό completed</h2>{% if completed %}<div style="overflow:auto"><table class="tbl"><tr><th>Ημερομηνία</th><th>Ώρα</th><th>Instructor</th><th>Spot</th><th>Διάρκεια</th><th>Επόμενη τεχνική</th></tr>{% for b in completed %}<tr><td>{{b.lesson_date|gr_date}}</td><td>{{b.start_time|hm24}}</td><td>{{b.instructor}}{% if b.instructor_surname %} {{b.instructor_surname}}{% endif %}</td><td>{{b.spot}}</td><td>{{b.duration}}h</td><td>{{b.next_skill or '—'}}</td></tr>{% endfor %}</table></div>{% else %}<p class="muted">Δεν υπάρχουν completed μαθήματα ακόμη.</p>{% endif %}</div>
-  <div class="card"><h2>Make-up / No-show / Ακυρωμένα</h2><div class="cards"><div class="metric"><span>Make-up</span><b>{{makeups|length}}</b></div><div class="metric"><span>No-show</span><b>{{no_shows|length}}</b></div><div class="metric"><span>Ακυρωμένα</span><b>{{cancelled|length}}</b></div></div></div>
+  <div id="history" class="card"><h2>Ιστορικό ολοκληρωμένων μαθημάτων</h2>{% if completed %}<div style="overflow:auto"><table class="tbl"><tr><th>Ημερομηνία</th><th>Ώρα</th><th>Εκπαιδευτής</th><th>Τοποθεσία</th><th>Διάρκεια</th><th>Επόμενη τεχνική</th></tr>{% for b in completed %}<tr><td>{{b.lesson_date|gr_date}}</td><td>{{b.start_time|hm24}}</td><td>{{b.instructor}}{% if b.instructor_surname %} {{b.instructor_surname}}{% endif %}</td><td>{{b.spot}}</td><td>{{b.duration}}h</td><td>{{b.next_skill or '—'}}</td></tr>{% endfor %}</table></div>{% else %}<p class="muted">Δεν υπάρχουν ολοκληρωμένα μαθήματα ακόμη.</p>{% endif %}</div>
+  <div class="card"><h2>Αναπληρώσεις / Απουσίες / Ακυρωμένα</h2><div class="cards"><div class="metric"><span>Αναπληρώσεις</span><b>{{makeups|length}}</b></div><div class="metric"><span>Απουσίες</span><b>{{no_shows|length}}</b></div><div class="metric"><span>Ακυρωμένα</span><b>{{cancelled|length}}</b></div></div></div>
 {% endif %}
 </div>
     </div>

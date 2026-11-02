@@ -6,3 +6,6 @@
 @media(max-width:520px){.sh-metric{align-items:flex-start;flex-direction:column;gap:8px}.sh-metric strong{font-size:23px;overflow-wrap:normal}.sh-metric h2{min-height:30px;margin-bottom:4px}.sh-metric .sh-date{font-size:16px}.sh-user>a{max-width:170px}.sh-user .btn{min-height:38px}}
 
 .sh-mobile-nav{display:none}@media(max-width:900px){.sh-mobile-nav{display:flex;gap:8px;overflow-x:auto;white-space:nowrap;margin:0 0 18px;padding:2px 0 9px}.sh-mobile-nav a{display:block;padding:10px 12px;min-height:40px;border:1px solid #dfe9f0;border-radius:10px;background:#fff;color:#173955;text-decoration:none;font-size:13px;font-weight:700}.sh-mobile-nav a[aria-current]{background:#ff6036;color:#fff;border-color:#ff6036}}
+
+/* Keep the purchase action separate from the credit balance. */
+.sh-metric>div{min-width:0}.sh-metric .sh-buy-hours{display:block;width:fit-content;max-width:100%;margin:0 0 8px;font-size:12px;line-height:1.5;overflow-wrap:normal}.sh-metric .sh-buy-hours span{white-space:nowrap}.sh-metric strong{display:block}
