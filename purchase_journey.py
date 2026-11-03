@@ -38,7 +38,7 @@ def setup_purchase_journey(app, db):
     app.extensions['purchase_language'] = language
 
     def after_login(user_id):
-        if session.get('registration_package') == 'private-8h':
+        if session.pop('registration_package', None) == 'private-8h':
             return url_for('student_package_review', lang=language())
         return url_for('home')
     app.extensions['purchase_after_login'] = after_login

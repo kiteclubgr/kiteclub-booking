@@ -1772,7 +1772,11 @@ def login():
     if request.method=="GET":
         existing=current_user()
         if existing:
-            return redirect(app.extensions["purchase_after_login"](existing["id"]) if existing["role"] == "student" else url_for("home"))
+            # Only an explicit package link resumes shopping for an existing session.
+            # Visiting the application root must always offer a way back to the portal.
+            if existing["role"] == "student" and request.args.get("package") == "private-8h":
+                return redirect(app.extensions["purchase_after_login"](existing["id"]))
+            return redirect(url_for("home"))
     if request.method=="POST":
         email = request.form.get("email", "").strip().lower()
         client_ip = request.remote_addr or 'unknown'
