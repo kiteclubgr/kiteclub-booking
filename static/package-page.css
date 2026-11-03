@@ -8,4 +8,5 @@ body::before{content:"";position:absolute;z-index:-1;pointer-events:none;inset:0
 .purchase{background:#fff}
 @media(max-width:800px){body::before{background-size:100% 55%}}
 
-.package-options{display:flex;flex-wrap:wrap;gap:10px;margin:20px 0}.package-options .button{width:auto;margin:0;min-width:80px}.package-options [aria-current=page]{border-color:#ff6036;background:#fff0e9}
+.package-select-label{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+.package-select{display:block;width:100%;max-width:100%;min-width:0;min-height:52px;margin:12px 0 6px;padding:8px 32px 8px 10px;border:1px solid #b7cad9;border-radius:10px;background:#fff;color:#112746;font:700 28px/1.25 Arial,sans-serif;cursor:pointer}.package-select:focus-visible{outline:3px solid #009aaa;outline-offset:3px}@media(max-width:450px){.package-select{font-size:22px}}

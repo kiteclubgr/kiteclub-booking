@@ -27,9 +27,12 @@ with tempfile.TemporaryDirectory() as tmp:
     anonymous=m.app.test_client();r=anonymous.get(prefix+'/packages/'+slug)
     assert r.status_code==200,(h,language,r.status_code)
     assert f'{package["price"]:g}€' in r.text
-    assert ('1 ώρα kitesurf' if language=='el' else '1 hour of kitesurfing') in r.text if h==1 else True
+    assert ('1 ώρα kitesurf' if language=='el' else '1 hour kitesurf') in r.text
+    assert 'class="package-options"' not in r.text
+    assert 'id="package-select"' in r.text
+    assert re.search(r'<option value="'+prefix+'/packages/'+slug+r'" selected>',r.text)
     assert 'package='+slug in r.text
-    assert f'href="{prefix}/packages/private-1h"' in r.text and f'href="{prefix}/packages/private-2h"' in r.text
+    assert f'value="{prefix}/packages/private-1h"' in r.text and f'value="{prefix}/packages/private-2h"' in r.text
    # Session persistence across registration/email verification context.
    c=m.app.test_client();c.get('/?package='+slug+'&lang=en')
    with c.session_transaction() as s:token=s['_csrf_token']
