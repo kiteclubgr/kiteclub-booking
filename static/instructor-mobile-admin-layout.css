@@ -72,3 +72,24 @@
   body.instructor-portal-body .ip-header .ip-profile-chip {display:none!important}
   body.instructor-portal-body .ip-stat b {font-size:18px!important}
 }
+
+/* Instructor uses the same compact account row and horizontal tabs as Student. */
+.kc-instructor-mobile-header{display:none}
+@media(max-width:900px){
+ body.instructor-portal-body .kc-instructor-mobile-header{display:block;position:static;top:auto;z-index:auto;height:auto;min-width:0;max-width:100%;padding:8px 12px 12px;background:#fff;border-bottom:1px solid #d9e6ee;box-shadow:0 5px 20px #0b234008}
+ .kc-instructor-account{display:flex;align-items:center;gap:10px;min-height:64px;margin-bottom:10px}
+ .kc-instructor-brand{flex:none;display:block;width:64px;height:64px}
+ .kc-instructor-brand img{display:block;width:100%;height:100%;object-fit:contain}
+ .kc-instructor-name{flex:1;min-width:0;overflow-wrap:anywhere;text-decoration:none;font-weight:800;font-size:14px}
+ .kc-instructor-account form{margin:0;flex:none}
+ .kc-instructor-account button{min-height:44px;padding:10px;border:1px solid #d9e6ee;border-radius:11px;background:#fff;color:#18344e;font:inherit;font-size:13px;font-weight:800;cursor:pointer}
+ body.instructor-portal-body .kc-instructor-mobile-nav{display:flex;position:static;height:auto;flex-direction:row;flex-wrap:nowrap;justify-content:flex-start;align-items:center;gap:6px;width:100%;min-width:0;max-width:100%;overflow-x:auto;overflow-y:hidden;white-space:nowrap;overscroll-behavior-x:contain;scrollbar-width:none;padding:2px 0 5px;border:0;background:transparent;box-shadow:none}
+ .kc-instructor-mobile-nav::-webkit-scrollbar{display:none}
+ .kc-instructor-mobile-nav a{display:flex;gap:4px;align-items:center;justify-content:center;flex:0 0 auto;min-height:42px;padding:10px 12px;border:0;border-radius:10px;background:#f4f8fb;color:#193450;font-size:12px;font-weight:750;line-height:1.2;white-space:nowrap;text-decoration:none}
+ .kc-instructor-mobile-nav a[aria-current=page]{color:#fff;background:linear-gradient(108deg,#ff673e,#fa4927);box-shadow:0 6px 13px #f6542a26}
+ .kc-instructor-mobile-header :is(a,button):focus-visible{outline:3px solid #0788c8;outline-offset:2px}
+ body.instructor-portal-body .im-bottom-nav{display:none!important}
+ body.instructor-portal-body .instructor-main{padding-bottom:24px!important}
+}
+
+@media(max-width:900px){.kc-instructor-mobile-nav svg{width:15px;height:15px;flex:none}}
