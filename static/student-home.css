@@ -7,7 +7,7 @@
 
 .sh-mobile-nav{display:none}@media(max-width:900px){.sh-mobile-nav{display:flex;gap:8px;overflow-x:auto;white-space:nowrap;margin:0 0 18px;padding:2px 0 9px}.sh-mobile-nav a{display:block;padding:10px 12px;min-height:40px;border:1px solid #dfe9f0;border-radius:10px;background:#fff;color:#173955;text-decoration:none;font-size:13px;font-weight:700}.sh-mobile-nav a[aria-current]{background:#ff6036;color:#fff;border-color:#ff6036}}
 
-/* Keep the purchase action separate from the credit balance. */
-.sh-metric>div{min-width:0}.sh-metric .sh-buy-hours{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;width:fit-content;max-width:100%;margin:10px 0 0;padding:8px 11px;border:1px solid #bce7ee;border-radius:9px;background:#eaf9fc;color:#07677b;font-size:12px;font-weight:700;line-height:1.4;text-decoration:none;text-align:center;white-space:normal;overflow-wrap:normal}.sh-metric .sh-buy-hours span{white-space:nowrap}.sh-metric strong{display:block}
-
-.sh-metric .sh-buy-hours:hover{background:#d7f2f7;border-color:#70c7d5;text-decoration:none}.sh-metric .sh-buy-hours:focus-visible{outline:3px solid #009aaa;outline-offset:3px}.sh-metric .sh-buy-hours span{flex:none}
+/* Keep credit cards focused on balances; purchases sit beside booking. */
+.sh-metric>div{min-width:0}.sh-metric strong{display:block}
+.sh-actions{display:flex;align-items:center;gap:12px;flex-shrink:0}.sh-actions .btn{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:12px 16px;box-sizing:border-box;text-decoration:none}
+@media(max-width:900px){.sh-actions{display:flex;flex-direction:column;align-items:stretch;width:100%}.sh-actions .btn{width:100%}}
