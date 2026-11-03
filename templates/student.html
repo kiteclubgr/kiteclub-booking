@@ -192,6 +192,35 @@
   .student-portal-main .student-wrap{max-width:1260px;margin:0 auto}
   .student-portal-main .mobile-topbar{display:none}
 }
+
+/* v0.9.7: compact mobile timetable modeled after the Admin day grid.
+   Only layout changes: existing selectable data and confirmation JS stay intact. */
+@media (max-width:900px) {
+  .student-portal-main .booking-card { width:100%; max-width:100%; overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; }
+  .student-portal-main .booking-table {
+    width:100%;
+    table-layout:fixed;
+    min-width:max(100%, calc(44px + var(--instructor-count, 1) * 88px));
+  }
+  .student-portal-main .booking-table th,
+  .student-portal-main .booking-table td {
+    min-width:0; padding:3px; overflow-wrap:anywhere; vertical-align:middle;
+  }
+  .student-portal-main .booking-table th:first-child,
+  .student-portal-main .booking-table td:first-child {
+    width:44px; min-width:44px; max-width:44px; font-size:10px; padding:3px 2px;
+  }
+  .student-portal-main .booking-table thead th { padding:7px 3px; }
+  .student-portal-main .inst-head { min-width:0; max-width:100%; }
+  .student-portal-main .inst-avatar { width:35px; height:35px; margin:0 auto 3px; }
+  .student-portal-main .inst-name { font-size:10px; line-height:1.2; overflow-wrap:anywhere; }
+  .student-portal-main .inst-sub { font-size:8px; }
+  .student-portal-main .slotbtn {
+    width:100%; min-width:0; min-height:54px; padding:6px 2px;
+    font-size:10px; line-height:1.25; white-space:normal; overflow-wrap:anywhere;
+  }
+  .student-portal-main .slot-icon { margin-right:1px; }
+}
 </style>
 
 <div class="student-portal-shell">
@@ -240,24 +269,7 @@
       <div class="spot-info muted-info">🌊 Συνθήκες: —</div>
     </div>
 
-    <a class="student-summary" href="{{url_for('student_profile')}}">
-      <div class="student-person">
-        <div class="student-avatar">
-          {% if student.profile_photo %}
-            <img src="{{url_for('static',filename=student.profile_photo)}}" alt="{{student.name}}">
-          {% else %}
-            {{student.name[:1] if student.name else 'Μ'}}
-          {% endif %}
-        </div>
-        <div>
-          <b>{{student.name}}{% if student.surname %} {{student.surname}}{% endif %}</b>
-          <div class="creditline">{{student.student_code}} · Υπόλοιπο πακέτου: <strong>{{student.credits}} ώρες</strong></div>
-          <div class="group-line">{{'Private' if student.lesson_type=='private' else ('2P Group' if student.lesson_type=='2p' else '3P Group')}}</div>
-          {% if group_members|length > 1 %}<div class="group-names">{% for m in group_members %}{{m.name}}{% if m.surname %} {{m.surname}}{% endif %}{% if not loop.last %} · {% endif %}{% endfor %}</div>{% endif %}
-        </div>
-      </div>
-      <div style="font-size:26px;color:#56768d">›</div>
-    </a>
+
   </div>
 
   <div class="card">
@@ -274,7 +286,7 @@
 
     {% if selected_spot and hours and day_columns %}
     <div class="booking-card">
-      <table class="booking-table" id="bookingTable">
+      <table class="booking-table" id="bookingTable" style="--instructor-count:{{day_columns|length}}">
         <thead>
           <tr>
             <th>Ώρα</th>
