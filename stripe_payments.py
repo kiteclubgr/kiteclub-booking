@@ -110,10 +110,13 @@ def setup_stripe_payments(app, db, current_user, activate, data_root, base):
         return render_template('stripe_buy.html',packages=packages,nonce=nonce,order=None,payment_available=payment_available)
     @app.get('/student/package-review')
     def student_package_review():
+        slug=request.args.get('package', 'private-8h')
+        if slug not in ('private-1h', 'private-2h', 'private-8h'): abort(404)
+        hours=int(slug.split('-')[1][:-1])
         language='en' if request.args.get('lang',session.get('purchase_language'))=='en' else 'el'
         user=current_user()
         if not user:
-            return redirect(url_for('login',package='private-8h',lang=language))
+            return redirect(url_for('login',package=slug,lang=language))
         if user['role']!='student':
             flash('Sign in with a student account to review this package.' if language=='en' else 'Συνδέσου με λογαριασμό μαθητή για να δεις το πακέτο.')
             return redirect(url_for('home'))
@@ -122,7 +125,7 @@ def setup_stripe_payments(app, db, current_user, activate, data_root, base):
             if eligible(c,uid) != 'lesson':
                 flash('This package is for individual lessons. Contact the school about your group package.' if language=='en' else 'Το πακέτο αφορά ατομικά μαθήματα. Επικοινώνησε με τη σχολή για το ομαδικό πακέτο σου.')
                 return redirect(url_for('student_home'))
-            package=c.execute("SELECT * FROM packages WHERE active=1 AND package_type='lesson' AND hours=8 AND price>0 ORDER BY id LIMIT 1").fetchone()
+            package=c.execute("SELECT * FROM packages WHERE active=1 AND package_type='lesson' AND hours=? AND price>0 ORDER BY id LIMIT 1",(hours,)).fetchone()
             payment_available=configured() and allowed(c,uid)
         if not package: abort(404)
         # Viewing a public package must not require permission to create TEST payments.
@@ -132,7 +135,7 @@ def setup_stripe_payments(app, db, current_user, activate, data_root, base):
             session['purchase_reviews']={**session.get('purchase_reviews',{}),nonce:{'package_id':package['id'],'price':str(package['price'])}}
             session['purchase_reviews']={k:v for k,v in session['purchase_reviews'].items() if k in session['stripe_nonces']}
         session['purchase_language']=language
-        response=app.make_response(render_template('package_review.html',package=package,nonce=nonce,language=language,preview=False,payment_available=payment_available))
+        response=app.make_response(render_template('package_review.html',package=package,nonce=nonce,language=language,preview=False,payment_available=payment_available,package_slug=slug))
         response.headers['Cache-Control']='no-store'
         return response
 
@@ -141,7 +144,7 @@ def setup_stripe_payments(app, db, current_user, activate, data_root, base):
         with connection() as c:
             package=c.execute("SELECT * FROM packages WHERE active=1 AND package_type='lesson' AND hours=8 AND price>0 ORDER BY id LIMIT 1").fetchone()
         if not package: abort(404)
-        return render_template('package_review.html',package=package,nonce='',language='en' if request.args.get('lang')=='en' else 'el',preview=True)
+        return render_template('package_review.html',package=package,nonce='',language='en' if request.args.get('lang')=='en' else 'el',preview=True,package_slug='private-8h')
 
     @app.post('/student/buy-hours')
     def student_create_checkout():

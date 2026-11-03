@@ -14,8 +14,8 @@ def setup_purchase_journey(app, db):
     @app.before_request
     def remember_choice():
         if request.endpoint in ('register', 'login', 'resend_registration_email'):
-            if request.args.get('package') == 'private-8h':
-                session['registration_package'] = 'private-8h'
+            if request.args.get('package') in ('private-1h', 'private-2h', 'private-8h'):
+                session['registration_package'] = request.args['package']
             if request.args.get('lang') in ('el', 'en'):
                 session['purchase_language'] = request.args['lang']
 
@@ -24,13 +24,13 @@ def setup_purchase_journey(app, db):
         con.execute('''INSERT INTO registration_purchase_context VALUES(?,?,?)
             ON CONFLICT(user_id) DO UPDATE SET package_slug=excluded.package_slug,
             language=excluded.language''',
-            (user_id, slug if slug == 'private-8h' else '', language()))
+            (user_id, slug if slug in ('private-1h', 'private-2h', 'private-8h') else '', language()))
 
     def restore_context(con, user_id):
         row = con.execute('SELECT * FROM registration_purchase_context WHERE user_id=?', (user_id,)).fetchone()
         if row:
             session['purchase_language'] = row['language'] if row['language'] in ('el', 'en') else 'el'
-            if row['package_slug'] == 'private-8h':
+            if row['package_slug'] in ('private-1h', 'private-2h', 'private-8h'):
                 session['registration_package'] = row['package_slug']
 
     app.extensions['purchase_save_context'] = save_context
@@ -38,7 +38,8 @@ def setup_purchase_journey(app, db):
     app.extensions['purchase_language'] = language
 
     def after_login(user_id):
-        if session.pop('registration_package', None) == 'private-8h':
-            return url_for('student_package_review', lang=language())
+        slug = session.pop('registration_package', None)
+        if slug in ('private-1h', 'private-2h', 'private-8h'):
+            return url_for('student_package_review', lang=language(), **({'package': slug} if slug != 'private-8h' else {}))
         return url_for('home')
     app.extensions['purchase_after_login'] = after_login

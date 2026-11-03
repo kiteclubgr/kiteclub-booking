@@ -20,7 +20,7 @@ from legal_pages import setup_legal_pages, record_registration_legal, TERMS_VERS
 from registration_email import setup_registration_email, issue_confirmation, send_confirmation, activate_verified_registration
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "KiteClub v0.9.0 · Student Packages"
+APP_VERSION = "KiteClub v0.9.1 · Private Packages"
 
 # v70: production-ready storage. Locally everything stays inside the project.
 # On Railway mount a persistent volume at /data and set DATA_DIR=/data.
@@ -1774,7 +1774,7 @@ def login():
         if existing:
             # Only an explicit package link resumes shopping for an existing session.
             # Visiting the application root must always offer a way back to the portal.
-            if existing["role"] == "student" and request.args.get("package") == "private-8h":
+            if existing["role"] == "student" and request.args.get("package") in ("private-1h", "private-2h", "private-8h"):
                 return redirect(app.extensions["purchase_after_login"](existing["id"]))
             return redirect(url_for("home"))
     if request.method=="POST":

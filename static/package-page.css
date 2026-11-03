@@ -7,3 +7,5 @@ body{min-height:100vh;position:relative;isolation:isolate;background:#fff}
 body::before{content:"";position:absolute;z-index:-1;pointer-events:none;inset:0;background-image:url("package-waves.svg");background-position:center bottom;background-repeat:no-repeat;background-size:100% 68%;}
 .purchase{background:#fff}
 @media(max-width:800px){body::before{background-size:100% 55%}}
+
+.package-options{display:flex;flex-wrap:wrap;gap:10px;margin:20px 0}.package-options .button{width:auto;margin:0;min-width:80px}.package-options [aria-current=page]{border-color:#ff6036;background:#fff0e9}
