@@ -26,3 +26,39 @@ body.kc-student-layout .sh-user{border:1px solid #d9e6ee;border-radius:13px;box-
  body.kc-student-layout .sh-symbol{width:37px;height:37px;font-size:23px}
 }
 @media(max-width:900px){.kc-student-mobile-nav a{font-size:11px;gap:4px;white-space:nowrap;overflow-wrap:normal}.kc-student-mobile-nav svg{width:15px!important;height:15px!important}}
+
+/* Student mobile navigation: match Admin's one-line horizontally scrollable tabs.
+   Keep the existing Student links, active state, account header and logout. */
+@media (max-width:900px) {
+  body.kc-student-layout .kc-student-mobile-header { min-width:0; max-width:100%; }
+  body.kc-student-layout .kc-student-mobile-nav {
+    display:flex!important;
+    flex-direction:row;
+    flex-wrap:nowrap;
+    justify-content:flex-start;
+    align-items:center;
+    gap:6px;
+    width:100%;
+    min-width:0;
+    max-width:100%;
+    overflow-x:auto;
+    overflow-y:hidden;
+    white-space:nowrap;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior-x:contain;
+    scrollbar-width:none;
+    padding:2px 0 5px;
+  }
+  body.kc-student-layout .kc-student-mobile-nav::-webkit-scrollbar { display:none; }
+  body.kc-student-layout .kc-student-mobile-nav a {
+    flex:0 0 auto;
+    width:auto;
+    white-space:nowrap;
+    min-height:42px;
+    padding:10px 12px;
+    font-size:12px;
+    line-height:1.2;
+    overflow-wrap:normal;
+    border-radius:10px;
+  }
+}
