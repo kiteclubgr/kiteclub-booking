@@ -94,6 +94,15 @@ def setup_stripe_payments(app, db, current_user, activate, data_root, base):
     app.extensions['stripe_test_gateway']={'create':create_checkout,'retrieve':retrieve_checkout,
         'refund':lambda rid:client().v1.refunds.retrieve(rid).to_dict(),
         'intent':lambda pid:client().v1.payment_intents.retrieve(pid).to_dict()}
+    def student_packages_url():
+        user=current_user()
+        if user and user['role']=='student':
+            with connection() as c:
+                if eligible(c,user['id'])=='lesson':
+                    return url_for('public_private_8h',language='el',hours=8)
+        return url_for('student_buy_hours')
+    app.jinja_env.globals['student_packages_url']=student_packages_url
+
     @app.get('/student/buy-hours')
     def student_buy_hours():
         user=current_user()

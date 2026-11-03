@@ -13,8 +13,8 @@ with tempfile.TemporaryDirectory() as tmp:
  c=m.app.test_client()
  with c.session_transaction() as s:s['uid']=sid;s['_csrf_token']='packages-qa'
  with patch('socket.socket.connect',side_effect=AssertionError('No network')):
-  h=c.get('/student/home');assert h.status_code==200 and h.text.count('href="/student/buy-hours"')>=3
-  assert 'KiteClub v0.9.3' in h.text
+  h=c.get('/student/home');assert h.status_code==200 and h.text.count('href="/packages/private-8h"')>=3
+  assert 'KiteClub v0.9.4' in h.text
   page=c.get('/student/buy-hours');assert page.status_code==200 and 'disabled' in page.text
   assert 'Οι πληρωμές TEST δεν είναι διαθέσιμες' in page.text
   with c.session_transaction() as s:assert not s.get('stripe_nonces')
@@ -28,6 +28,9 @@ with tempfile.TemporaryDirectory() as tmp:
     group=con.execute("INSERT INTO student_groups(group_size,created_at) VALUES(?,'2026-11-03')",(size,)).lastrowid
    for member in members[:size]:con.execute('UPDATE students SET lesson_type=?,group_id=? WHERE user_id=?',(kind,group,member))
    con.commit()
+   home=c.get('/student/home');assert home.status_code==200
+   target='/packages/private-8h' if size==1 else '/student/buy-hours'
+   assert home.text.count('href="'+target+'"')>=3
    page=c.get('/student/buy-hours');assert page.status_code==200
    assert 'name="package_id"' in page.text and not re.search(r'<button[^>]*disabled',page.text)
   # A private package can enter TEST checkout for a student with no allowlisted email.
@@ -41,4 +44,4 @@ with tempfile.TemporaryDirectory() as tmp:
   assert c.post('/student/buy-hours',data={'_csrf_token':'packages-qa','nonce':nonce,'package_id':pid}).status_code==503
   assert len(calls)==1
  con.close()
-print('PASS: permanent desktop/mobile/home links with disabled TEST feature; zero credits; v0.9.3; private/2P/3P catalog; any active Student TEST checkout; no early credits/payment; LIVE key rejected; no network')
+print('PASS: permanent desktop/mobile/home links with disabled TEST feature; zero credits; v0.9.4; private/2P/3P catalog; any active Student TEST checkout; no early credits/payment; LIVE key rejected; no network')
