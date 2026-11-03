@@ -1,7 +1,7 @@
 {% extends "base.html" %}{% block content %}
 <link rel="stylesheet" href="{{url_for('static',filename='student-portal.css')}}">
 <link rel="stylesheet" href="{{url_for('static',filename='role-sidebar-v3.css')}}?v=33">
-<link rel="stylesheet" href="{{url_for('static',filename='student-home.css',v='audit-20261102')}}">
+<link rel="stylesheet" href="{{url_for('static',filename='student-home.css',v='095')}}">
 <script>document.body.classList.add('student-portal-body','student-home-body')</script>
 <div class="student-portal-shell">
 {% set student_nav='home' %}{% include '_student_portal_sidebar.html' %}
@@ -10,7 +10,7 @@
 <nav class="sh-mobile-nav" aria-label="Πλοήγηση μαθητή"><a href="{{url_for('student_home')}}" aria-current="page">Αρχική</a><a href="{{url_for('student')}}">Κρατήσεις</a><a href="{{url_for('student_profile',view='lessons')}}">Μαθήματα</a><a href="{{url_for('student_profile')}}">Προφίλ</a><a href="{{url_for('student_messages')}}">Μηνύματα</a></nav><div class="student-portal-content sh-content">
 <div class="sh-heading"><div><h1>Καλώς ήρθες, {{student.name}}!</h1><p>Η εικόνα των μαθημάτων σου, με μια ματιά.</p></div><a class="btn sh-book" href="{{url_for('student')}}">+ Νέα κράτηση</a></div>
 <section class="sh-metrics" aria-label="Σύνοψη μαθημάτων">
-<article class="sh-metric cyan"><span class="sh-symbol" aria-hidden="true">◷</span><div><h2>Διαθέσιμες ώρες</h2><a class="sh-buy-hours" href="{{student_packages_url()}}">Πακέτα / Αγορά ωρών <span aria-hidden="true">→</span></a><strong>{{'%g'|format(student.credits)}} <small>ώρες</small></strong></div></article>
+<article class="sh-metric cyan"><span class="sh-symbol" aria-hidden="true">◷</span><div><h2>Διαθέσιμες ώρες</h2><strong>{{'%g'|format(student.credits)}} <small>ώρες</small></strong><a class="sh-buy-hours" href="{{student_packages_url()}}">Πακέτα / Αγορά ωρών <span aria-hidden="true">→</span></a></div></article>
 <article class="sh-metric peach"><span class="sh-symbol" aria-hidden="true">▦</span><div><h2>Επόμενο μάθημα</h2><strong class="sh-date">{% if upcoming %}{{upcoming[0].lesson_date|gr_date}}{% else %}Δεν έχει οριστεί{% endif %}</strong></div></article>
 <article class="sh-metric yellow"><span class="sh-symbol" aria-hidden="true">◇</span><div><h2>Το επίπεδό μου</h2><strong>{{progress.current_level}}</strong></div></article>
 <article class="sh-metric mint"><span class="sh-symbol" aria-hidden="true">✓</span><div><h2>Ολοκληρωμένα μαθήματα</h2><strong>{{completed|length}}</strong></div></article>
