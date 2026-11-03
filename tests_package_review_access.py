@@ -17,7 +17,7 @@ with tempfile.TemporaryDirectory() as tmp:
     spec=importlib.util.spec_from_file_location('review_launcher',root/'run_local.py')
     launcher=importlib.util.module_from_spec(spec);spec.loader.exec_module(launcher)
     m=launcher.load_local_app();m.app.config.update(TESTING=True,IS_KITECLUB_PRODUCTION=True)
-    os.environ.update(STRIPE_ONLINE_TEST='1',STRIPE_TEST_ENABLED='1',PUBLIC_BASE_URL='https://booking.kiteclub.gr',STRIPE_SECRET_KEY='sk_test_fixture',STRIPE_WEBHOOK_SECRET='whsec_fixture',STRIPE_TEST_STUDENT_EMAILS='allowed@example.test')
+    os.environ.update(STRIPE_ONLINE_TEST='1',STRIPE_TEST_ENABLED='0',PUBLIC_BASE_URL='https://booking.kiteclub.gr',STRIPE_SECRET_KEY='sk_test_fixture',STRIPE_WEBHOOK_SECRET='whsec_fixture',STRIPE_TEST_STUDENT_EMAILS='allowed@example.test')
     con=m.db();sid=con.execute('SELECT user_id FROM students ORDER BY user_id LIMIT 1').fetchone()[0]
     con.execute("UPDATE users SET email='new-student@example.test' WHERE id=?",(sid,))
     con.execute("UPDATE students SET lesson_type='private',group_id=NULL WHERE user_id=?",(sid,));con.commit()
@@ -33,20 +33,21 @@ with tempfile.TemporaryDirectory() as tmp:
         assert r.status_code==302 and urlsplit(r.location).path=='/student/package-review'
         before=list(con.iterdump())
         r=c.get(r.location);assert r.status_code==200 and r.headers['Cache-Control']=='no-store'
-        assert b'approved TEST accounts' in r.data and re.search(rb'<button[^>]*disabled',r.data)
+        assert b'TEST payments are currently disabled' in r.data and re.search(rb'<button[^>]*disabled',r.data)
         with c.session_transaction() as s:
             assert not s.get('stripe_nonces') and not s.get('purchase_reviews')
             token=s['_csrf_token'];s['stripe_nonces']=['forged']
         pid=con.execute("SELECT id FROM packages WHERE active=1 AND package_type='lesson' AND hours=8 LIMIT 1").fetchone()[0]
-        assert c.post('/student/buy-hours',data={'_csrf_token':token,'nonce':'forged','package_id':pid}).status_code==403
+        assert c.post('/student/buy-hours',data={'_csrf_token':token,'nonce':'forged','package_id':pid}).status_code==503
         assert list(con.iterdump())==before and not calls
         assert 'Δεν έγινε καμία χρέωση' in c.get('/student/package-review?lang=el').text
-        os.environ['STRIPE_TEST_STUDENT_EMAILS']='new-student@example.test'
+        os.environ['STRIPE_TEST_ENABLED']='1'
+        os.environ['STRIPE_TEST_STUDENT_EMAILS']=''
         r=c.get('/student/package-review?lang=en');assert r.status_code==200
         assert not re.search(rb'<button[^>]*disabled',r.data)
         with c.session_transaction() as s:assert s['purchase_reviews'] and s['stripe_nonces']
         os.environ['STRIPE_TEST_ENABLED']='0'
-        r=c.get('/student/package-review?lang=en');assert r.status_code==200 and b'approved TEST accounts' in r.data
+        r=c.get('/student/package-review?lang=en');assert r.status_code==200 and b'TEST payments are currently disabled' in r.data
         assert c.post('/student/buy-hours',data={'_csrf_token':token,'nonce':'forged','package_id':pid}).status_code==503
         admin=m.app.test_client()
         with admin.session_transaction() as s:s['uid']=con.execute("SELECT id FROM users WHERE role='admin'").fetchone()[0]
@@ -55,4 +56,4 @@ with tempfile.TemporaryDirectory() as tmp:
         r=c.get('/student/package-review?lang=en');assert r.status_code==302 and urlsplit(r.location).path=='/student/home'
         assert not calls
     con.close()
-print('PASS: real login -> restricted review 200; anonymous login context; EN/EL notice; no forbidden nonce; checkout 403/503 guards; allowed account review; Admin/group redirects; no DB mutation or network/payment')
+print('PASS: real login -> restricted review 200; anonymous login context; EN/EL notice; no forbidden nonce; checkout disabled-mode guard; allowed account review; Admin/group redirects; no DB mutation or network/payment')

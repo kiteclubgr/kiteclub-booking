@@ -1,4 +1,4 @@
-"""Stripe sandbox only. Online testing requires explicit email allowlisting; live keys rejected."""
+"""Stripe sandbox only. Explicit online TEST mode permits active Students; live keys rejected."""
 import json
 import os
 import uuid
@@ -27,12 +27,10 @@ def setup_stripe_payments(app, db, current_user, activate, data_root, base):
     def online():
         return os.getenv('STRIPE_ONLINE_TEST')=='1' and os.getenv('PUBLIC_BASE_URL','').rstrip('/')=='https://booking.kiteclub.gr'
     def allowed(c, uid):
-        if local and not app.config.get('IS_KITECLUB_PRODUCTION'): return True
-        emails={x.strip().lower() for x in os.getenv('STRIPE_TEST_STUDENT_EMAILS','').split(',') if x.strip()}
-        user=c.execute('SELECT email,role,active FROM users WHERE id=?',(uid,)).fetchone()
-        return bool(user and user['role']=='student' and user['active'] and user['email'].lower() in emails)
+        user=c.execute('SELECT role,active FROM users WHERE id=?',(uid,)).fetchone()
+        return bool(user and user['role']=='student' and user['active'])
     def configured():
-        deployment_ok=(local and not app.config.get('IS_KITECLUB_PRODUCTION')) or (online() and bool(os.getenv('STRIPE_TEST_STUDENT_EMAILS','').strip()))
+        deployment_ok=(local and not app.config.get('IS_KITECLUB_PRODUCTION')) or online()
         return deployment_ok and os.getenv('STRIPE_TEST_ENABLED')=='1' and os.getenv('STRIPE_SECRET_KEY','').startswith(('sk_test_','rk_test_')) and os.getenv('STRIPE_WEBHOOK_SECRET','').startswith('whsec_')
     def enabled():
         if not configured(): return False
@@ -98,13 +96,18 @@ def setup_stripe_payments(app, db, current_user, activate, data_root, base):
         'intent':lambda pid:client().v1.payment_intents.retrieve(pid).to_dict()}
     @app.get('/student/buy-hours')
     def student_buy_hours():
-        uid=require_student()
+        user=current_user()
+        if not user: return redirect(url_for('login'))
+        if user['role']!='student': abort(403)
+        uid=user['id']
         with connection() as c:
             kind=eligible(c,uid)
             packages=c.execute('SELECT * FROM packages WHERE active=1 AND package_type=? AND hours>0 AND price>0 ORDER BY hours,id',(kind,)).fetchall() if kind else []
-        nonce=uuid.uuid4().hex
-        session['stripe_nonces']=(session.get('stripe_nonces',[])+[nonce])[-10:]
-        return render_template('stripe_buy.html',packages=packages,nonce=nonce,order=None)
+            payment_available=configured() and allowed(c,uid)
+        nonce=uuid.uuid4().hex if payment_available else ''
+        if payment_available:
+            session['stripe_nonces']=(session.get('stripe_nonces',[])+[nonce])[-10:]
+        return render_template('stripe_buy.html',packages=packages,nonce=nonce,order=None,payment_available=payment_available)
     @app.get('/student/package-review')
     def student_package_review():
         language='en' if request.args.get('lang',session.get('purchase_language'))=='en' else 'el'

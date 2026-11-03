@@ -178,13 +178,16 @@ with tempfile.TemporaryDirectory() as tmp:
  for x,balance in others_before.items():assert con.execute('SELECT credits FROM students WHERE user_id=?',(x,)).fetchone()[0]==balance
  paid.update(payment_status='unpaid',status='expired');assert group_event().status_code==200
  assert con.execute('SELECT state FROM stripe_test_orders WHERE id=?',(target3['id'],)).fetchone()[0]=='paid'
- os.environ['STRIPE_TEST_ENABLED']='0';assert c.get('/student/buy-hours').status_code==503
+ os.environ['STRIPE_TEST_ENABLED']='0';assert c.get('/student/buy-hours').status_code==200
  os.environ['STRIPE_TEST_ENABLED']='1'
  m.app.config['IS_KITECLUB_PRODUCTION']=True
  # The launch-time local guard is supplemented by current production config.
- assert c.get('/student/buy-hours').status_code==503
+ assert c.get('/student/buy-hours').status_code==200
  m.app.config['IS_KITECLUB_PRODUCTION']=False
  with c.session_transaction() as s:s['uid']=999999
  assert c.get('/student/payments/'+row['id']).status_code in (403,404)
- os.environ['STRIPE_SECRET_KEY']='sk_live_not_allowed';assert c.get('/student/buy-hours').status_code==503
+ with c.session_transaction() as s:s['uid']=uid
+ os.environ['STRIPE_SECRET_KEY']='sk_live_not_allowed'
+ page=c.get('/student/buy-hours');assert page.status_code==200 and 'Οι πληρωμές TEST δεν είναι διαθέσιμες' in page.text
+ assert c.post('/student/buy-hours',data=data).status_code==503
  con.close();print('PASS: CSRF, server price, duplicate checkout, pending/invalid/signed webhook, replay, exact credits/payment, ownership, live-key rejection, 2P/3P eligibility, transaction rollback and retry')
