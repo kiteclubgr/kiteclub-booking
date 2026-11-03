@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from decimal import Decimal
 from datetime import datetime
 from pathlib import Path
-from flask import abort, request, session, redirect, render_template
+from flask import abort, request, session, redirect, render_template, flash, url_for
 import stripe
 
 
@@ -107,18 +107,29 @@ def setup_stripe_payments(app, db, current_user, activate, data_root, base):
         return render_template('stripe_buy.html',packages=packages,nonce=nonce,order=None)
     @app.get('/student/package-review')
     def student_package_review():
-        uid=require_student()
+        language='en' if request.args.get('lang',session.get('purchase_language'))=='en' else 'el'
+        user=current_user()
+        if not user:
+            return redirect(url_for('login',package='private-8h',lang=language))
+        if user['role']!='student':
+            flash('Sign in with a student account to review this package.' if language=='en' else 'Συνδέσου με λογαριασμό μαθητή για να δεις το πακέτο.')
+            return redirect(url_for('home'))
+        uid=user['id']
         with connection() as c:
             if eligible(c,uid) != 'lesson':
-                abort(403, description='This package is for individual lessons. Contact the school about your group package.')
+                flash('This package is for individual lessons. Contact the school about your group package.' if language=='en' else 'Το πακέτο αφορά ατομικά μαθήματα. Επικοινώνησε με τη σχολή για το ομαδικό πακέτο σου.')
+                return redirect(url_for('student_home'))
             package=c.execute("SELECT * FROM packages WHERE active=1 AND package_type='lesson' AND hours=8 AND price>0 ORDER BY id LIMIT 1").fetchone()
+            payment_available=configured() and allowed(c,uid)
         if not package: abort(404)
-        nonce=uuid.uuid4().hex
-        session['stripe_nonces']=(session.get('stripe_nonces',[])+[nonce])[-10:]
-        session['purchase_language']='en' if request.args.get('lang',session.get('purchase_language'))=='en' else 'el'
-        session['purchase_reviews']={**session.get('purchase_reviews',{}),nonce:{'package_id':package['id'],'price':str(package['price'])}}
-        session['purchase_reviews']={k:v for k,v in session['purchase_reviews'].items() if k in session['stripe_nonces']}
-        response=app.make_response(render_template('package_review.html',package=package,nonce=nonce,language=session['purchase_language'],preview=False))
+        # Viewing a public package must not require permission to create TEST payments.
+        nonce=uuid.uuid4().hex if payment_available else ''
+        if payment_available:
+            session['stripe_nonces']=(session.get('stripe_nonces',[])+[nonce])[-10:]
+            session['purchase_reviews']={**session.get('purchase_reviews',{}),nonce:{'package_id':package['id'],'price':str(package['price'])}}
+            session['purchase_reviews']={k:v for k,v in session['purchase_reviews'].items() if k in session['stripe_nonces']}
+        session['purchase_language']=language
+        response=app.make_response(render_template('package_review.html',package=package,nonce=nonce,language=language,preview=False,payment_available=payment_available))
         response.headers['Cache-Control']='no-store'
         return response
 
