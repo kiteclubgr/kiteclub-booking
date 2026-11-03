@@ -14,6 +14,6 @@ body::before{content:"";position:absolute;z-index:-1;pointer-events:none;inset:0
 /* Compact package intro: one-line headings on phone screens. */
 .layout>section{min-width:0}
 @media(max-width:800px){
- .layout>section>h1{font-size:clamp(17px,4.8vw,32px);letter-spacing:-.5px;white-space:nowrap}
- .layout>section>h2{font-size:clamp(17px,4.8vw,29px);letter-spacing:-.5px;white-space:nowrap;margin-bottom:0}
+ .layout>section>h1{font-size:clamp(15px,4.5vw,32px);letter-spacing:-.5px;white-space:nowrap}
+ .layout>section>h2{font-size:clamp(15px,4.5vw,29px);letter-spacing:-.5px;white-space:nowrap;margin-bottom:0}
 }
