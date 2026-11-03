@@ -204,7 +204,7 @@
       </div>
       <div class="kc-welcome">
         <div><h1>Καλώς ήρθες, {{me.name}}!</h1><p>Εδώ είναι η επισκόπηση της σχολής σήμερα.</p></div>
-        <div class="kc-top-side"><div class="kc-welcome-date">{{today_date|gr_long_date}}</div><div class="kc-weather" title="Ενδεικτική εμφάνιση — δεν υπάρχουν δεδομένα καιρού"><span class="kc-weather-icon">☀</span><span><strong>—°C</strong><small>Άνεμος: — kts</small><small class="kc-weather-placeholder">Weather preview</small></span></div></div>
+        <div class="kc-top-side"><div class="kc-welcome-date">{{today_date|gr_long_date}}</div><div class="kc-weather" title="Ενδεικτική εμφάνιση — δεν υπάρχουν δεδομένα καιρού"><span class="kc-weather-icon">☀</span><span><strong>—°C</strong><small>Άνεμος: — kts</small><small class="kc-weather-placeholder">Δεν υπάρχουν δεδομένα καιρού</small></span></div></div>
       </div>
       <div class="kc-dash-stats">
         <a class="kc-dash-stat cyan" href="{{url_for('admin',date=today_date|gr_date)}}#day"><div class="kc-stat-symbol">♟</div><div><span>Σημερινά μαθήματα</span><strong>{{today_summary.lessons}}</strong><small>{{today_summary.students}} μαθητές</small></div></a>
