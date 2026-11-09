@@ -220,3 +220,21 @@ details{margin:24px 0;border:1px solid var(--line);border-radius:8px;padding:16p
     transform:translateX(-clamp(60px,8vw,160px));
   }
 }
+
+/* Mobile auth: natural row heights and stable background while Chrome bars move. */
+@media(max-width:900px){
+  .kc-auth-body{min-height:100svh;background-attachment:scroll}
+  .kc-auth-login.kc-auth,.kc-auth-register.kc-auth{
+    min-height:0;align-content:start;grid-auto-rows:auto;
+  }
+  .kc-auth-login .kc-auth-panel,.kc-auth-register .kc-auth-panel{
+    align-items:flex-start;
+  }
+  .kc-auth-login .kc-auth-card>img{margin-top:0;margin-bottom:0;width:130px}
+  .kc-auth-login .kc-auth-card h1{font-size:24px}
+  .kc-auth-login .kc-auth-card .hint{margin-bottom:12px}
+  .kc-auth-login .kc-auth-card label{margin-top:12px}
+  .kc-auth-login .kc-auth-card .kc-google-form{margin:12px 0!important}
+  .kc-auth-login .kc-auth-divider{margin-top:12px}
+  .kc-auth-login .kc-auth-card>p:last-child{margin-top:12px}
+}
