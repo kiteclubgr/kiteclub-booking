@@ -6375,6 +6375,9 @@ setup_package_pages(app, db, current_user)
 from registration_waiting import setup_registration_waiting
 setup_registration_waiting(app, db)
 
+from pilot_reset import setup_pilot_reset
+setup_pilot_reset(DB, UPLOAD_ROOT, DATA_ROOT)
+
 from pilot_backup import setup_pilot_backup
 setup_pilot_backup(app, DB, UPLOAD_ROOT)
 
